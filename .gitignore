@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+
+# Environment & Local Secrets
+.env
+.env.local
+*.local
+*.key
+
+# Ephemeral test & framework artifacts
+/tmp/
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+logs/
+*.log
+
+# Editor & System files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
