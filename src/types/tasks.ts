@@ -21,6 +21,8 @@ export interface CurriculumTask {
   prerequisites: string[]; // task IDs that must be completed/verified first
   estimatedMinutes: number;
   statusActiveInMvp: boolean; // true for Week 1 & 4; false (planned) for Weeks 2, 3, 5, 6, 7
+  description?: string;
+  topics?: string[];
 }
 
 export interface TaskState {

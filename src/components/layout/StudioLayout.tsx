@@ -22,7 +22,8 @@ import {
   Lock,
   X,
   Trash2,
-  Award
+  Award,
+  LayoutDashboard
 } from 'lucide-react';
 import { 
   WORKFLOW_STEPS, 
@@ -65,8 +66,20 @@ const QueryPlanLab = lazy(() =>
   import('../database/QueryPlanLab').then(m => ({ default: m.QueryPlanLab }))
 );
 
-export function StudioLayout() {
-  const [isDark, setIsDark] = useState<boolean>(() => {
+export interface StudioLayoutProps {
+  initialWeek?: number;
+  onNavigateHome?: () => void;
+  isDark?: boolean;
+  onToggleTheme?: () => void;
+}
+
+export function StudioLayout({
+  initialWeek = 1,
+  onNavigateHome,
+  isDark: propIsDark,
+  onToggleTheme
+}: StudioLayoutProps = {}) {
+  const [internalDark, setInternalDark] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('syscraft-theme');
       return saved !== null ? saved === 'dark' : true;
@@ -75,7 +88,16 @@ export function StudioLayout() {
     }
   });
 
-  const [selectedWeek, setSelectedWeek] = useState<number>(1);
+  const isDark = propIsDark !== undefined ? propIsDark : internalDark;
+  const toggleTheme = () => {
+    if (onToggleTheme) {
+      onToggleTheme();
+    } else {
+      setInternalDark(prev => !prev);
+    }
+  };
+
+  const [selectedWeek, setSelectedWeek] = useState<number>(initialWeek);
   const [currentStep, setCurrentStep] = useState<WorkflowStep>(1);
   const [highestStepReached, setHighestStepReached] = useState<number>(1);
   const [stepCompletions, setStepCompletions] = useState<DrillStepCompletions>({
@@ -665,6 +687,19 @@ export function StudioLayout() {
       {/* Top Application Header */}
       <header className="studio-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {onNavigateHome && (
+            <Button
+              id="back-to-hub-btn"
+              variant="default-outline"
+              size="small"
+              onClick={onNavigateHome}
+              aria-label="Return to Curriculum Hub"
+              style={{ padding: '3px 8px', fontSize: '0.75rem' }}
+            >
+              <LayoutDashboard size={13} style={{ marginRight: '5px' }} />
+              Hub
+            </Button>
+          )}
           <div style={{ 
             width: '28px', 
             height: '28px', 
@@ -751,7 +786,7 @@ export function StudioLayout() {
             id="theme-toggle-btn"
             variant="default-outline" 
             size="small" 
-            onClick={() => setIsDark(!isDark)}
+            onClick={toggleTheme}
             aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
           >
             {isDark ? <Sun size={13} style={{ marginRight: '4px' }} /> : <Moon size={13} style={{ marginRight: '4px' }} />}

@@ -11,6 +11,8 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     prerequisites: [],
     estimatedMinutes: 25,
     statusActiveInMvp: true,
+    description: 'Eliminate N+1 database roundtrips using Eloquent eager loading and trace the 9-stage HTTP request lifecycle.',
+    topics: ['Eloquent Eager Loading', 'N+1 Query Budget (≤3)', 'HTTP Lifecycle Tracer', 'Model::preventLazyLoading'],
   },
   {
     id: 'w2-rest-cursor-pagination',
@@ -22,6 +24,8 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     prerequisites: ['w1-laravel-internals-n1'],
     estimatedMinutes: 30,
     statusActiveInMvp: false,
+    description: 'Implement seek-based cursor pagination for high-volume APIs and emit RFC 9457 standard problem details.',
+    topics: ['Seek-based Cursors', 'RFC 9457 Problem Details', 'Opaque Tokens', 'Index Traversal'],
   },
   {
     id: 'w3-class-refactoring-di',
@@ -33,6 +37,8 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     prerequisites: ['w1-laravel-internals-n1'],
     estimatedMinutes: 30,
     statusActiveInMvp: false,
+    description: 'Refactor bloated procedural code into clean services, bind contracts in Laravel IoC, and inject dependencies.',
+    topics: ['Dependency Inversion', 'Service Providers', 'Constructor Injection', 'Interface Segregation'],
   },
   {
     id: 'w4-btree-indexing',
@@ -44,6 +50,8 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     prerequisites: ['w1-laravel-internals-n1'],
     estimatedMinutes: 35,
     statusActiveInMvp: true,
+    description: 'Engineer composite B-Tree indexes in SQLite WASM and PostgreSQL, validating execution plans with EXPLAIN.',
+    topics: ['Composite B-Tree Indexes', 'EXPLAIN QUERY PLAN', 'Index Covering', 'Search vs Scan'],
   },
   {
     id: 'w5-queue-dlq-pipeline',
@@ -55,6 +63,8 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     prerequisites: ['w4-btree-indexing'],
     estimatedMinutes: 30,
     statusActiveInMvp: false,
+    description: 'Construct idempotent queue consumers with exponential backoff and isolate poisonous messages in a dead-letter queue.',
+    topics: ['Exponential Backoff', 'Dead-Letter Queues (DLQ)', 'Idempotency Keys', 'Worker Poisoning'],
   },
   {
     id: 'w6-system-design-star',
@@ -66,6 +76,8 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     prerequisites: ['w4-btree-indexing'],
     estimatedMinutes: 45,
     statusActiveInMvp: false,
+    description: 'Architect a 100k req/sec sensor pipeline and defend storage, buffering, and failover tradeoffs using STAR.',
+    topics: ['STAR Method Defense', 'Time-Series Sharding', 'Buffer Backpressure', 'SLA/SLI Tradeoffs'],
   },
   {
     id: 'w7-crud-auth-sprint',
@@ -77,6 +89,8 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     prerequisites: ['w1-laravel-internals-n1', 'w4-btree-indexing'],
     estimatedMinutes: 90,
     statusActiveInMvp: false,
+    description: '90-minute timed CRUD sprint under pressure: enforce policy gates, defend against session fixation, and pass security audits.',
+    topics: ['Policy Authorization', 'Session Regeneration', 'Role-Based Access Control', 'Timed Sprint'],
   },
 ];
 
