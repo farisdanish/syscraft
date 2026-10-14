@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { HomeHub } from './components/home/HomeHub';
+import { AboutArchitecture } from './components/about/AboutArchitecture';
 import { StudioLayout } from './components/layout/StudioLayout';
 
-export type ViewMode = 'home' | 'studio';
+export type ViewMode = 'curriculum' | 'architecture' | 'studio';
 
 export default function App() {
-  const [viewMode, setViewMode] = useState<ViewMode>('home');
+  const [viewMode, setViewMode] = useState<ViewMode>('curriculum');
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
   const [isDark, setIsDark] = useState<boolean>(() => {
     try {
@@ -33,26 +34,43 @@ export default function App() {
     setViewMode('studio');
   };
 
-  const handleBackToHub = () => {
-    setViewMode('home');
+  const handleNavigateCurriculum = () => {
+    setViewMode('curriculum');
   };
 
-  if (viewMode === 'home') {
+  const handleNavigateArchitecture = () => {
+    setViewMode('architecture');
+  };
+
+  if (viewMode === 'architecture') {
     return (
-      <HomeHub
+      <AboutArchitecture
         isDark={isDark}
         onToggleTheme={toggleTheme}
+        onNavigateHome={handleNavigateCurriculum}
         onLaunchWorkbench={handleLaunchWorkbench}
       />
     );
   }
 
+  if (viewMode === 'studio') {
+    return (
+      <StudioLayout
+        initialWeek={selectedWeek}
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
+        onNavigateHome={handleNavigateCurriculum}
+        onNavigateArchitecture={handleNavigateArchitecture}
+      />
+    );
+  }
+
   return (
-    <StudioLayout
-      initialWeek={selectedWeek}
+    <HomeHub
       isDark={isDark}
       onToggleTheme={toggleTheme}
-      onNavigateHome={handleBackToHub}
+      onLaunchWorkbench={handleLaunchWorkbench}
+      onNavigateArchitecture={handleNavigateArchitecture}
     />
   );
 }

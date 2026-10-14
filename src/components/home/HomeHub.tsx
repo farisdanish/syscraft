@@ -12,18 +12,18 @@ import {
   CheckCircle2,
   AlertCircle,
   Flag,
-  Server,
   Lock,
   Sparkles,
   ArrowRight,
-  Database,
-  Cpu,
-  Layers,
   Clock,
   ShieldCheck,
-  RefreshCw,
   X,
-  Trash2
+  Trash2,
+  Layers,
+  Code2,
+  Database,
+  Cpu,
+  Shield
 } from 'lucide-react';
 import { CURRICULUM_TASKS, resolveTaskStatus, resolveTaskAvailability } from '../../data/curriculumTasks';
 import type { TaskState, HesitationLogItem } from '../../types';
@@ -34,19 +34,22 @@ import {
   exportEnvelopeJSON, 
   importEnvelopeJSON 
 } from '../../services/storage';
-import { checkBridgeHealth, type BridgeHealth } from '../../services/bridgeClient';
 
 interface HomeHubProps {
   isDark: boolean;
   onToggleTheme: () => void;
   onLaunchWorkbench: (week: number) => void;
+  onNavigateArchitecture: () => void;
 }
 
-export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubProps) {
+export function HomeHub({
+  isDark,
+  onToggleTheme,
+  onLaunchWorkbench,
+  onNavigateArchitecture
+}: HomeHubProps) {
   const [taskStates, setTaskStates] = useState<Record<string, TaskState>>({});
   const [hesitations, setHesitations] = useState<HesitationLogItem[]>([]);
-  const [bridgeStatus, setBridgeStatus] = useState<BridgeHealth>({ connected: false });
-  const [isCheckingBridge, setIsCheckingBridge] = useState<boolean>(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
   
   // Modal State & Accessibility Refs
@@ -56,7 +59,7 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
   const clearTriggerBtnRef = useRef<HTMLButtonElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Load telemetry data from IndexedDB & Bridge
+  // Load telemetry data from IndexedDB
   const refreshHubData = useCallback(async () => {
     try {
       const storedTasks = await getAllTaskStates();
@@ -70,18 +73,6 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
       setHesitations(unreviewedHesitations);
     } catch (err) {
       console.error('[HomeHub] Failed to load learner telemetry:', err);
-    }
-  }, []);
-
-  const refreshBridge = useCallback(async () => {
-    setIsCheckingBridge(true);
-    try {
-      const health = await checkBridgeHealth();
-      setBridgeStatus(health);
-    } catch {
-      setBridgeStatus({ connected: false });
-    } finally {
-      setIsCheckingBridge(false);
     }
   }, []);
 
@@ -102,14 +93,6 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
         setHesitations(unreviewedHesitations);
       } catch (err) {
         console.error('[HomeHub] Failed to load learner telemetry:', err);
-      }
-
-      try {
-        const health = await checkBridgeHealth();
-        if (!active) return;
-        setBridgeStatus(health);
-      } catch {
-        if (active) setBridgeStatus({ connected: false });
       }
     };
 
@@ -170,7 +153,6 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
     return s === 'completed' || s === 'verified';
   }).length;
 
-  const verifiedCount = activeTasks.filter(t => taskStates[t.id]?.status === 'verified').length;
   const inProgressCount = activeTasks.filter(t => resolveTaskStatus(t, taskStates[t.id], taskStates) === 'in_progress').length;
   const progressPercent = totalActive > 0 ? Math.round((masteredCount / totalActive) * 100) : 0;
 
@@ -247,11 +229,34 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '1.0625rem', fontWeight: 700, color: 'var(--studio-text)', lineHeight: 1.2 }}>
-              SysCraft Hub
+              SysCraft
             </h1>
             <span style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)' }}>
-              Curriculum Roadmap &amp; System Health Dashboard
+              Interactive Systems &amp; Backend Learning Studio
             </span>
+          </div>
+
+          {/* Navigation Tabs */}
+          <div style={{ marginLeft: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Button
+              variant="primary-fill"
+              size="small"
+              style={{ fontWeight: 600, padding: '3px 10px' }}
+              aria-current="page"
+            >
+              Curriculum
+            </Button>
+            <Button
+              id="nav-how-it-works-btn"
+              variant="default-outline"
+              size="small"
+              onClick={onNavigateArchitecture}
+              style={{ padding: '3px 10px' }}
+              aria-label="View Technical Architecture & How It Works"
+            >
+              <Layers size={13} style={{ marginRight: '4px' }} />
+              How It Works
+            </Button>
           </div>
         </div>
 
@@ -265,7 +270,7 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
             aria-label="Open Studio Workbench"
           >
             <Play size={13} style={{ marginRight: '5px' }} />
-            Open Studio Workbench
+            Open Workbench
           </Button>
 
           {/* Envelope Export */}
@@ -302,6 +307,7 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
 
           {/* Reset Progress */}
           <Button
+            ref={clearTriggerBtnRef}
             id="hub-reset-progress-btn"
             variant="default-outline"
             size="small"
@@ -326,7 +332,7 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
       </header>
 
       {/* Main Dashboard Content */}
-      <main className="home-main">
+      <main className="home-main" style={{ gap: '1.25rem' }}>
         {/* Banner Notification Toast */}
         {notification && (
           <div style={{ position: 'relative' }}>
@@ -350,25 +356,24 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
           </div>
         )}
 
-        {/* Hero Architectural Thesis */}
+        {/* Hero Banner: High-Level, Outcome-Oriented */}
         <section className="home-hero" aria-label="Curriculum Overview">
-          <div style={{ maxWidth: '820px' }}>
+          <div style={{ maxWidth: '840px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-              <Tag variant="primary" size="small">7-Week Systems &amp; Backend Track</Tag>
-              <Tag variant={bridgeStatus.connected ? "success" : "default"} size="small">
-                {bridgeStatus.connected ? "Tier 3 PostgreSQL Bridge Online" : "Bridge Disconnected"}
-              </Tag>
+              <Tag variant="primary" size="small">7-Week Backend Engineering Track</Tag>
+              <Tag variant="success" size="small">Hands-On Systems Practice</Tag>
             </div>
-            <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.35rem', fontWeight: 700, color: 'var(--studio-text)', lineHeight: 1.25 }}>
-              Deterministic Simulation &amp; Secured PostgreSQL Verification
+            <h2 style={{ margin: '0 0 0.45rem 0', fontSize: '1.35rem', fontWeight: 700, color: 'var(--studio-text)', lineHeight: 1.25 }}>
+              Master Backend Engineering &amp; Systems Design
             </h2>
             <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--studio-text-muted)', lineHeight: 1.55 }}>
-              SysCraft bridges foundational mental models with production realities. Master Eloquent internals, B-tree composite seek plans, resilient dead-letter queues, and timed CRUD authorization sprints through in-browser WebAssembly and isolated Docker testbeds.
+              Interactive code challenges, database query plan labs, and structured architectural defense to prepare you for senior backend interviews and high-scale production systems.
             </p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
             <Button
+              id="hero-start-drill-btn"
               variant="primary-fill"
               size="medium"
               onClick={() => onLaunchWorkbench(inProgressCount > 0 ? (taskStates['w4-btree-indexing']?.status === 'in_progress' ? 4 : 1) : 1)}
@@ -377,25 +382,134 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
               <Play size={15} style={{ marginRight: '6px' }} />
               {inProgressCount > 0 ? 'Resume In-Progress Drill' : 'Start Week 1: Laravel Internals'}
             </Button>
+
+            <Button
+              id="hero-how-it-works-btn"
+              variant="default-outline"
+              size="small"
+              onClick={onNavigateArchitecture}
+            >
+              <Layers size={13} style={{ marginRight: '5px' }} />
+              How It Works &amp; Architecture →
+            </Button>
           </div>
         </section>
 
-        {/* Learner Telemetry Stat Cards */}
-        <section aria-label="Learner Telemetry">
-          <div className="home-metrics-grid">
-            {/* Progress % */}
-            <div className="home-metric-card">
-              <span className="home-metric-label">Curriculum Mastery</span>
-              <div className="home-metric-value">
-                <span>{progressPercent}%</span>
-                <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--studio-text-muted)' }}>
-                  ({masteredCount}/{totalActive})
+        {/* 4 High-Level Learning Tracks */}
+        <section aria-label="Core Engineering Disciplines">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '0.85rem'
+          }}>
+            <div style={{
+              backgroundColor: 'var(--studio-surface)',
+              border: '1px solid var(--studio-border)',
+              borderRadius: '8px',
+              padding: '0.75rem 0.95rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              boxShadow: 'var(--studio-shadow-sm)'
+            }}>
+              <Code2 size={20} color="var(--studio-primary)" style={{ flexShrink: 0 }} />
+              <div>
+                <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-text)', display: 'block' }}>
+                  Framework Internals
+                </strong>
+                <span style={{ fontSize: '0.71875rem', color: 'var(--studio-text-muted)' }}>
+                  Request lifecycle &amp; N+1 query budgets
                 </span>
               </div>
+            </div>
+
+            <div style={{
+              backgroundColor: 'var(--studio-surface)',
+              border: '1px solid var(--studio-border)',
+              borderRadius: '8px',
+              padding: '0.75rem 0.95rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              boxShadow: 'var(--studio-shadow-sm)'
+            }}>
+              <Database size={20} color="var(--studio-primary)" style={{ flexShrink: 0 }} />
+              <div>
+                <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-text)', display: 'block' }}>
+                  Database Engineering
+                </strong>
+                <span style={{ fontSize: '0.71875rem', color: 'var(--studio-text-muted)' }}>
+                  B-tree seeks &amp; EXPLAIN plan analysis
+                </span>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: 'var(--studio-surface)',
+              border: '1px solid var(--studio-border)',
+              borderRadius: '8px',
+              padding: '0.75rem 0.95rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              boxShadow: 'var(--studio-shadow-sm)'
+            }}>
+              <Cpu size={20} color="var(--studio-primary)" style={{ flexShrink: 0 }} />
+              <div>
+                <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-text)', display: 'block' }}>
+                  Distributed Queues
+                </strong>
+                <span style={{ fontSize: '0.71875rem', color: 'var(--studio-text-muted)' }}>
+                  Idempotency, retries &amp; dead-letter routing
+                </span>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: 'var(--studio-surface)',
+              border: '1px solid var(--studio-border)',
+              borderRadius: '8px',
+              padding: '0.75rem 0.95rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              boxShadow: 'var(--studio-shadow-sm)'
+            }}>
+              <Shield size={20} color="var(--studio-primary)" style={{ flexShrink: 0 }} />
+              <div>
+                <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-text)', display: 'block' }}>
+                  Architecture &amp; Security
+                </strong>
+                <span style={{ fontSize: '0.71875rem', color: 'var(--studio-text-muted)' }}>
+                  STAR interview defense &amp; policy gates
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Streamlined Learner Telemetry Progress Strip */}
+        <section aria-label="Learner Telemetry">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '0.85rem'
+          }}>
+            {/* Progress % */}
+            <div className="home-metric-card" style={{ padding: '0.75rem 1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span className="home-metric-label">Curriculum Mastery</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--studio-primary)' }}>
+                  {masteredCount} of {totalActive} Mastered
+                </span>
+              </div>
+              <div className="home-metric-value" style={{ fontSize: '1.35rem', marginTop: '2px' }}>
+                <span>{progressPercent}%</span>
+              </div>
               <div style={{ 
-                height: '5px', 
+                height: '4px', 
                 backgroundColor: 'var(--studio-border)', 
-                borderRadius: '3px', 
+                borderRadius: '2px', 
                 overflow: 'hidden', 
                 marginTop: '4px' 
               }}>
@@ -406,134 +520,50 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
                   transition: 'width 0.3s ease'
                 }} />
               </div>
-              <span className="home-metric-subtext">Active MVP Modules (Weeks 1 &amp; 4)</span>
             </div>
 
             {/* In-Progress Modules */}
-            <div className="home-metric-card">
-              <span className="home-metric-label">Drills in Progress</span>
-              <div className="home-metric-value">
-                <span>{inProgressCount}</span>
-                <Clock size={18} color="var(--studio-primary)" style={{ opacity: 0.8 }} />
+            <div className="home-metric-card" style={{ padding: '0.75rem 1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span className="home-metric-label">Active Drill</span>
+                <Clock size={14} color="var(--studio-primary)" style={{ opacity: 0.8 }} />
               </div>
-              <span className="home-metric-subtext">
-                {inProgressCount > 0 ? 'Draft sessions auto-saved in IndexedDB' : 'Ready to start drills'}
+              <div className="home-metric-value" style={{ fontSize: '1.35rem', marginTop: '2px' }}>
+                <span>{inProgressCount > 0 ? `Week ${taskStates['w4-btree-indexing']?.status === 'in_progress' ? 4 : 1}` : 'None'}</span>
+              </div>
+              <span className="home-metric-subtext" style={{ fontSize: '0.71875rem' }}>
+                {inProgressCount > 0 ? 'Draft progress auto-saved in browser' : 'Select a drill below to begin'}
               </span>
             </div>
 
-            {/* PostgreSQL 16.4 Verified */}
-            <div className="home-metric-card">
-              <span className="home-metric-label">PostgreSQL 16.4 Verified</span>
-              <div className="home-metric-value">
-                <span style={{ color: verifiedCount > 0 ? 'var(--studio-success)' : 'inherit' }}>
-                  {verifiedCount}
-                </span>
-                <ShieldCheck size={18} color="var(--studio-success)" style={{ opacity: 0.8 }} />
-              </div>
-              <span className="home-metric-subtext">Authenticated Tier 3 Docker passes</span>
-            </div>
-
             {/* Sunday Review Queue */}
-            <div className="home-metric-card">
-              <span className="home-metric-label">Sunday Review Queue</span>
-              <div className="home-metric-value">
+            <div className="home-metric-card" style={{ padding: '0.75rem 1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span className="home-metric-label">Sunday Oral Defense</span>
+                <Flag size={14} color="var(--studio-warning)" style={{ opacity: 0.8 }} />
+              </div>
+              <div className="home-metric-value" style={{ fontSize: '1.35rem', marginTop: '2px' }}>
                 <span style={{ color: hesitations.length > 0 ? 'var(--studio-warning)' : 'inherit' }}>
-                  {hesitations.length}
+                  {hesitations.length} Flagged
                 </span>
-                <Flag size={18} color="var(--studio-warning)" style={{ opacity: 0.8 }} />
               </div>
-              <span className="home-metric-subtext">Flagged hesitations for unscripted recall</span>
+              <span className="home-metric-subtext" style={{ fontSize: '0.71875rem' }}>
+                {hesitations.length > 0 ? 'Hesitation review items waiting' : 'No review hesitations queued'}
+              </span>
             </div>
           </div>
         </section>
 
-        {/* 3-Tier Architecture & System Health Card */}
-        <section aria-label="3-Tier Architecture Health">
-          <div className="home-section-header">
-            <h3 className="home-section-title">
-              <Layers size={17} color="var(--studio-primary)" />
-              3-Tier Runtime Architecture &amp; Health Status
-            </h3>
-            <Button
-              variant="default-outline"
-              size="small"
-              onClick={refreshBridge}
-              disabled={isCheckingBridge}
-              aria-label="Refresh system health diagnostics"
-            >
-              <RefreshCw size={12} className={isCheckingBridge ? "spin" : ""} style={{ marginRight: '5px' }} />
-              {isCheckingBridge ? "Checking..." : "Run Diagnostic Check"}
-            </Button>
-          </div>
-
-          <div className="home-tier-grid">
-            {/* Tier 1 */}
-            <div className="home-tier-card healthy">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Database size={16} color="var(--studio-primary)" />
-                  <strong style={{ fontSize: '0.875rem', color: 'var(--studio-text)' }}>Tier 1: Browser-Native WASM</strong>
-                </div>
-                <Tag variant="success" size="small">Online (SQLite 3.45.2)</Tag>
-              </div>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--studio-text-muted)', lineHeight: 1.5 }}>
-                In-browser WebAssembly SQL engine (<code>sql.js@1.12.0</code>) with semantic <code>EXPLAIN QUERY PLAN</code> parser and 5,000 synthetic weather observations. Zero network dependency.
-              </p>
-              <div style={{ fontSize: '0.6875rem', color: 'var(--studio-text-faint)', borderTop: '1px solid var(--studio-border)', paddingTop: '0.4rem' }}>
-                Engine: WebAssembly SQLite • Latency: &lt;1ms • Status: Active
-              </div>
-            </div>
-
-            {/* Tier 2 */}
-            <div className="home-tier-card healthy">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Cpu size={16} color="var(--studio-primary)" />
-                  <strong style={{ fontSize: '0.875rem', color: 'var(--studio-text)' }}>Tier 2: Deterministic Simulation</strong>
-                </div>
-                <Tag variant="success" size="small">Online (9-Step FSM)</Tag>
-              </div>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--studio-text-muted)', lineHeight: 1.5 }}>
-                Deterministic behavioral simulation of Laravel's 9-step request lifecycle, Eloquent eager loading query budgets, and dead-letter queue backoff. Clear stated assumptions.
-              </p>
-              <div style={{ fontSize: '0.6875rem', color: 'var(--studio-text-faint)', borderTop: '1px solid var(--studio-border)', paddingTop: '0.4rem' }}>
-                Engine: State Machine • Evaluator: Dynamic Query Budget • Status: Active
-              </div>
-            </div>
-
-            {/* Tier 3 */}
-            <div className={`home-tier-card ${bridgeStatus.connected ? 'healthy' : 'offline'}`}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Server size={16} color={bridgeStatus.connected ? "var(--studio-primary)" : "var(--studio-warning)"} />
-                  <strong style={{ fontSize: '0.875rem', color: 'var(--studio-text)' }}>Tier 3: Secured Local Bridge</strong>
-                </div>
-                <Tag variant={bridgeStatus.connected ? "success" : "warning"} size="small">
-                  {bridgeStatus.connected ? "Connected (127.0.0.1:49152)" : "Bridge Offline"}
-                </Tag>
-              </div>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--studio-text-muted)', lineHeight: 1.5 }}>
-                Secured Docker bridge executing PHP 8.3 &amp; PostgreSQL 16.4 on isolated internal network (<code>syscraft-testnet</code>). Evaluates live PDO query budgets and timing defenses.
-              </p>
-              <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.6875rem', color: 'var(--studio-text-faint)', borderTop: '1px solid var(--studio-border)', paddingTop: '0.4rem' }}>
-                <span>Docker: {bridgeStatus.dockerAvailable ? '✓' : '✗'}</span>
-                <span>Postgres: {bridgeStatus.postgresReady ? '✓' : '✗'}</span>
-                <span>Runner: {bridgeStatus.runnerImageReady ? '✓' : '✗'}</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 7-Week Curriculum Roadmap Matrix */}
+        {/* 7-Week Curriculum Roadmap Matrix: Center Stage! */}
         <section aria-label="Curriculum Matrix">
           <div className="home-section-header">
             <div>
               <h3 className="home-section-title">
                 <Layers size={17} color="var(--studio-primary)" />
-                7-Week Curriculum Roadmap Matrix
+                7-Week Curriculum Roadmap
               </h3>
               <span style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)' }}>
-                Weeks 1 &amp; 4 are active and fully verified; Weeks 2, 3, 5, 6, 7 are scheduled architectural expansions.
+                Weeks 1 &amp; 4 are live interactive drills; Weeks 2, 3, 5, 6, 7 are upcoming core expansions.
               </span>
             </div>
           </div>
@@ -555,7 +585,7 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
                   key={task.id} 
                   className={`home-module-card ${task.statusActiveInMvp ? 'active-drill' : 'planned-drill'}`}
                 >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
                     {/* Header Row: Week pill & Status tag */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                       <span style={{ 
@@ -572,7 +602,7 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
                       {!isVerified && isCompleted && <Tag variant="success" size="small"><CheckCircle2 size={11} style={{ marginRight: '3px' }} /> Mastered</Tag>}
                       {isInProgress && <Tag variant="warning" size="small"><Clock size={11} style={{ marginRight: '3px' }} /> In Progress</Tag>}
                       {isLocked && <Tag variant="default" size="small"><Lock size={11} style={{ marginRight: '3px' }} /> Locked</Tag>}
-                      {isPlanned && <Tag variant="default" size="small"><Sparkles size={11} style={{ marginRight: '3px' }} /> Planned Expansion</Tag>}
+                      {isPlanned && <Tag variant="default" size="small"><Sparkles size={11} style={{ marginRight: '3px' }} /> Planned</Tag>}
                       {!isCompleted && !isInProgress && !isLocked && !isPlanned && (
                         <Tag variant="primary" size="small">Ready to Start</Tag>
                       )}
@@ -588,13 +618,8 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
                       {task.description}
                     </p>
 
-                    {/* Tier & Estimated Time */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-                      <Tag variant="default" size="small">
-                        {task.tier === 1 && 'Tier 1: Browser WASM'}
-                        {task.tier === 2 && 'Tier 2: Simulation'}
-                        {task.tier === 3 && 'Tier 3: Docker PG 16.4'}
-                      </Tag>
+                    {/* Meta tags: Estimated Time & Prerequisites */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
                       <span style={{ fontSize: '0.71875rem', color: 'var(--studio-text-faint)', display: 'flex', alignItems: 'center', gap: '3px' }}>
                         <Clock size={11} /> {task.estimatedMinutes} mins
                       </span>
@@ -642,7 +667,7 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
                           </>
                         )}
                       </Button>
-                    ) : isLocked ? (
+                    ) : availability === 'blocked' ? (
                       <Button variant="default-outline" size="small" disabled>
                         <Lock size={12} style={{ marginRight: '5px' }} />
                         Prerequisites Required
@@ -717,11 +742,24 @@ export function HomeHub({ isDark, onToggleTheme, onLaunchWorkbench }: HomeHubPro
         <div>
           <span>SysCraft Studio v1.0.0</span>
           <span style={{ margin: '0 8px' }}>•</span>
-          <span>Pinned PostgreSQL 16.4 &amp; SQLite 3.45.2 WASM</span>
+          <button
+            type="button"
+            onClick={onNavigateArchitecture}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              fontSize: '0.75rem',
+              color: 'var(--studio-primary)',
+              textDecoration: 'underline',
+              cursor: 'pointer'
+            }}
+          >
+            How It Works (Technical Realism Architecture)
+          </button>
         </div>
         <div>
           <button
-            ref={clearTriggerBtnRef}
             type="button"
             onClick={() => setShowResetModal(true)}
             style={{

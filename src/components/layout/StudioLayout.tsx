@@ -23,7 +23,8 @@ import {
   X,
   Trash2,
   Award,
-  LayoutDashboard
+  LayoutDashboard,
+  Layers
 } from 'lucide-react';
 import { 
   WORKFLOW_STEPS, 
@@ -69,6 +70,7 @@ const QueryPlanLab = lazy(() =>
 export interface StudioLayoutProps {
   initialWeek?: number;
   onNavigateHome?: () => void;
+  onNavigateArchitecture?: () => void;
   isDark?: boolean;
   onToggleTheme?: () => void;
 }
@@ -76,6 +78,7 @@ export interface StudioLayoutProps {
 export function StudioLayout({
   initialWeek = 1,
   onNavigateHome,
+  onNavigateArchitecture,
   isDark: propIsDark,
   onToggleTheme
 }: StudioLayoutProps = {}) {
@@ -697,7 +700,21 @@ export function StudioLayout({
               style={{ padding: '3px 8px', fontSize: '0.75rem' }}
             >
               <LayoutDashboard size={13} style={{ marginRight: '5px' }} />
-              Hub
+              Curriculum
+            </Button>
+          )}
+
+          {onNavigateArchitecture && (
+            <Button
+              id="studio-to-architecture-btn"
+              variant="default-outline"
+              size="small"
+              onClick={onNavigateArchitecture}
+              aria-label="View Technical Architecture & How It Works"
+              style={{ padding: '3px 8px', fontSize: '0.75rem' }}
+            >
+              <Layers size={13} style={{ marginRight: '5px' }} />
+              How It Works
             </Button>
           )}
           <div style={{ 
