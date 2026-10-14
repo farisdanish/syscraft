@@ -1,6 +1,13 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { z } from 'zod';
-import type { ExportEnvelopeV1, HesitationLogItem, OralRubricScore } from '../types';
+import type { 
+  ExportEnvelopeV1, 
+  HesitationLogItem, 
+  OralRubricScore, 
+  TaskState, 
+  TaskStatus, 
+  DrillSessionState 
+} from '../types';
 
 interface SysCraftDB extends DBSchema {
   progress: {
@@ -13,6 +20,14 @@ interface SysCraftDB extends DBSchema {
       completedAt: string;
       attempts: number;
     };
+  };
+  tasks: {
+    key: string;
+    value: TaskState;
+  };
+  drillSessions: {
+    key: string;
+    value: DrillSessionState;
   };
   hesitations: {
     key: string;
@@ -30,14 +45,14 @@ interface SysCraftDB extends DBSchema {
 }
 
 const DB_NAME = 'syscraft_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<SysCraftDB>> | null = null;
 
 export function getDatabase(): Promise<IDBPDatabase<SysCraftDB>> {
   if (!dbPromise) {
     dbPromise = openDB<SysCraftDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
+      async upgrade(db, oldVersion, _newVersion, transaction) {
         if (!db.objectStoreNames.contains('progress')) {
           db.createObjectStore('progress', { keyPath: 'drillId' });
         }
@@ -51,13 +66,41 @@ export function getDatabase(): Promise<IDBPDatabase<SysCraftDB>> {
         if (!db.objectStoreNames.contains('notes')) {
           db.createObjectStore('notes', { keyPath: 'drillId' });
         }
+
+        // DB Version 2: Task catalog state and granular drill session stores
+        if (!db.objectStoreNames.contains('tasks')) {
+          db.createObjectStore('tasks', { keyPath: 'taskId' });
+        }
+        if (!db.objectStoreNames.contains('drillSessions')) {
+          db.createObjectStore('drillSessions', { keyPath: 'drillId' });
+        }
+
+        // Automatic non-destructive migration from v1 progress to v2 tasks
+        if (oldVersion < 2 && db.objectStoreNames.contains('progress')) {
+          const progressStore = transaction.objectStore('progress');
+          const tasksStore = transaction.objectStore('tasks');
+          const records = await progressStore.getAll();
+          for (const p of records) {
+            const status: TaskStatus = p.completed
+              ? (p.verified && p.verificationSource === 'local-runtime' ? 'verified' : 'completed')
+              : (p.attempts > 0 ? 'in_progress' : 'available');
+            await tasksStore.put({
+              taskId: p.drillId,
+              status,
+              attempts: p.attempts || 1,
+              verificationSource: p.verificationSource || 'simulation',
+              completedAt: p.completed ? p.completedAt : undefined,
+              lastOpenedAt: p.completedAt,
+            });
+          }
+        }
       },
     });
   }
   return dbPromise;
 }
 
-// Progress Operations
+// Progress Operations (Legacy & Cross-Compatibility)
 export async function saveDrillProgress(
   drillId: string, 
   completed: boolean, 
@@ -66,13 +109,28 @@ export async function saveDrillProgress(
 ): Promise<void> {
   const db = await getDatabase();
   const existing = await db.get('progress', drillId);
+  const completedAt = new Date().toISOString();
   await db.put('progress', {
     drillId,
     completed,
     verified,
     verificationSource,
-    completedAt: new Date().toISOString(),
+    completedAt,
     attempts: (existing?.attempts || 0) + 1,
+  });
+
+  // Also synchronize with tasks store
+  const existingTask = await db.get('tasks', drillId);
+  const status: TaskStatus = completed
+    ? (verified && verificationSource === 'local-runtime' ? 'verified' : 'completed')
+    : 'in_progress';
+  await db.put('tasks', {
+    taskId: drillId,
+    status,
+    attempts: (existingTask?.attempts || 0) + 1,
+    verificationSource,
+    completedAt: completed ? completedAt : existingTask?.completedAt,
+    lastOpenedAt: completedAt,
   });
 }
 
@@ -84,6 +142,38 @@ export async function getDrillProgress(drillId: string) {
 export async function getAllProgress() {
   const db = await getDatabase();
   return db.getAll('progress');
+}
+
+// Task State Operations
+export async function getTaskState(taskId: string): Promise<TaskState | undefined> {
+  const db = await getDatabase();
+  return db.get('tasks', taskId);
+}
+
+export async function saveTaskState(state: TaskState): Promise<void> {
+  const db = await getDatabase();
+  await db.put('tasks', state);
+}
+
+export async function getAllTaskStates(): Promise<TaskState[]> {
+  const db = await getDatabase();
+  return db.getAll('tasks');
+}
+
+// Granular Drill Session Operations
+export async function getDrillSession(drillId: string): Promise<DrillSessionState | undefined> {
+  const db = await getDatabase();
+  return db.get('drillSessions', drillId);
+}
+
+export async function saveDrillSession(session: DrillSessionState): Promise<void> {
+  const db = await getDatabase();
+  await db.put('drillSessions', session);
+}
+
+export async function getAllDrillSessions(): Promise<DrillSessionState[]> {
+  const db = await getDatabase();
+  return db.getAll('drillSessions');
 }
 
 // Hesitation Tracker Operations
@@ -108,10 +198,10 @@ export async function getSundayHesitations(): Promise<HesitationLogItem[]> {
 
 export async function markHesitationReviewed(id: string): Promise<void> {
   const db = await getDatabase();
-  const item = await db.get('hesitations', id);
-  if (item) {
-    item.reviewedSunday = true;
-    await db.put('hesitations', item);
+  const record = await db.get('hesitations', id);
+  if (record) {
+    record.reviewedSunday = true;
+    await db.put('hesitations', record);
   }
 }
 
@@ -121,10 +211,36 @@ export async function saveOralScore(score: OralRubricScore): Promise<void> {
   await db.put('oralScores', score);
 }
 
-export async function getOralScoresForDrill(drillId: string): Promise<OralRubricScore[]> {
+export async function getOralScores(drillId?: string): Promise<OralRubricScore[]> {
   const db = await getDatabase();
   const all = await db.getAll('oralScores');
-  return all.filter(s => s.drillId === drillId);
+  if (drillId) {
+    return all.filter(s => s.drillId === drillId);
+  }
+  return all;
+}
+
+// Note Operations
+export async function saveCustomNote(drillId: string, content: string): Promise<void> {
+  const db = await getDatabase();
+  await db.put('notes', { drillId, content, updatedAt: new Date().toISOString() });
+}
+
+export async function getCustomNote(drillId: string): Promise<string> {
+  const db = await getDatabase();
+  const record = await db.get('notes', drillId);
+  return record?.content || '';
+}
+
+// Distinct Reset Semantics
+export async function clearLearnerProgress(): Promise<void> {
+  const db = await getDatabase();
+  await db.clear('tasks');
+  await db.clear('drillSessions');
+  await db.clear('progress');
+  await db.clear('hesitations');
+  await db.clear('oralScores');
+  await db.clear('notes');
 }
 
 // Export / Import Validation Schemas (Strict Zod Validation)
@@ -158,17 +274,51 @@ const OralRubricScoreSchema = z.object({
   notes: z.string().max(2000),
 });
 
+const TaskStateSchema = z.object({
+  taskId: z.string(),
+  status: z.enum(['locked', 'available', 'in_progress', 'completed', 'verified', 'deferred']),
+  attempts: z.number(),
+  verificationSource: z.enum(['simulation', 'local-runtime', 'self-reported']).optional(),
+  lastOpenedAt: z.string().optional(),
+  completedAt: z.string().optional(),
+});
+
+const DrillStepCompletionsSchema = z.object({
+  1: z.boolean(),
+  2: z.boolean(),
+  3: z.boolean(),
+  4: z.boolean(),
+  5: z.boolean(),
+});
+
+const DrillSessionStateSchema = z.object({
+  drillId: z.string(),
+  week: z.number(),
+  currentStep: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+  highestStepReached: z.number(),
+  stepCompletions: DrillStepCompletionsSchema,
+  draftCode: z.string().max(50000),
+  testResults: z.unknown().nullable().optional(),
+  tier3Result: z.unknown().nullable().optional(),
+  verificationSource: z.enum(['simulation', 'local-runtime', 'self-reported']),
+  completed: z.boolean(),
+  oralDefenseCompleted: z.boolean(),
+  lastActiveAt: z.string(),
+});
+
 const EnvelopeSchema = z.object({
   schemaVersion: z.string().regex(/^1\.\d+\.\d+$/),
   exportedAt: z.string(),
   appVersion: z.string().regex(/^1\.\d+\.\d+$/),
   payload: z.object({
+    tasks: z.record(z.string(), TaskStateSchema).optional(),
     completedDrills: z.record(z.string(), z.object({
       completed: z.boolean(),
       score: z.number().optional(),
       verified: z.boolean(),
       verificationSource: z.enum(['simulation', 'local-runtime', 'self-reported']).optional(),
     })),
+    drillSessions: z.record(z.string(), DrillSessionStateSchema).optional(),
     hesitations: z.array(HesitationSchema),
     oralScores: z.array(OralRubricScoreSchema),
     customNotes: z.record(z.string(), z.string().max(10000)),
@@ -190,6 +340,8 @@ function checkObjectDepth(obj: unknown, maxDepth = 6, currentDepth = 0): boolean
 export async function exportEnvelopeJSON(): Promise<string> {
   const db = await getDatabase();
   const progressList = await db.getAll('progress');
+  const taskList = await db.getAll('tasks');
+  const sessionList = await db.getAll('drillSessions');
   const hesitations = await db.getAll('hesitations');
   const oralScores = await db.getAll('oralScores');
   const notesList = await db.getAll('notes');
@@ -203,6 +355,16 @@ export async function exportEnvelopeJSON(): Promise<string> {
     };
   }
 
+  const tasks: Record<string, TaskState> = {};
+  for (const t of taskList) {
+    tasks[t.taskId] = t;
+  }
+
+  const drillSessions: Record<string, DrillSessionState> = {};
+  for (const s of sessionList) {
+    drillSessions[s.drillId] = s;
+  }
+
   const customNotes: Record<string, string> = {};
   for (const n of notesList) {
     customNotes[n.drillId] = n.content;
@@ -213,7 +375,9 @@ export async function exportEnvelopeJSON(): Promise<string> {
     exportedAt: new Date().toISOString(),
     appVersion: '1.0.0',
     payload: {
+      tasks,
       completedDrills,
+      drillSessions,
       hesitations,
       oralScores,
       customNotes,
@@ -253,6 +417,26 @@ export async function importEnvelopeJSON(jsonString: string): Promise<{ success:
         completedAt: new Date().toISOString(),
         attempts: 1,
       });
+    }
+
+    if (validated.payload.tasks) {
+      for (const task of Object.values(validated.payload.tasks)) {
+        if (task.taskId) {
+          await db.put('tasks', task);
+        }
+      }
+    }
+
+    if (validated.payload.drillSessions) {
+      for (const session of Object.values(validated.payload.drillSessions)) {
+        if (session.drillId) {
+          await db.put('drillSessions', {
+            ...session,
+            testResults: session.testResults ?? null,
+            tier3Result: session.tier3Result ?? null,
+          });
+        }
+      }
     }
 
     for (const h of validated.payload.hesitations) {

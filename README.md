@@ -1,6 +1,6 @@
 # SysCraft: Interactive Systems & Backend Learning Studio
 
-> **Positioning Statement:**  
+> **Positioning Statement:**
 > *SysCraft is a browser-first learning studio with deterministic simulations for systems concepts, semantic query-plan validation, and a secured local runtime integration that validates behavior against pinned PostgreSQL 16.4 with a deterministic PHP query-budget testbed prototype.*
 
 ---
@@ -8,6 +8,7 @@
 ## 1. Target Audience & Scope
 
 SysCraft is engineered specifically for **self-directed backend engineers** preparing for:
+
 * **Senior Backend & Systems Design Interviews:** Deep architectural trade-offs, backpressure handling, cursor vs. offset pagination, and unscripted oral defense.
 * **Laravel / PHP Technical Roles:** Framework internals, HTTP request lifecycle, Service Container resolution, Eloquent N+1 elimination, and Horizon queue semantics.
 * **Malaysian Government & GovTech Technical Assessments:** Conformance with official public sector digital standards (**MYDS - Malaysia Government Design System**), WCAG 2.2 accessibility, clean repository hygiene, threat-modeled authorization policies, and reproducible deployments.
@@ -79,25 +80,32 @@ flowchart LR
 ## 4. Development Roadmap
 
 ### Phase 0: Scaffolding, Git Init & MYDS Proof-of-Installation (Completed)
-* [x] Initialize Git repository at `/home/nian014/projects/syscraft` with conventional commit structure.
-* [x] Scaffold Vite 8.3.4 + React 19.3.0 (TypeScript 6.0.3) project.
-* [x] Install pinned `@govtechmy/myds-react@1.0.2` and `@govtechmy/myds-style@1.0.0`.
-* [x] Configure `.agents/` customizations directory (`rules/`, `skills/`, `notes/`) for cross-device development.
-* [x] Gate Check: Verify MYDS component rendering, CSS design tokens, dark/light theme switching, and local SQLite WASM execution (`3.45.2`).
 
-### Phase 1: MVP Core (Weeks 1 & 4 + Studio Shell) (Completed & Remediated)
-* [x] **Studio Shell:** Draggable 5-step progressive workflow UI using `react-resizable-panels`, Monaco Editor (`@monaco-editor/react`), and lazy-loaded React Flow (`@xyflow/react`).
-* [x] **Week 1 Simulator (Tier 2):** Deterministic Laravel Lifecycle mental model tracer with interactive breakpoint inspection.
-* [x] **Week 4 Database Lab (Tier 1):** `sql.js@1.12.0` SQLite sandbox with dynamic runtime version display (`sqlite3_libversion()`), reset scaffold starter, and fixture-tested semantic query-plan parser.
-* [x] **Secured Local Bridge & Testbed Prototype (Tier 3):** Loopback bridge daemon (`127.0.0.1:49152`) connecting to `syscraft-testnet` with custom `syscraft-runner:1.0.0` and `postgres:16.4-alpine`, hardened with read-only rootfs, ephemeral learner code injection, real PDO query-budget tracking against PostgreSQL (51 unoptimized queries vs 3 batch eager-loaded queries), strict non-empty origin validation, and child process group timeout management.
-* [x] **Oral Recall Rubric & Operationalized Hesitation Queue:** 5-dimension scored rubric (1–4 scale), latency/retry metrics, and Sunday review queue in IndexedDB.
+* [X] Initialize Git repository at `/home/nian014/projects/syscraft` with conventional commit structure.
+* [X] Scaffold Vite 8.3.4 + React 19.3.0 (TypeScript 6.0.3) project.
+* [X] Install pinned `@govtechmy/myds-react@1.0.2` and `@govtechmy/myds-style@1.0.0`.
+* [X] Configure `.agents/` customizations directory (`rules/`, `skills/`, `notes/`) for cross-device development.
+* [X] Gate Check: Verify MYDS component rendering, CSS design tokens, dark/light theme switching, and local SQLite WASM execution (`3.45.2`).
+
+### Phase 1: MVP Core & Sequential Task Tracking (Completed & Hardened)
+
+* [X] **Studio Shell:** Draggable 5-step progressive workflow UI using `react-resizable-panels`, Monaco Editor (`@monaco-editor/react`), and lazy-loaded React Flow (`@xyflow/react`).
+* [X] **Two-Tier Task Tracking Architecture:** Macroscopic task catalog for Weeks 1–7 with microscopic 5-step FSM (`CurriculumTask`, `TaskStatus`, `TaskState`).
+* [X] **Strict Sequential Step Gating:** Locked-step progression preventing skipping; Step 2 requires concept reading, Step 3 requires passing assertions, Step 4 requires confirming analysis, and Step 5 requires oral rubric scoring.
+* [X] **Non-Destructive Module Switching:** Real-time auto-saving and IndexedDB v2 persistence (`tasks` and `drillSessions` stores) preserving learner draft code, active steps, and completions across module navigation.
+* [X] **Week 1 Simulator (Tier 2):** Deterministic Laravel Lifecycle mental model tracer with interactive breakpoint inspection.
+* [X] **Week 4 Database Lab (Tier 1):** `sql.js@1.12.0` SQLite sandbox with dynamic runtime version display (`sqlite3_libversion()`), reset scaffold starter, and fixture-tested semantic query-plan parser.
+* [X] **Secured Local Bridge & Testbed Prototype (Tier 3):** Loopback bridge daemon (`127.0.0.1:49152`) connecting to `syscraft-testnet` with custom `syscraft-runner:1.0.0` and `postgres:16.4-alpine`, hardened with read-only rootfs, ephemeral learner code injection, real PDO query-budget tracking against PostgreSQL (51 unoptimized queries vs 3 batch eager-loaded queries), strict non-empty origin validation, and child process group timeout management.
+* [X] **Oral Recall Rubric & Operationalized Hesitation Queue:** 5-dimension scored rubric (1–4 scale), latency/retry metrics, and Sunday review queue in IndexedDB.
 
 ### Phase 2: High-Value Core Expansions & Home Hub (Weeks 6 & 7)
+
 * [ ] **Home Page & Curriculum Dashboard:** Central navigation hub with 7-week curriculum matrix, IndexedDB telemetry, Sunday review queue stats, 3-tier architecture status, and direct workbench launcher.
 * [ ] **Week 7 Timed CRUD & Auth Sprint:** 90-minute timed mock featuring threat-modeled session fixation regeneration (`$request->session()->regenerate()`), FormRequests, and policy authorization (`$this->authorize()`).
 * [ ] **Week 6 Scoped MVP:** 1 timed system design (Weather Data Pipeline), 2 STAR stories (Report Export Speedup & Memory OOM Fix), and 1 reusable 1-page design document template.
 
 ### Phase 3: Enrichment Modules (Weeks 2, 3, 5)
+
 * [ ] **Week 2:** REST API cursor pagination with concurrency contracts & RFC 9457 Problem Details error formats.
 * [ ] **Week 3:** Refactoring diff studio with dependency injection and Pest 3.0.4 test harness.
 * [ ] **Week 5:** Resilient multi-queue ingestion pipeline and failure-mode matrix.
@@ -110,14 +118,14 @@ While SysCraft's initial curriculum focuses on Laravel, PHP, and PostgreSQL, its
 
 ### 5.1 Portable Learning Layer vs. Stack-Specific Layer
 
-| Dimension | Portable Layer (Core Platform) | Stack-Specific Layer (Adapter Module) |
-|---|---|---|
-| **Learning Workflow** | Concept $\rightarrow$ Drill $\rightarrow$ Feedback $\rightarrow$ Oral Recall $\rightarrow$ Review | Language/runtime syntax and toolchains |
-| **Hesitation Tracking** | Action latency, retry counts, hint tracking, rubric misses | Language-specific compilation & linter errors |
-| **System Design** | URL shorteners, ingestion pipelines, notification systems | High-level architectural diagrams & trade-offs |
-| **API Contracts** | Pagination mechanics, idempotency keys, RFC 9457 contracts | Routing frameworks (Laravel, FastAPI, Express, Spring) |
-| **Database Concepts** | B-Tree indexing, table scans vs. seeks, transaction safety | Engine specifics (PostgreSQL, SQLite, MySQL, SQL Server) |
-| **Simulations** | Deterministic state machines and animated visual tracers | Framework lifecycle nodes (Kernel, Middleware, Container) |
+| Dimension                     | Portable Layer (Core Platform)                                                                            | Stack-Specific Layer (Adapter Module)                     |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| **Learning Workflow**   | Concept $\rightarrow$ Drill $\rightarrow$ Feedback $\rightarrow$ Oral Recall $\rightarrow$ Review | Language/runtime syntax and toolchains                    |
+| **Hesitation Tracking** | Action latency, retry counts, hint tracking, rubric misses                                                | Language-specific compilation & linter errors             |
+| **System Design**       | URL shorteners, ingestion pipelines, notification systems                                                 | High-level architectural diagrams & trade-offs            |
+| **API Contracts**       | Pagination mechanics, idempotency keys, RFC 9457 contracts                                                | Routing frameworks (Laravel, FastAPI, Express, Spring)    |
+| **Database Concepts**   | B-Tree indexing, table scans vs. seeks, transaction safety                                                | Engine specifics (PostgreSQL, SQLite, MySQL, SQL Server)  |
+| **Simulations**         | Deterministic state machines and animated visual tracers                                                  | Framework lifecycle nodes (Kernel, Middleware, Container) |
 
 ### 5.2 Stack Adapter Interface Architecture
 
@@ -143,6 +151,7 @@ Stack Adapters (Modular Plugins)
 ```
 
 ### 5.3 Implementation Sequencing Strategy
+
 1. **Reference Implementation (Current):** Build and harden the Laravel 12 / PHP 8.3 / PostgreSQL 16 reference system first. Ensure that lesson schemas, drill models, rubric scoring, IndexedDB storage, and loopback bridge protocols are robust and battle-tested.
 2. **Adapter Decoupling:** Keep curriculum content and prompt templates strictly separated from Laravel-specific execution details.
 3. **Pluggable Adapters:** Once the core platform is proven, introduce new stack adapters behind the `StackAdapterInterface` without touching the studio shell, visual flow engine, or hesitation tracker.
@@ -151,35 +160,39 @@ Stack Adapters (Modular Plugins)
 
 ## 6. Pinned Technology Stack Matrix
 
-| Component | Pinned Version / Digest |
-|---|---|
-| **Frontend Framework** | React `19.3.0` + TypeScript `6.0.3` + Vite `8.3.4` |
-| **Design System** | `@govtechmy/myds-react@1.0.2` & `@govtechmy/myds-style@1.0.0` |
-| **Visual Tracer** | `@xyflow/react` (`12.12.0`) |
-| **IDE & Diff Editor** | `@monaco-editor/react` (`4.7.0`) |
-| **Tier 1 Database** | `sql.js@1.12.0` (SQLite `3.45.2` WASM) |
+| Component                     | Pinned Version / Digest                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------ |
+| **Frontend Framework**  | React `19.3.0` + TypeScript `6.0.3` + Vite `8.3.4`                                   |
+| **Design System**       | `@govtechmy/myds-react@1.0.2` & `@govtechmy/myds-style@1.0.0`                          |
+| **Visual Tracer**       | `@xyflow/react` (`12.12.0`)                                                            |
+| **IDE & Diff Editor**   | `@monaco-editor/react` (`4.7.0`)                                                       |
+| **Tier 1 Database**     | `sql.js@1.12.0` (SQLite `3.45.2` WASM)                                                 |
 | **Tier 3 Runner Image** | `syscraft-runner:1.0.0` (`php:8.3.11-cli-alpine` + Composer `2.7.7` + `pdo_pgsql`) |
-| **Tier 3 Database** | `postgres:16.4-alpine` |
-| **Tier 3 Framework** | Laravel `12.0.1` + PHPUnit `11.3.3` + Pest `3.0.4` |
+| **Tier 3 Database**     | `postgres:16.4-alpine`                                                                   |
+| **Tier 3 Framework**    | Laravel `12.0.1` + PHPUnit `11.3.3` + Pest `3.0.4`                                   |
 
 ---
 
 ## 7. Local Development Quickstart
 
 ### Prerequisites
+
 * Node.js v20.x or v22.x LTS
 * Docker Engine & Docker Compose v2.20+ (for Tier 3 exercises)
 
 ### 1. Start the Studio Development Server
+
 ```bash
 git clone <repo-url> syscraft
 cd syscraft
 npm install
 npm run dev
 ```
+
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ### 2. Start the Tier 3 Docker Environment & Bridge Daemon
+
 ```bash
 # In terminal 1: start internal PostgreSQL container
 docker compose -f docker/docker-compose.yml up -d postgres
@@ -189,6 +202,7 @@ npm run bridge
 ```
 
 ### 3. Verify Local Build & Linter
+
 ```bash
 npm run lint
 npm run build
@@ -197,5 +211,6 @@ npm run build
 ---
 
 ## 8. License & Standards
+
 * Built in alignment with the **Malaysia Government Design System (MYDS)** standards.
 * Conforms to **WCAG 2.2 AA** accessibility guidelines.
