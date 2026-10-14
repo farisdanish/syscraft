@@ -134,7 +134,7 @@ export function OralRubricDialog({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem', backgroundColor: 'var(--bg-white, #ffffff)', borderRadius: '8px', border: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem', backgroundColor: 'var(--studio-surface)', borderRadius: '8px', border: '1px solid var(--studio-border)', color: 'var(--studio-text)' }}>
       
       {/* Accessible polite announcement region */}
       <div 
@@ -146,13 +146,13 @@ export function OralRubricDialog({
       </div>
 
       {/* Header & 3-Min Stopwatch */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', borderBottom: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))', paddingBottom: '0.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', borderBottom: '1px solid var(--studio-border)', paddingBottom: '0.75rem' }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: '1.125rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Award size={20} color="#0284c7" />
+          <h3 style={{ margin: 0, fontSize: '1.125rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--studio-text)' }}>
+            <Award size={20} color="var(--studio-primary)" />
             Unscripted Oral Recall Defense
           </h3>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.8125rem', color: 'var(--txt-black-600, #475569)' }}>
+          <p style={{ margin: '4px 0 0 0', fontSize: '0.8125rem', color: 'var(--studio-text-muted)' }}>
             Speak your architectural explanation out loud without reading from notes.
           </p>
         </div>
@@ -163,10 +163,11 @@ export function OralRubricDialog({
             fontSize: '1.5rem', 
             fontWeight: 800, 
             fontFamily: 'monospace', 
-            color: secondsRemaining <= 30 ? '#dc2626' : '#0284c7',
+            color: secondsRemaining <= 30 ? 'var(--studio-danger)' : 'var(--studio-primary)',
             padding: '4px 12px',
             borderRadius: '6px',
-            backgroundColor: 'var(--bg-contrast, rgba(0,0,0,0.04))'
+            backgroundColor: 'var(--studio-surface-subtle)',
+            border: '1px solid var(--studio-border)'
           }}>
             {formatTime(secondsRemaining)}
           </div>
@@ -194,18 +195,18 @@ export function OralRubricDialog({
       </div>
 
       {/* Oral Prompt Card */}
-      <div style={{ padding: '0.875rem', borderRadius: '6px', backgroundColor: 'rgba(2, 132, 199, 0.08)', borderLeft: '4px solid #0284c7' }}>
-        <strong style={{ fontSize: '0.8125rem', color: '#0284c7', display: 'block', marginBottom: '4px' }}>
+      <div style={{ padding: '0.875rem', borderRadius: '6px', backgroundColor: 'var(--studio-primary-glow)', borderLeft: '4px solid var(--studio-primary)' }}>
+        <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-primary)', display: 'block', marginBottom: '4px' }}>
           INTERVIEW DEFENSE PROMPT:
         </strong>
-        <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--txt-black-900, #0f172a)' }}>
+        <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--studio-text)' }}>
           "{question}"
         </span>
       </div>
 
       {/* 5-Dimension Qualitative Rubric Grid */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--txt-black-700, #334155)' }}>
+        <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--studio-text-muted)' }}>
           Self-Assessment Rubric (Score 1 to 4 per dimension):
         </div>
 
@@ -213,14 +214,14 @@ export function OralRubricDialog({
           <div key={idx} style={{ 
             padding: '0.75rem', 
             borderRadius: '6px', 
-            border: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))',
-            backgroundColor: 'var(--bg-white, #ffffff)',
+            border: '1px solid var(--studio-border)',
+            backgroundColor: 'var(--studio-surface)',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.5rem'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.8125rem', fontWeight: 600, textTransform: 'capitalize' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, textTransform: 'capitalize', color: 'var(--studio-text)' }}>
                 {idx + 1}. {cp.dimension} Checkpoint
               </span>
               
@@ -235,12 +236,13 @@ export function OralRubricDialog({
                       width: '28px',
                       height: '28px',
                       borderRadius: '4px',
-                      border: '1px solid var(--border-washed, #cbd5e1)',
-                      backgroundColor: scores[cp.dimension] === scoreVal ? '#0284c7' : 'var(--bg-contrast, rgba(0,0,0,0.03))',
-                      color: scores[cp.dimension] === scoreVal ? '#ffffff' : 'var(--txt-black-900, #0f172a)',
+                      border: `1px solid ${scores[cp.dimension] === scoreVal ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
+                      backgroundColor: scores[cp.dimension] === scoreVal ? 'var(--studio-primary)' : 'var(--studio-surface-subtle)',
+                      color: scores[cp.dimension] === scoreVal ? '#ffffff' : 'var(--studio-text)',
                       fontWeight: 600,
                       fontSize: '12px',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
                     }}
                     aria-label={`Score ${scoreVal} for ${cp.dimension}`}
                   >
@@ -250,7 +252,7 @@ export function OralRubricDialog({
               </div>
             </div>
 
-            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--txt-black-600, #475569)', lineHeight: 1.45 }}>
+            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--studio-text-muted)', lineHeight: 1.45 }}>
               {cp.prompt}
             </p>
           </div>
@@ -259,7 +261,7 @@ export function OralRubricDialog({
 
       {/* Notes Textarea */}
       <div>
-        <label htmlFor="oral-notes" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '4px' }}>
+        <label htmlFor="oral-notes" style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '4px', color: 'var(--studio-text)' }}>
           Unscripted Delivery Notes / Stumble Points:
         </label>
         <textarea
@@ -272,9 +274,9 @@ export function OralRubricDialog({
             width: '100%',
             padding: '0.625rem',
             borderRadius: '6px',
-            border: '1px solid var(--border-washed, rgba(148, 163, 184, 0.3))',
-            backgroundColor: 'var(--bg-white, #ffffff)',
-            color: 'var(--txt-black-900, #0f172a)',
+            border: '1px solid var(--studio-border)',
+            backgroundColor: 'var(--studio-surface)',
+            color: 'var(--studio-text)',
             fontSize: '0.8125rem',
             boxSizing: 'border-box'
           }}
@@ -282,7 +284,7 @@ export function OralRubricDialog({
       </div>
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--studio-border)' }}>
         <Button 
           variant={hesitationFlagged ? "danger-outline" : "default-outline"}
           size="small"

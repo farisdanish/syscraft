@@ -129,7 +129,7 @@ export function StudioLayout() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-washed, #0b0f17)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--studio-bg)', color: 'var(--studio-text)' }}>
       
       {/* Screen Reader Polite Live Region */}
       <div 
@@ -142,14 +142,15 @@ export function StudioLayout() {
 
       {/* Top Masthead & Curriculum Selector Bar */}
       <header style={{ 
-        borderBottom: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))', 
-        backgroundColor: 'var(--bg-white, #ffffff)', 
+        borderBottom: '1px solid var(--studio-border)', 
+        backgroundColor: 'var(--studio-surface)', 
         padding: '0.625rem 1.25rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '0.75rem'
+        gap: '0.75rem',
+        color: 'var(--studio-text)'
       }}>
         {/* Brand & Studio ID */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -157,7 +158,7 @@ export function StudioLayout() {
             width: '30px', 
             height: '30px', 
             borderRadius: '6px', 
-            backgroundColor: '#0284c7', 
+            backgroundColor: 'var(--studio-primary)', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
@@ -168,10 +169,10 @@ export function StudioLayout() {
             SC
           </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: '0.9375rem', letterSpacing: '-0.02em' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.9375rem', letterSpacing: '-0.02em', color: 'var(--studio-text)' }}>
               SysCraft Studio
             </div>
-            <div style={{ fontSize: '0.6875rem', color: 'var(--txt-black-500, #64748b)' }}>
+            <div style={{ fontSize: '0.6875rem', color: 'var(--studio-text-muted)' }}>
               Interactive Systems & Backend Learning Studio
             </div>
           </div>
@@ -179,7 +180,7 @@ export function StudioLayout() {
 
         {/* Curriculum Module Switcher */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--txt-black-500, #64748b)' }}>Module:</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--studio-text-muted)' }}>Module:</span>
           
           <button
             type="button"
@@ -187,12 +188,13 @@ export function StudioLayout() {
             style={{
               padding: '4px 10px',
               borderRadius: '6px',
-              border: `1px solid ${selectedWeek === 1 ? '#0284c7' : 'var(--border-washed, rgba(148, 163, 184, 0.3))'}`,
-              backgroundColor: selectedWeek === 1 ? 'rgba(2, 132, 199, 0.15)' : 'transparent',
-              color: selectedWeek === 1 ? '#0284c7' : 'var(--txt-black-800, #1e293b)',
+              border: `1px solid ${selectedWeek === 1 ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
+              backgroundColor: selectedWeek === 1 ? 'var(--studio-primary-glow)' : 'transparent',
+              color: selectedWeek === 1 ? 'var(--studio-primary)' : 'var(--studio-text)',
               fontWeight: 600,
               fontSize: '0.8125rem',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
             }}
           >
             Week 1: Laravel Internals
@@ -204,12 +206,13 @@ export function StudioLayout() {
             style={{
               padding: '4px 10px',
               borderRadius: '6px',
-              border: `1px solid ${selectedWeek === 4 ? '#0284c7' : 'var(--border-washed, rgba(148, 163, 184, 0.3))'}`,
-              backgroundColor: selectedWeek === 4 ? 'rgba(2, 132, 199, 0.15)' : 'transparent',
-              color: selectedWeek === 4 ? '#0284c7' : 'var(--txt-black-800, #1e293b)',
+              border: `1px solid ${selectedWeek === 4 ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
+              backgroundColor: selectedWeek === 4 ? 'var(--studio-primary-glow)' : 'transparent',
+              color: selectedWeek === 4 ? 'var(--studio-primary)' : 'var(--studio-text)',
               fontWeight: 600,
               fontSize: '0.8125rem',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
             }}
           >
             Week 4: Database & EXPLAIN Lab
@@ -245,8 +248,8 @@ export function StudioLayout() {
 
       {/* Progressive 5-Step Stepper Navigation */}
       <nav aria-label="Progressive 5-step workflow" style={{ 
-        borderBottom: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))', 
-        backgroundColor: 'var(--bg-white, #ffffff)', 
+        borderBottom: '1px solid var(--studio-border)', 
+        backgroundColor: 'var(--studio-surface)', 
         padding: '0.5rem 1.25rem',
         overflowX: 'auto'
       }}>
@@ -264,11 +267,11 @@ export function StudioLayout() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.375rem',
-                  padding: '5px 10px',
+                  padding: '5px 12px',
                   borderRadius: '20px',
-                  border: `1px solid ${isActive ? '#0284c7' : 'var(--border-washed, rgba(148, 163, 184, 0.2))'}`,
-                  backgroundColor: isActive ? '#0284c7' : isCompleted ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
-                  color: isActive ? '#ffffff' : isCompleted ? '#059669' : 'var(--txt-black-700, #334155)',
+                  border: `1px solid ${isActive ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
+                  backgroundColor: isActive ? 'var(--studio-primary)' : isCompleted ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                  color: isActive ? '#ffffff' : isCompleted ? 'var(--studio-success)' : 'var(--studio-text)',
                   fontSize: '0.8125rem',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -280,8 +283,8 @@ export function StudioLayout() {
                   width: '18px', 
                   height: '18px', 
                   borderRadius: '50%', 
-                  backgroundColor: isActive ? '#ffffff' : isCompleted ? '#10b981' : 'var(--bg-contrast, rgba(0,0,0,0.06))',
-                  color: isActive ? '#0284c7' : isCompleted ? '#ffffff' : 'var(--txt-black-600, #475569)',
+                  backgroundColor: isActive ? '#ffffff' : isCompleted ? 'var(--studio-success)' : 'var(--studio-surface-hover)',
+                  color: isActive ? 'var(--studio-primary)' : isCompleted ? '#ffffff' : 'var(--studio-text-muted)',
                   fontSize: '11px',
                   display: 'flex',
                   alignItems: 'center',
@@ -305,7 +308,7 @@ export function StudioLayout() {
           <div style={{ maxWidth: '900px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <Callout variant="info">
               <CalloutTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <BookOpen size={18} color="#0284c7" />
+                <BookOpen size={18} color="var(--studio-primary)" />
                 Step 1: Concept Brief • {activeDrill.title}
               </CalloutTitle>
               <CalloutContent>
@@ -314,11 +317,11 @@ export function StudioLayout() {
             </Callout>
 
             {/* Key Checkpoints Card */}
-            <div style={{ padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))', backgroundColor: 'var(--bg-white, #ffffff)' }}>
-              <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', color: 'var(--txt-black-900, #0f172a)' }}>
+            <div style={{ padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--studio-border)', backgroundColor: 'var(--studio-surface)' }}>
+              <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', color: 'var(--studio-text)' }}>
                 Core Architectural Checkpoints:
               </h3>
-              <ul style={{ margin: 0, paddingLeft: '1.25rem', lineHeight: 1.6, fontSize: '0.875rem', color: 'var(--txt-black-700, #334155)' }}>
+              <ul style={{ margin: 0, paddingLeft: '1.25rem', lineHeight: 1.6, fontSize: '0.875rem', color: 'var(--studio-text-muted)' }}>
                 {activeDrill.conceptBrief.keyPoints.map((pt, i) => (
                   <li key={i} style={{ marginBottom: '0.375rem' }}>{pt}</li>
                 ))}
@@ -349,13 +352,13 @@ export function StudioLayout() {
                   justifyContent: 'space-between',
                   padding: '0.5rem 0.75rem',
                   borderRadius: '6px',
-                  backgroundColor: 'var(--bg-white, #ffffff)',
-                  border: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))',
+                  backgroundColor: 'var(--studio-surface)',
+                  border: '1px solid var(--studio-border)',
                   flexWrap: 'wrap',
                   gap: '0.5rem'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <FileCode size={16} color="#0284c7" />
+                    <FileCode size={16} color="var(--studio-primary)" />
                     <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}><code>{activeDrill.targetFile}</code></span>
                     <Tag variant="primary" size="small">PHP 8.3 / Laravel 12</Tag>
                   </div>
@@ -386,14 +389,14 @@ export function StudioLayout() {
                 <div style={{ 
                   flex: 1, 
                   minHeight: '420px', 
-                  border: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))', 
+                  border: '1px solid var(--studio-border)', 
                   borderRadius: '8px', 
                   overflow: 'hidden' 
                 }}>
                   <Editor
                     height="100%"
                     defaultLanguage="php"
-                    theme="vs-dark"
+                    theme={isDark ? "vs-dark" : "light"}
                     value={userCode}
                     onChange={(val) => setUserCode(val || '')}
                     options={{
@@ -410,6 +413,7 @@ export function StudioLayout() {
               /* Week 4: In-Browser SQLite Query Plan Lab */
               <div style={{ flex: 1 }}>
                 <QueryPlanLab 
+                  isDark={isDark}
                   onExecutionComplete={(passed) => {
                     if (passed) {
                       setDrillCompleted(true);
@@ -436,7 +440,7 @@ export function StudioLayout() {
         {/* STEP 3: Plan & Assertion Analysis */}
         {currentStep === 3 && (
           <div style={{ maxWidth: '900px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.125rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.125rem', color: 'var(--studio-text)' }}>
               Step 3: Verification & Assertion Output
             </h3>
 
@@ -444,7 +448,7 @@ export function StudioLayout() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <Callout variant={testResults.passed ? "success" : "danger"}>
                   <CalloutTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {testResults.passed ? <CheckCircle2 size={18} color="#10b981" /> : <AlertCircle size={18} color="#ef4444" />}
+                    {testResults.passed ? <CheckCircle2 size={18} color="var(--studio-success)" /> : <AlertCircle size={18} color="var(--studio-danger)" />}
                     {testResults.passed ? "All Assertions Passed • Zero N+1 Queries" : "Query Budget Violation • N+1 Queries Detected"}
                   </CalloutTitle>
                   <CalloutContent>
@@ -453,8 +457,8 @@ export function StudioLayout() {
                 </Callout>
 
                 {/* Assertion List Card */}
-                <div style={{ padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))', backgroundColor: 'var(--bg-white, #ffffff)' }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                <div style={{ padding: '1rem', borderRadius: '8px', border: '1px solid var(--studio-border)', backgroundColor: 'var(--studio-surface)' }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--studio-text)' }}>
                     EVALUATED ASSERTIONS:
                   </div>
                   {testResults.assertionResults.map((a: any, i: number) => (
@@ -462,13 +466,14 @@ export function StudioLayout() {
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'space-between',
-                      padding: '0.5rem',
+                      padding: '0.5rem 0.75rem',
                       borderRadius: '4px',
-                      backgroundColor: 'var(--bg-contrast, rgba(0,0,0,0.02))',
+                      backgroundColor: 'var(--studio-surface-subtle)',
                       marginBottom: '0.375rem',
-                      fontSize: '0.8125rem'
+                      fontSize: '0.8125rem',
+                      color: 'var(--studio-text)'
                     }}>
-                      <span>{a.name} — <span style={{ color: 'var(--txt-black-600, #475569)' }}>{a.message}</span></span>
+                      <span>{a.name} — <span style={{ color: 'var(--studio-text-muted)' }}>{a.message}</span></span>
                       <Tag variant={a.passed ? "success" : "danger"} size="small">
                         {a.passed ? "PASS" : "FAIL"}
                       </Tag>
@@ -529,15 +534,15 @@ export function StudioLayout() {
             <div style={{ 
               padding: '0.625rem 1rem', 
               borderRadius: '6px', 
-              backgroundColor: 'var(--bg-white, #ffffff)', 
-              border: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))',
+              backgroundColor: 'var(--studio-surface)', 
+              border: '1px solid var(--studio-border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between'
             }}>
               <div>
-                <strong style={{ fontSize: '0.875rem' }}>Step 5: Visual System Tracer Replay</strong>
-                <span style={{ fontSize: '0.75rem', color: 'var(--txt-black-500, #64748b)', display: 'block' }}>
+                <strong style={{ fontSize: '0.875rem', color: 'var(--studio-text)' }}>Step 5: Visual System Tracer Replay</strong>
+                <span style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)', display: 'block' }}>
                   Interactive state machine visualizing the request journey. Click any node to inspect internal variables and assumptions.
                 </span>
               </div>
@@ -546,7 +551,7 @@ export function StudioLayout() {
               </Tag>
             </div>
 
-            <div style={{ flex: 1, minHeight: '520px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))' }}>
+            <div style={{ flex: 1, minHeight: '520px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--studio-border)' }}>
               <LifecycleTracer />
             </div>
 
@@ -563,11 +568,11 @@ export function StudioLayout() {
 
       {/* Bottom Status Footer with Engine Badges & Invariants */}
       <footer style={{ 
-        borderTop: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))', 
+        borderTop: '1px solid var(--studio-border)', 
         padding: '0.625rem 1.25rem',
-        backgroundColor: 'var(--bg-white, #ffffff)',
+        backgroundColor: 'var(--studio-surface)',
         fontSize: '0.75rem',
-        color: 'var(--txt-black-600, #475569)',
+        color: 'var(--studio-text-muted)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',

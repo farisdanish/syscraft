@@ -18,11 +18,13 @@ import type { SemanticQueryPlanResult } from '../../types';
 
 interface QueryPlanLabProps {
   initialIndexSql?: string;
+  isDark?: boolean;
   onExecutionComplete?: (passed: boolean, plan: SemanticQueryPlanResult) => void;
 }
 
 export function QueryPlanLab({ 
   initialIndexSql = 'CREATE INDEX idx_station_recorded ON weather_observations (station_code, recorded_at DESC);',
+  isDark = true,
   onExecutionComplete 
 }: QueryPlanLabProps) {
   const [db, setDb] = useState<Database | null>(null);
@@ -162,11 +164,12 @@ export function QueryPlanLab({
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'space-between', 
-        padding: '0.625rem 1rem', 
-        borderBottom: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))',
-        backgroundColor: 'var(--bg-white, #ffffff)',
+        padding: '0.75rem 1.25rem', 
+        borderBottom: '1px solid var(--studio-border)',
+        backgroundColor: 'var(--studio-surface)',
+        borderRadius: '8px',
         flexWrap: 'wrap',
-        gap: '0.5rem'
+        gap: '0.75rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Tag variant="success" size="small">
@@ -205,52 +208,54 @@ export function QueryPlanLab({
 
       {/* Portability Notice */}
       <div style={{ 
-        padding: '0.5rem 1rem', 
-        borderRadius: '6px', 
-        backgroundColor: 'rgba(2, 132, 199, 0.06)', 
-        border: '1px solid rgba(2, 132, 199, 0.2)',
+        padding: '0.625rem 1rem', 
+        borderRadius: '8px', 
+        backgroundColor: 'var(--studio-surface-subtle)', 
+        border: '1px solid var(--studio-border)',
         fontSize: '0.75rem',
-        color: 'var(--txt-black-700, #334155)',
+        color: 'var(--studio-text)',
         display: 'flex',
         alignItems: 'center',
-        gap: '0.5rem'
+        gap: '0.625rem'
       }}>
-        <Info size={14} color="#0284c7" />
-        <span>
+        <Info size={16} color="var(--studio-primary)" />
+        <span style={{ lineHeight: 1.45 }}>
           <strong>Database Portability Notice:</strong> SQLite execution plans teach relational mechanics (table scan vs. index seek). They do not predict PostgreSQL cost optimizer decisions.
         </span>
       </div>
 
       {/* Two-Column Editor & Plan Inspector */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1rem', flex: 1, minHeight: '360px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1rem', flex: 1, minHeight: '380px' }}>
         
         {/* Left Column: Monaco SQL Editor */}
         <div style={{ 
-          border: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))',
+          border: '1px solid var(--studio-border)',
           borderRadius: '8px',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: 'var(--bg-white, #ffffff)'
+          backgroundColor: 'var(--studio-surface)'
         }}>
           <div style={{ 
-            padding: '0.5rem 0.75rem', 
-            borderBottom: '1px solid var(--border-washed, rgba(148, 163, 184, 0.15))',
+            padding: '0.625rem 0.875rem', 
+            borderBottom: '1px solid var(--studio-border)',
             fontSize: '0.8125rem',
             fontWeight: 600,
+            color: 'var(--studio-text)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            backgroundColor: 'var(--studio-surface)'
           }}>
             <span>SQL Index Definition</span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--txt-black-500, #64748b)' }}>Esc releases focus</span>
+            <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-muted)' }}>Esc releases focus</span>
           </div>
 
-          <div style={{ flex: 1, minHeight: '220px' }}>
+          <div style={{ flex: 1, minHeight: '260px' }}>
             <Editor
               height="100%"
               defaultLanguage="sql"
-              theme="vs-dark"
+              theme={isDark ? "vs-dark" : "light"}
               value={sqlCode}
               onChange={(val) => setSqlCode(val || '')}
               onMount={(editor) => {
@@ -266,24 +271,24 @@ export function QueryPlanLab({
             />
           </div>
 
-          <div style={{ padding: '0.5rem 0.75rem', borderTop: '1px solid var(--border-washed, rgba(148, 163, 184, 0.15))', fontSize: '0.75rem', color: 'var(--txt-black-600, #475569)' }}>
+          <div style={{ padding: '0.625rem 0.875rem', borderTop: '1px solid var(--studio-border)', fontSize: '0.75rem', color: 'var(--studio-text-muted)', backgroundColor: 'var(--studio-surface-subtle)' }}>
             <strong>Benchmark Target:</strong> <code>SELECT ... WHERE station_code = 'STN-MY-042' ORDER BY recorded_at DESC LIMIT 50;</code>
           </div>
         </div>
 
         {/* Right Column: Query Plan Comparison & Semantic Nodes */}
         <div style={{ 
-          border: '1px solid var(--border-washed, rgba(148, 163, 184, 0.2))',
+          border: '1px solid var(--studio-border)',
           borderRadius: '8px',
-          padding: '1rem',
-          backgroundColor: 'var(--bg-white, #ffffff)',
+          padding: '1.25rem',
+          backgroundColor: 'var(--studio-surface)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.75rem',
+          gap: '0.875rem',
           overflowY: 'auto'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>Semantic Plan Analysis</span>
+            <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--studio-text)' }}>Semantic Plan Analysis</span>
             {optimizationStatus && (
               <Tag variant={optimizationStatus.passed ? 'success' : 'danger'} size="small">
                 {optimizationStatus.passed ? 'OPTIMIZED' : 'UNOPTIMIZED'}
@@ -305,34 +310,34 @@ export function QueryPlanLab({
           )}
 
           {/* Comparison Cards: Before vs After */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
             
             {/* Baseline Card */}
             <div style={{ 
-              padding: '0.625rem', 
-              borderRadius: '6px', 
-              backgroundColor: 'rgba(239, 68, 68, 0.06)', 
-              border: '1px solid rgba(239, 68, 68, 0.2)',
+              padding: '0.75rem', 
+              borderRadius: '8px', 
+              backgroundColor: 'rgba(239, 68, 68, 0.08)', 
+              border: '1px solid rgba(239, 68, 68, 0.25)',
               fontSize: '0.75rem'
             }}>
-              <div style={{ fontWeight: 600, color: '#dc2626', marginBottom: '4px' }}>1. Baseline (Unindexed):</div>
-              <code>SCAN TABLE weather_observations</code>
-              <div style={{ marginTop: '4px', color: 'var(--txt-black-600, #475569)' }}>Complexity: O(N) full scan (2,500 rows)</div>
+              <div style={{ fontWeight: 700, color: 'var(--studio-danger)', marginBottom: '4px' }}>1. Baseline (Unindexed):</div>
+              <code style={{ color: 'var(--studio-text)', display: 'block', wordBreak: 'break-all' }}>SCAN TABLE weather_observations</code>
+              <div style={{ marginTop: '6px', color: 'var(--studio-text-muted)' }}>Complexity: O(N) full scan (2,500 rows)</div>
             </div>
 
             {/* Current Plan Card */}
             <div style={{ 
-              padding: '0.625rem', 
-              borderRadius: '6px', 
-              backgroundColor: currentPlan?.usesFullTableScan ? 'rgba(239, 68, 68, 0.06)' : 'rgba(16, 185, 129, 0.08)', 
-              border: `1px solid ${currentPlan?.usesFullTableScan ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.3)'}`,
+              padding: '0.75rem', 
+              borderRadius: '8px', 
+              backgroundColor: currentPlan?.usesFullTableScan ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)', 
+              border: `1px solid ${currentPlan?.usesFullTableScan ? 'rgba(239, 68, 68, 0.25)' : 'rgba(16, 185, 129, 0.35)'}`,
               fontSize: '0.75rem'
             }}>
-              <div style={{ fontWeight: 600, color: currentPlan?.usesFullTableScan ? '#dc2626' : '#059669', marginBottom: '4px' }}>
+              <div style={{ fontWeight: 700, color: currentPlan?.usesFullTableScan ? 'var(--studio-danger)' : 'var(--studio-success)', marginBottom: '4px' }}>
                 2. Current Plan:
               </div>
-              <code>{currentPlan?.rawExplain[0] || 'Awaiting execution'}</code>
-              <div style={{ marginTop: '4px', color: 'var(--txt-black-600, #475569)' }}>
+              <code style={{ color: 'var(--studio-text)', display: 'block', wordBreak: 'break-all' }}>{currentPlan?.rawExplain[0] || 'Awaiting execution'}</code>
+              <div style={{ marginTop: '6px', color: 'var(--studio-text-muted)' }}>
                 {currentPlan?.usesFullTableScan ? 'Complexity: O(N)' : 'Complexity: O(log N) binary seek'}
               </div>
             </div>
@@ -341,19 +346,21 @@ export function QueryPlanLab({
 
           {/* Parsed Nodes List */}
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--txt-black-500, #64748b)', marginBottom: '4px' }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--studio-text-muted)', marginBottom: '6px' }}>
               PARSED PLAN NODES:
             </div>
             {currentPlan?.nodes.map((node, i) => (
               <div key={i} style={{ 
                 fontSize: '0.75rem', 
-                padding: '0.375rem 0.5rem', 
-                backgroundColor: 'var(--bg-contrast, rgba(0,0,0,0.02))',
-                borderRadius: '4px',
+                padding: '0.5rem 0.625rem', 
+                backgroundColor: 'var(--studio-surface-subtle)',
+                border: '1px solid var(--studio-border)',
+                borderRadius: '6px',
                 marginBottom: '4px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between'
+                justifyContent: 'space-between',
+                color: 'var(--studio-text)'
               }}>
                 <span>
                   <strong>{node.operation.toUpperCase()}:</strong> {node.table} {node.index ? `(Index: ${node.index})` : ''}
@@ -367,8 +374,8 @@ export function QueryPlanLab({
 
           {/* Supplementary Timing Note */}
           {currentPlan?.executionTimeMs !== undefined && (
-            <div style={{ fontSize: '0.75rem', color: 'var(--txt-black-500, #64748b)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Cpu size={12} />
+            <div style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Cpu size={13} color="var(--studio-primary)" />
               <span>Supplementary Warm Benchmark: ~{currentPlan.executionTimeMs.toFixed(2)}ms (Informational only; host-dependent)</span>
             </div>
           )}

@@ -1,29 +1,90 @@
 @import "@govtechmy/myds-style/full.css";
 @import "@xyflow/react/dist/style.css";
 
-/* Studio Root & High-Contrast Typography */
+/* ==========================================================================
+   SysCraft Studio Design System (studio-ui-ux)
+   High-contrast, institutional technical palette for Light and Dark modes.
+   ========================================================================== */
+
 :root {
+  /* Surfaces */
+  --studio-bg: #f8fafc;
+  --studio-surface: #ffffff;
+  --studio-surface-hover: #f1f5f9;
+  --studio-surface-subtle: #f8fafc;
+  
+  /* Borders */
+  --studio-border: #e2e8f0;
+  --studio-border-strong: #cbd5e1;
+  --studio-border-focus: #0284c7;
+
+  /* Typography */
+  --studio-text: #0f172a;
+  --studio-text-muted: #64748b;
+  --studio-text-faint: #94a3b8;
+
+  /* Accents */
+  --studio-primary: #0284c7;
+  --studio-primary-glow: rgba(2, 132, 199, 0.15);
+  --studio-success: #059669;
+  --studio-warning: #d97706;
+  --studio-danger: #dc2626;
+  
+  /* Shadows */
+  --studio-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --studio-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
+  --studio-shadow-glow: 0 0 16px rgba(2, 132, 199, 0.35);
+
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
+.dark {
+  /* Surfaces */
+  --studio-bg: #090d16;
+  --studio-surface: #111827;
+  --studio-surface-hover: #1f2937;
+  --studio-surface-subtle: #0d131f;
+  
+  /* Borders */
+  --studio-border: rgba(148, 163, 184, 0.15);
+  --studio-border-strong: rgba(148, 163, 184, 0.3);
+  --studio-border-focus: #38bdf8;
+
+  /* Typography */
+  --studio-text: #f8fafc;
+  --studio-text-muted: #94a3b8;
+  --studio-text-faint: #64748b;
+
+  /* Accents */
+  --studio-primary: #38bdf8;
+  --studio-primary-glow: rgba(56, 189, 248, 0.25);
+  --studio-success: #10b981;
+  --studio-warning: #f59e0b;
+  --studio-danger: #f43f5e;
+  
+  /* Shadows */
+  --studio-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --studio-shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.55);
+  --studio-shadow-glow: 0 0 20px rgba(56, 189, 248, 0.4);
+
+  color-scheme: dark;
+}
+
+/* Base Document Styles */
 html, body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background-color: var(--bg-washed, #f8fafc);
-  color: var(--txt-black-900, #0f172a);
+  background-color: var(--studio-bg);
+  color: var(--studio-text);
   transition: background-color 0.2s ease, color 0.2s ease;
+  -webkit-font-smoothing: antialiased;
 }
 
-html.dark body {
-  background-color: var(--bg-washed, #0b0f17);
-  color: var(--txt-black-900, #f8fafc);
-}
-
-/* Accessible Focus Indicators */
+/* High Contrast Accessible Focus Indicators */
 :focus-visible {
-  outline: 3px solid var(--border-primary-500, #0284c7);
+  outline: 3px solid var(--studio-border-focus);
   outline-offset: 2px;
 }
 
@@ -34,4 +95,44 @@ html.dark body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* React Flow Theming Overrides */
+.react-flow__background {
+  background-color: var(--studio-bg) !important;
+}
+
+.react-flow__controls {
+  border-radius: 8px !important;
+  box-shadow: var(--studio-shadow-md) !important;
+  border: 1px solid var(--studio-border) !important;
+  overflow: hidden;
+  background-color: var(--studio-surface) !important;
+}
+
+.react-flow__controls-button {
+  background-color: var(--studio-surface) !important;
+  border-bottom: 1px solid var(--studio-border) !important;
+  color: var(--studio-text) !important;
+  fill: var(--studio-text) !important;
+}
+
+.react-flow__controls-button:hover {
+  background-color: var(--studio-surface-hover) !important;
+}
+
+/* Custom Scrollbar for Studio Containers */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--studio-border-strong);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--studio-text-muted);
 }
