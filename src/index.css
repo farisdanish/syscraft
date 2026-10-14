@@ -339,14 +339,18 @@ html, body {
   padding: 1.25rem 1.75rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
+}
+
+.home-main > * {
+  flex-shrink: 0;
 }
 
 .home-hero {
   background: linear-gradient(135deg, var(--studio-surface) 0%, var(--studio-surface-subtle) 100%);
   border: 1px solid var(--studio-border);
   border-radius: 10px;
-  padding: 1.25rem 1.5rem;
+  padding: 1.1rem 1.35rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -354,6 +358,16 @@ html, body {
   box-shadow: var(--studio-shadow-sm);
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .home-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
 }
 
 .home-hero::before {

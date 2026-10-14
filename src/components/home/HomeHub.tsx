@@ -332,7 +332,7 @@ export function HomeHub({
       </header>
 
       {/* Main Dashboard Content */}
-      <main className="home-main" style={{ gap: '1.25rem' }}>
+      <main className="home-main" style={{ gap: '1rem' }}>
         {/* Banner Notification Toast */}
         {notification && (
           <div style={{ position: 'relative' }}>
@@ -359,11 +359,11 @@ export function HomeHub({
         {/* Hero Banner: High-Level, Outcome-Oriented */}
         <section className="home-hero" aria-label="Curriculum Overview">
           <div style={{ maxWidth: '840px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem', flexWrap: 'wrap' }}>
               <Tag variant="primary" size="small">7-Week Backend Engineering Track</Tag>
               <Tag variant="success" size="small">Hands-On Systems Practice</Tag>
             </div>
-            <h2 style={{ margin: '0 0 0.45rem 0', fontSize: '1.35rem', fontWeight: 700, color: 'var(--studio-text)', lineHeight: 1.25 }}>
+            <h2 style={{ margin: '0 0 0.45rem 0', fontSize: '1.4rem', fontWeight: 700, color: 'var(--studio-text)', lineHeight: 1.3 }}>
               Master Backend Engineering &amp; Systems Design
             </h2>
             <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--studio-text-muted)', lineHeight: 1.55 }}>
@@ -377,7 +377,7 @@ export function HomeHub({
               variant="primary-fill"
               size="medium"
               onClick={() => onLaunchWorkbench(inProgressCount > 0 ? (taskStates['w4-btree-indexing']?.status === 'in_progress' ? 4 : 1) : 1)}
-              style={{ fontWeight: 600 }}
+              style={{ fontWeight: 600, whiteSpace: 'nowrap' }}
             >
               <Play size={15} style={{ marginRight: '6px' }} />
               {inProgressCount > 0 ? 'Resume In-Progress Drill' : 'Start Week 1: Laravel Internals'}
@@ -388,6 +388,7 @@ export function HomeHub({
               variant="default-outline"
               size="small"
               onClick={onNavigateArchitecture}
+              style={{ whiteSpace: 'nowrap' }}
             >
               <Layers size={13} style={{ marginRight: '5px' }} />
               How It Works &amp; Architecture →
@@ -400,13 +401,13 @@ export function HomeHub({
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '0.85rem'
+            gap: '0.75rem'
           }}>
             <div style={{
               backgroundColor: 'var(--studio-surface)',
               border: '1px solid var(--studio-border)',
               borderRadius: '8px',
-              padding: '0.75rem 0.95rem',
+              padding: '0.6rem 0.85rem',
               display: 'flex',
               alignItems: 'center',
               gap: '0.75rem',
@@ -427,7 +428,7 @@ export function HomeHub({
               backgroundColor: 'var(--studio-surface)',
               border: '1px solid var(--studio-border)',
               borderRadius: '8px',
-              padding: '0.75rem 0.95rem',
+              padding: '0.6rem 0.85rem',
               display: 'flex',
               alignItems: 'center',
               gap: '0.75rem',
@@ -448,7 +449,7 @@ export function HomeHub({
               backgroundColor: 'var(--studio-surface)',
               border: '1px solid var(--studio-border)',
               borderRadius: '8px',
-              padding: '0.75rem 0.95rem',
+              padding: '0.6rem 0.85rem',
               display: 'flex',
               alignItems: 'center',
               gap: '0.75rem',
@@ -469,7 +470,7 @@ export function HomeHub({
               backgroundColor: 'var(--studio-surface)',
               border: '1px solid var(--studio-border)',
               borderRadius: '8px',
-              padding: '0.75rem 0.95rem',
+              padding: '0.6rem 0.85rem',
               display: 'flex',
               alignItems: 'center',
               gap: '0.75rem',
@@ -493,10 +494,10 @@ export function HomeHub({
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '0.85rem'
+            gap: '0.75rem'
           }}>
             {/* Progress % */}
-            <div className="home-metric-card" style={{ padding: '0.75rem 1rem' }}>
+            <div className="home-metric-card" style={{ padding: '0.6rem 0.85rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span className="home-metric-label">Curriculum Mastery</span>
                 <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--studio-primary)' }}>
@@ -523,7 +524,7 @@ export function HomeHub({
             </div>
 
             {/* In-Progress Modules */}
-            <div className="home-metric-card" style={{ padding: '0.75rem 1rem' }}>
+            <div className="home-metric-card" style={{ padding: '0.6rem 0.85rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span className="home-metric-label">Active Drill</span>
                 <Clock size={14} color="var(--studio-primary)" style={{ opacity: 0.8 }} />
@@ -537,7 +538,7 @@ export function HomeHub({
             </div>
 
             {/* Sunday Review Queue */}
-            <div className="home-metric-card" style={{ padding: '0.75rem 1rem' }}>
+            <div className="home-metric-card" style={{ padding: '0.6rem 0.85rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span className="home-metric-label">Sunday Oral Defense</span>
                 <Flag size={14} color="var(--studio-warning)" style={{ opacity: 0.8 }} />
