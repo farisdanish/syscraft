@@ -20,6 +20,7 @@ interface QueryPlanLabProps {
   initialIndexSql?: string;
   isDark?: boolean;
   onCodeChange?: (sql: string) => void;
+  onVersionDetected?: (version: string) => void;
   onExecutionComplete?: (passed: boolean, plan: SemanticQueryPlanResult) => void;
 }
 
@@ -27,6 +28,7 @@ export function QueryPlanLab({
   initialIndexSql = '',
   isDark = true,
   onCodeChange,
+  onVersionDetected,
   onExecutionComplete 
 }: QueryPlanLabProps) {
   const [db, setDb] = useState<Database | null>(null);
@@ -36,6 +38,10 @@ export function QueryPlanLab({
   const [optimizationStatus, setOptimizationStatus] = useState<{ passed: boolean; message: string } | null>(null);
   const [isSeeding, setIsSeeding] = useState<boolean>(true);
   const [isRunning, setIsRunning] = useState<boolean>(false);
+
+  useEffect(() => {
+    setSqlCode(initialIndexSql);
+  }, [initialIndexSql]);
 
   const editorRef = useRef<any>(null);
 
@@ -58,7 +64,9 @@ export function QueryPlanLab({
       const database = new SQL.Database();
       const verRes = database.exec('SELECT sqlite_version() AS version;');
       if (verRes[0]?.values[0]) {
-        setSqlVersion(String(verRes[0].values[0][0]));
+        const detected = String(verRes[0].values[0][0]);
+        setSqlVersion(detected);
+        onVersionDetected?.(detected);
       }
 
       // Create Table

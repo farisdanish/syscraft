@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import Editor from '@monaco-editor/react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { Button } from '@govtechmy/myds-react/button';
@@ -32,11 +32,9 @@ import {
   type BridgeRunResult 
 } from '../../services/bridgeClient';
 import { 
-  LifecycleTracer, 
   LARAVEL_LIFECYCLE_STEPS, 
   BTREE_INDEX_TRACER_STEPS 
-} from '../tracer/LifecycleTracer';
-import { QueryPlanLab } from '../database/QueryPlanLab';
+} from '../tracer/tracerSteps';
 import { OralRubricDialog } from '../rubric/OralRubricDialog';
 import { 
   saveDrillProgress, 
@@ -45,6 +43,13 @@ import {
   exportEnvelopeJSON, 
   importEnvelopeJSON 
 } from '../../services/storage';
+
+const LifecycleTracer = lazy(() => 
+  import('../tracer/LifecycleTracer').then(m => ({ default: m.LifecycleTracer }))
+);
+const QueryPlanLab = lazy(() => 
+  import('../database/QueryPlanLab').then(m => ({ default: m.QueryPlanLab }))
+);
 
 export function StudioLayout() {
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -57,6 +62,14 @@ export function StudioLayout() {
   });
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
   const [currentStep, setCurrentStep] = useState<WorkflowStep>(1);
+  const [highestStepReached, setHighestStepReached] = useState<number>(1);
+  const [verificationSource, setVerificationSource] = useState<'simulation' | 'local-runtime' | 'self-reported'>('simulation');
+  const [runtimeSqlVersion, setRuntimeSqlVersion] = useState<string>('3.45.2');
+
+  const goToStep = (step: WorkflowStep) => {
+    setCurrentStep(step);
+    setHighestStepReached(prev => Math.max(prev, step));
+  };
   
   // Drill State
   const activeDrill: DrillDefinition = selectedWeek === 1 ? WEEK_1_DRILL : WEEK_4_DRILL;
@@ -110,12 +123,20 @@ export function StudioLayout() {
     setTestResults(null);
     setTier3Result(null);
     setCurrentStep(1);
+    setHighestStepReached(1);
   };
 
   // Load drill progress & Sunday count
   const refreshProgress = useCallback(async () => {
     const prog = await getDrillProgress(activeDrill.id);
-    setDrillCompleted(prog?.completed ?? false);
+    const isComp = prog?.completed ?? false;
+    setDrillCompleted(isComp);
+    if (prog?.verificationSource) {
+      setVerificationSource(prog.verificationSource);
+    }
+    if (isComp) {
+      setHighestStepReached(prev => Math.max(prev, 3));
+    }
     const hes = await getSundayHesitations();
     setSundayCount(hes.length);
   }, [activeDrill.id]);
@@ -125,7 +146,14 @@ export function StudioLayout() {
     void Promise.resolve().then(async () => {
       const prog = await getDrillProgress(activeDrill.id);
       if (!ignore) {
-        setDrillCompleted(prog?.completed ?? false);
+        const isComp = prog?.completed ?? false;
+        setDrillCompleted(isComp);
+        if (prog?.verificationSource) {
+          setVerificationSource(prog.verificationSource);
+        }
+        if (isComp) {
+          setHighestStepReached(prev => Math.max(prev, 3));
+        }
         const hes = await getSundayHesitations();
         setSundayCount(hes.length);
       }
@@ -145,13 +173,14 @@ export function StudioLayout() {
       const evalResult = evaluateLaravelDrill(userCode);
       setTestResults(evalResult);
       if (evalResult.passed) {
+        setVerificationSource('simulation');
         setDrillCompleted(true);
         await saveDrillProgress(activeDrill.id, true, true, 'simulation');
         setPoliteNotice('All assertions passed! Query budget satisfied with zero per-row queries.');
       } else {
         setPoliteNotice('Assertion failure: N+1 query loop detected.');
       }
-      setCurrentStep(3); // Auto-advance to Step 3 (Plan & Assertion Analysis)
+      goToStep(3); // Auto-advance to Step 3 (Plan & Assertion Analysis)
     }
 
     setIsEvaluating(false);
@@ -170,13 +199,14 @@ export function StudioLayout() {
     setIsRunningDocker(false);
 
     if (result.passed) {
+      setVerificationSource('local-runtime');
       setDrillCompleted(true);
       await saveDrillProgress(activeDrill.id, true, true, 'local-runtime');
       setPoliteNotice(`Tier 3 Docker verification passed for ${activeDrill.title}`);
-      setCurrentStep(3);
+      goToStep(3);
     } else {
       setPoliteNotice('Tier 3 Docker test run failed assertions.');
-      setCurrentStep(3);
+      goToStep(3);
     }
     refreshProgress();
   };
@@ -350,7 +380,7 @@ export function StudioLayout() {
             const isActive = s.step === currentStep;
             const isCompleted = s.step < currentStep;
             const maxAccessibleStep = drillCompleted ? 5 : 2;
-            const isLocked = s.step > maxAccessibleStep;
+            const isLocked = s.step > maxAccessibleStep || s.step > highestStepReached + 1;
 
             return (
               <button
@@ -360,9 +390,9 @@ export function StudioLayout() {
                 disabled={isLocked}
                 onClick={() => {
                   if (!isLocked) {
-                    setCurrentStep(s.step);
+                    goToStep(s.step);
                   } else {
-                    setPoliteNotice('Complete Step 2 drill to unlock subsequent analysis & defense steps.');
+                    setPoliteNotice('Complete earlier drill prerequisites to unlock subsequent steps.');
                   }
                 }}
                 style={{
@@ -434,7 +464,7 @@ export function StudioLayout() {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.25rem' }}>
-                <Button variant="primary-fill" size="medium" onClick={() => setCurrentStep(2)}>
+                <Button variant="primary-fill" size="medium" onClick={() => goToStep(2)}>
                   Proceed to Step 2: Focused Drill
                   <ChevronRight size={16} style={{ marginLeft: '4px' }} />
                 </Button>
@@ -557,7 +587,7 @@ export function StudioLayout() {
                         <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--studio-text)' }}>
                           <code>{activeDrill.targetFile}</code>
                         </span>
-                        <Tag variant="primary" size="small">PHP 8.3 / Laravel 12</Tag>
+                        <Tag variant="primary" size="small">PHP 8.3 (Eloquent Testbed Prototype)</Tag>
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -669,27 +699,32 @@ export function StudioLayout() {
                   </div>
                 )}
                 <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                  <QueryPlanLab 
-                    initialIndexSql={userCode}
-                    isDark={isDark}
-                    onCodeChange={(newSql) => setUserCode(newSql)}
-                    onExecutionComplete={(passed) => {
-                      if (passed) {
-                        setDrillCompleted(true);
-                        saveDrillProgress(activeDrill.id, true, true, 'simulation');
-                      }
-                    }}
-                  />
+                  <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--studio-text-muted)' }}>Loading SQLite WASM Lab...</div>}>
+                    <QueryPlanLab 
+                      initialIndexSql={userCode}
+                      isDark={isDark}
+                      onCodeChange={(newSql) => setUserCode(newSql)}
+                      onVersionDetected={(ver) => setRuntimeSqlVersion(ver)}
+                      onExecutionComplete={(passed) => {
+                        if (passed) {
+                          setVerificationSource('simulation');
+                          setDrillCompleted(true);
+                          saveDrillProgress(activeDrill.id, true, true, 'simulation');
+                          goToStep(3);
+                        }
+                      }}
+                    />
+                  </Suspense>
                 </div>
               </div>
             )}
 
             <div className="studio-step-actions">
-              <Button variant="default-outline" size="small" onClick={() => setCurrentStep(1)}>
+              <Button variant="default-outline" size="small" onClick={() => goToStep(1)}>
                 <ChevronLeft size={14} style={{ marginRight: '4px' }} />
                 Back to Concept
               </Button>
-              <Button variant="primary-fill" size="small" onClick={() => setCurrentStep(3)}>
+              <Button variant="primary-fill" size="small" onClick={() => goToStep(3)}>
                 Go to Step 3: Plan Analysis
                 <ChevronRight size={14} style={{ marginLeft: '4px' }} />
               </Button>
@@ -719,7 +754,7 @@ export function StudioLayout() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <Tag variant={tier3Result.exitCode === 0 ? "success" : "danger"} size="small">
-                        {tier3Result.exitCode === 0 ? "Tier 3: [Automated Pass]" : "Tier 3: [Failed]"}
+                        {tier3Result.exitCode === 0 ? "Tier 3: [PostgreSQL Runtime Passed]" : "Tier 3: [Failed]"}
                       </Tag>
                       <strong style={{ fontSize: '0.875rem', color: 'var(--studio-text)' }}>
                         syscraft-runner:1.0.0 (Isolated Docker syscraft-testnet)
@@ -794,11 +829,11 @@ export function StudioLayout() {
               ) : null}
 
               <div className="studio-step-actions">
-                <Button variant="default-outline" size="small" onClick={() => setCurrentStep(2)}>
+                <Button variant="default-outline" size="small" onClick={() => goToStep(2)}>
                   <ChevronLeft size={14} style={{ marginRight: '4px' }} />
                   Back to Code Drill
                 </Button>
-                <Button variant="primary-fill" size="small" onClick={() => setCurrentStep(4)}>
+                <Button variant="primary-fill" size="small" onClick={() => goToStep(4)}>
                   Proceed to Step 4: Oral Recall
                   <ChevronRight size={14} style={{ marginLeft: '4px' }} />
                 </Button>
@@ -823,11 +858,11 @@ export function StudioLayout() {
               />
 
               <div className="studio-step-actions">
-                <Button variant="default-outline" size="small" onClick={() => setCurrentStep(3)}>
+                <Button variant="default-outline" size="small" onClick={() => goToStep(3)}>
                   <ChevronLeft size={14} style={{ marginRight: '4px' }} />
                   Back to Assertions
                 </Button>
-                <Button variant="primary-fill" size="small" onClick={() => setCurrentStep(5)}>
+                <Button variant="primary-fill" size="small" onClick={() => goToStep(5)}>
                   Proceed to Step 5: Tracer Replay
                   <ChevronRight size={14} style={{ marginLeft: '4px' }} />
                 </Button>
@@ -867,16 +902,18 @@ export function StudioLayout() {
             </div>
 
             <div style={{ flex: 1, minHeight: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--studio-border)' }}>
-              <LifecycleTracer 
-                steps={activeDrill.week === 1 ? LARAVEL_LIFECYCLE_STEPS : BTREE_INDEX_TRACER_STEPS}
-                engineBadge={activeDrill.week === 1 ? "Tier 2: Deterministic Simulation" : "Tier 1: SQLite 3.45.2 (WASM Engine)"}
-                badgeVariant={activeDrill.week === 1 ? "primary" : "success"}
-                packetName={activeDrill.week === 1 ? "Active Ingress Packet" : "Active Cursor Pointer"}
-              />
+              <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--studio-text-muted)' }}>Loading Lifecycle Tracer...</div>}>
+                <LifecycleTracer 
+                  steps={activeDrill.week === 1 ? LARAVEL_LIFECYCLE_STEPS : BTREE_INDEX_TRACER_STEPS}
+                  engineBadge={activeDrill.week === 1 ? "Tier 2: Deterministic Simulation" : `Tier 1: SQLite ${runtimeSqlVersion} (WASM Engine)`}
+                  badgeVariant={activeDrill.week === 1 ? "primary" : "success"}
+                  packetName={activeDrill.week === 1 ? "Active Ingress Packet" : "Active Cursor Pointer"}
+                />
+              </Suspense>
             </div>
 
             <div className="studio-step-actions">
-              <Button variant="default-outline" size="small" onClick={() => setCurrentStep(4)}>
+              <Button variant="default-outline" size="small" onClick={() => goToStep(4)}>
                 <ChevronLeft size={14} style={{ marginRight: '4px' }} />
                 Back to Oral Rubric
               </Button>
@@ -891,13 +928,15 @@ export function StudioLayout() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Tag variant={tier3Result && tier3Result.exitCode === 0 ? "success" : activeDrill.week === 1 ? "primary" : "success"} size="small">
             {tier3Result && tier3Result.exitCode === 0 
-              ? "[Tier 3: Verified syscraft-runner:1.0.0]"
+              ? "[Tier 3: PostgreSQL 16.4 Runtime Passed]"
               : activeDrill.week === 1 
                 ? "[Tier 2: Deterministic Simulation]" 
-                : "[Engine: SQLite 3.45.2 (WASM)]"}
+                : `[Engine: SQLite ${runtimeSqlVersion} (WASM)]`}
           </Tag>
           <Tag variant={drillCompleted ? "success" : "default"} size="small">
-            {drillCompleted ? "Automated Pass" : "In Progress"}
+            {drillCompleted 
+              ? (verificationSource === 'local-runtime' ? "PostgreSQL Runtime Passed" : "Simulation Passed") 
+              : "In Progress"}
           </Tag>
           <Tag variant={bridgeStatus.connected ? "success" : "default"} size="small">
             {bridgeStatus.connected ? "Bridge: 127.0.0.1:49152 (Online)" : "Bridge: Offline"}
@@ -905,7 +944,7 @@ export function StudioLayout() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span>Target: <strong>Laravel 12.0.1 / PHP 8.3.11</strong></span>
+          <span>Runner: <strong>PHP 8.3.11 / PostgreSQL 16.4 (Testbed Prototype)</strong></span>
           <span>MYDS Standards Compliant</span>
           <span>Tab/Esc Navigation Enabled</span>
         </div>

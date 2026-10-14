@@ -2,12 +2,14 @@
 <?php
 
 /**
- * SysCraft Tier 3 Canonical Testbed Runner
- * Pinned to Laravel 12.0.1 / PHP 8.3.11 / PostgreSQL 16.4
+ * SysCraft Tier 3 Deterministic Testbed Runner
+ * Pinned to PHP 8.3.11 / PostgreSQL 16.4 (Runtime Testbed Prototype)
  */
 
-$version = 'Laravel Framework 12.0.1 (SysCraft Pinned Testbed)';
+$version = 'SysCraft Testbed Prototype 1.0.0 (PHP ' . PHP_VERSION . ')';
 $phpVersion = PHP_VERSION;
+
+require_once __DIR__ . '/bootstrap/models.php';
 
 // Parse CLI Arguments
 $args = array_slice($argv, 1);
@@ -19,9 +21,9 @@ if ($command === '--version' || $command === '-V') {
 }
 
 if ($command === 'list') {
-    echo "SysCraft Testbed CLI - Pinned Laravel 12.0.1 / PHP 8.3.11\n\n";
+    echo "SysCraft Testbed CLI - PHP 8.3.11 / PostgreSQL 16.4 Testbed Prototype\n\n";
     echo "Available commands:\n";
-    echo "  test    Run PHPUnit / Pest test suites against PostgreSQL 16.4\n";
+    echo "  test    Run query-budget and query-plan assertions against PostgreSQL 16.4\n";
     echo "  migrate Setup PostgreSQL schema\n";
     exit(0);
 }
@@ -69,20 +71,26 @@ function ensureFixtures(PDO $pdo): void {
         );
     ");
 
-    // Check if authors seeded
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM authors");
-    if ((int)$stmt->fetch()['count'] === 0) {
+    // Check if 25 posts are seeded for accurate query budget testing (1 + 25 + 25 = 51 queries)
+    $stmt = $pdo->query("SELECT COUNT(*) as count FROM posts");
+    if ((int)$stmt->fetch()['count'] < 25) {
+        $pdo->exec("TRUNCATE TABLE comments, posts, authors RESTART IDENTITY CASCADE;");
         $pdo->exec("
-            INSERT INTO authors (id, name) VALUES (1, 'Ahmad Zaki'), (2, 'Siti Nurhaliza'), (3, 'Tan Sri Lee');
-            INSERT INTO posts (id, author_id, title, content) VALUES 
-                (1, 1, 'Architecture Principles in GovTech', 'Scalable systems overview'),
-                (2, 2, 'Design Systems in Practice', 'MYDS tokens implementation'),
-                (3, 1, 'PostgreSQL EXPLAIN Mastery', 'B-Tree deep dive');
-            INSERT INTO comments (post_id, body) VALUES 
-                (1, 'Great overview'), (1, 'Very helpful'), 
-                (2, 'Colors look crisp'), 
-                (3, 'Index scan vs Seq scan clarified');
+            INSERT INTO authors (id, name) VALUES 
+                (1, 'Ahmad Zaki'), 
+                (2, 'Siti Nurhaliza'), 
+                (3, 'Tan Sri Lee');
         ");
+
+        $postStmt = $pdo->prepare("INSERT INTO posts (id, author_id, title, content) VALUES (?, ?, ?, ?);");
+        $commentStmt = $pdo->prepare("INSERT INTO comments (post_id, body) VALUES (?, ?);");
+
+        for ($i = 1; $i <= 25; $i++) {
+            $authorId = (($i - 1) % 3) + 1;
+            $postStmt->execute([$i, $authorId, "Architectural Post #{$i}", "Deep-dive systems content for post {$i}"]);
+            $commentStmt->execute([$i, "First comment on post #{$i}"]);
+            $commentStmt->execute([$i, "Second comment on post #{$i}"]);
+        }
     }
 
     // 2. Weather Observations with 5,000 seeded rows
@@ -97,7 +105,6 @@ function ensureFixtures(PDO $pdo): void {
 
     $weatherCount = (int)$pdo->query("SELECT COUNT(*) as count FROM weather_observations")->fetch()['count'];
     if ($weatherCount < 5000) {
-        // Seed 5,000 deterministic records
         $pdo->beginTransaction();
         $insert = $pdo->prepare("
             INSERT INTO weather_observations (station_code, temperature_c, recorded_at)
@@ -118,6 +125,9 @@ function ensureFixtures(PDO $pdo): void {
     }
 }
 
+// -------------------------------------------------------------
+// Test Execution Engine
+// -------------------------------------------------------------
 if ($command === 'test') {
     $filter = '';
     foreach ($args as $arg) {
@@ -135,76 +145,138 @@ if ($command === 'test') {
     }
 
     ensureFixtures($pdo);
+    \App\Models\Post::setPdo($pdo);
 
     // Test Suite 1: PostNPlusOneTest (Week 1 Eager Loading)
     if ($filter === 'PostNPlusOneTest' || empty($filter)) {
         $submissionPath = '/workspace/submission/PostController.php';
-        $code = '';
-        if (file_exists($submissionPath)) {
-            $code = file_get_contents($submissionPath);
+        if (!file_exists($submissionPath)) {
+            echo "\n\033[41m\033[37m FAIL \033[0m \033[1mTests\\Feature\\PostNPlusOneTest\033[0m\n";
+            echo "  \033[31m⨯\033[0m \033[90msubmission file not found at {$submissionPath}\033[0m\n";
+            exit(1);
         }
 
-        // Validate learner code for eager loading
-        $hasEagerLoading = false;
-        if (!empty($code)) {
-            $hasEagerLoading = (
-                preg_match('/Post::with\s*\(\s*\[?\s*[\'"]author[\'"]\s*,\s*[\'"]comments[\'"]\s*\]?\s*\)/', $code) ||
-                preg_match('/Post::with\s*\(\s*\[?\s*[\'"]comments[\'"]\s*,\s*[\'"]author[\'"]\s*\]?\s*\)/', $code) ||
-                (str_contains($code, 'with(') && str_contains($code, 'author') && str_contains($code, 'comments'))
-            );
+        $rawCode = file_get_contents($submissionPath);
+        
+        $cleanCode = preg_replace('/<\?php\s*/', '', $rawCode);
+        $cleanCode = preg_replace('/namespace\s+App\\\\Http\\\\Controllers\s*;/', '', $cleanCode);
+        $cleanCode = preg_replace('/use\s+App\\\\Models\\\\Post\s*;/', '', $cleanCode);
+        $cleanCode = preg_replace('/use\s+Illuminate\\\\Http\\\\Request\s*;/', '', $cleanCode);
+        $cleanCode = preg_replace('/use\s+Illuminate\\\\Http\\\\JsonResponse\s*;/', '', $cleanCode);
+        $cleanCode = preg_replace('/class\s+PostController\b/', 'class LearnerPostController', $cleanCode);
+
+        try {
+            eval($cleanCode);
+        } catch (Throwable $e) {
+            echo "\n\033[41m\033[37m FAIL \033[0m \033[1mTests\\Feature\\PostNPlusOneTest\033[0m\n";
+            echo "  \033[31m⨯\033[0m \033[90mphp syntax error in submitted PostController.php\033[0m\n";
+            echo "    \033[31m" . $e->getMessage() . "\033[0m\n";
+            exit(1);
         }
 
-        if (!$hasEagerLoading) {
+        if (!class_exists('LearnerPostController')) {
+            echo "\n\033[41m\033[37m FAIL \033[0m \033[1mTests\\Feature\\PostNPlusOneTest\033[0m\n";
+            echo "  \033[31m⨯\033[0m \033[90mclass PostController not defined in submission\033[0m\n";
+            exit(1);
+        }
+
+        // Execute the learner controller with real query interceptor
+        QueryLog::reset();
+        $controller = new LearnerPostController();
+        $request = new \Illuminate\Http\Request();
+
+        try {
+            $response = $controller->index($request);
+        } catch (Throwable $e) {
+            echo "\n\033[41m\033[37m FAIL \033[0m \033[1mTests\\Feature\\PostNPlusOneTest\033[0m\n";
+            echo "  \033[31m⨯\033[0m \033[90mruntime exception executing index()\033[0m\n";
+            echo "    \033[31m" . $e->getMessage() . "\033[0m\n";
+            exit(1);
+        }
+
+        $executedQueries = QueryLog::$queries;
+        $queryCount = count($executedQueries);
+
+        $hasBatchAuthor = false;
+        $hasBatchComments = false;
+        $sequentialAuthorQueries = 0;
+        $sequentialCommentQueries = 0;
+
+        foreach ($executedQueries as $q) {
+            $sql = $q['sql'];
+            if (str_contains($sql, 'FROM authors WHERE id IN (')) {
+                $hasBatchAuthor = true;
+            } elseif (str_contains($sql, 'FROM authors WHERE id = ?')) {
+                $sequentialAuthorQueries++;
+            }
+            if (str_contains($sql, 'FROM comments WHERE post_id IN (')) {
+                $hasBatchComments = true;
+            } elseif (str_contains($sql, 'FROM comments WHERE post_id = ?')) {
+                $sequentialCommentQueries++;
+            }
+        }
+
+        $passed = ($queryCount <= 3) && $hasBatchAuthor && $hasBatchComments && ($sequentialAuthorQueries === 0) && ($sequentialCommentQueries === 0);
+
+        if (!$passed) {
             echo "\n\033[41m\033[37m FAIL \033[0m \033[1mTests\\Feature\\PostNPlusOneTest\033[0m\n";
             usleep(15000);
             echo "  \033[31m⨯\033[0m \033[90meager loading query budget <= 3\033[0m\n";
-            echo "    \033[31mFailed asserting that executed query count (51) is within budget of 3 queries.\033[0m\n";
+            echo "    \033[31mFailed asserting that executed query count ({$queryCount}) is within budget of 3 queries.\033[0m\n";
             usleep(12000);
-            echo "  \033[31m⨯\033[0m \033[90mauthor relation batch resolved via whereIn\033[0m\n";
-            echo "    \033[31mSequential author queries detected per post row.\033[0m\n";
+
+            if (!$hasBatchAuthor) {
+                echo "  \033[31m⨯\033[0m \033[90mauthor relation batch resolved via WHERE id IN (...)\033[0m\n";
+                echo "    \033[31mDetected {$sequentialAuthorQueries} individual queries to authors table.\033[0m\n";
+            } else {
+                echo "  \033[32m✓\033[0m \033[90mauthor relation batch resolved via WHERE id IN (...)\033[0m\n";
+            }
             usleep(10000);
-            echo "  \033[31m⨯\033[0m \033[90mcomments relation batch resolved via whereIn\033[0m\n";
-            echo "    \033[31mSequential comments queries detected per post row.\033[0m\n";
+
+            if (!$hasBatchComments) {
+                echo "  \033[31m⨯\033[0m \033[90mcomments relation batch resolved via WHERE post_id IN (...)\033[0m\n";
+                echo "    \033[31mDetected {$sequentialCommentQueries} individual queries to comments table.\033[0m\n";
+            } else {
+                echo "  \033[32m✓\033[0m \033[90mcomments relation batch resolved via WHERE post_id IN (...)\033[0m\n";
+            }
             usleep(8000);
+
             echo "  \033[31m⨯\033[0m \033[90mzero sequential n+1 iterations detected in loop\033[0m\n";
-            echo "    \033[31mN+1 loop detected in \$posts->map iteration.\033[0m\n";
+            echo "    \033[31mN+1 loop detected in \$posts->map iteration: {$queryCount} total queries executed on PostgreSQL.\033[0m\n";
 
             $duration = number_format(microtime(true) - $startTime, 2);
-            echo "\n  \033[1mTests:\033[0m    \033[31m4 failed\033[0m (4 assertions)\n";
+            echo "\n  \033[1mTests:\033[0m    \033[31mFailed (Query Budget Exceeded)\033[0m\n";
             echo "  \033[1mDuration:\033[0m {$duration}s\n";
-            echo "  \033[1mRuntime:\033[0m  PHP 8.3.11 / Laravel 12.0.1 / Pest 3.0.4\n";
+            echo "  \033[1mRuntime:\033[0m  PHP {$phpVersion} / PostgreSQL 16.4 (Testbed Prototype)\n";
             echo "  \033[1mVerified:\033[0m [syscraft-runner:1.0.0 UID 1000:1000]\n\n";
             exit(1);
         }
 
         echo "\n\033[42m\033[30m PASS \033[0m \033[1mTests\\Feature\\PostNPlusOneTest\033[0m\n";
         usleep(15000);
-        echo "  \033[32m✓\033[0m \033[90meager loading query budget <= 3\033[0m (11ms)\n";
+        echo "  \033[32m✓\033[0m \033[90meager loading query budget satisfied ({$queryCount} queries executed on PostgreSQL 16.4)\033[0m (11ms)\n";
         usleep(12000);
-        echo "  \033[32m✓\033[0m \033[90mauthor relation batch resolved via whereIn\033[0m (8ms)\n";
+        echo "  \033[32m✓\033[0m \033[90mauthor relation batch resolved via WHERE id IN (...)\033[0m (8ms)\n";
         usleep(10000);
-        echo "  \033[32m✓\033[0m \033[90mcomments relation batch resolved via whereIn\033[0m (7ms)\n";
+        echo "  \033[32m✓\033[0m \033[90mcomments relation batch resolved via WHERE post_id IN (...)\033[0m (7ms)\n";
         usleep(8000);
-        echo "  \033[32m✓\033[0m \033[90mzero sequential n+1 iterations detected in loop\033[0m (5ms)\n";
+        echo "  \033[32m✓\033[0m \033[90mzero sequential per-row queries detected in loop\033[0m (5ms)\n";
 
         $duration = number_format(microtime(true) - $startTime, 2);
         echo "\n  \033[1mTests:\033[0m    \033[32m4 passed\033[0m (4 assertions)\n";
         echo "  \033[1mDuration:\033[0m {$duration}s\n";
-        echo "  \033[1mRuntime:\033[0m  PHP 8.3.11 / Laravel 12.0.1 / Pest 3.0.4\n";
+        echo "  \033[1mRuntime:\033[0m  PHP {$phpVersion} / PostgreSQL 16.4 (Testbed Prototype)\n";
         echo "  \033[1mVerified:\033[0m [syscraft-runner:1.0.0 UID 1000:1000]\n\n";
         exit(0);
     }
 
     // Test Suite 2: PostgresIndexPlanTest (Week 4 PostgreSQL EXPLAIN BUFFERS)
     if ($filter === 'PostgresIndexPlanTest') {
-        // Query PostgreSQL Version
         $verRow = $pdo->query("SELECT version()")->fetch();
         $pgVersion = explode(' ', $verRow['version'])[1] ?? '16.4';
 
-        // Drop any pre-existing custom index so learner's submission is tested cleanly
         $pdo->exec("DROP INDEX IF EXISTS idx_station_recorded;");
 
-        // Inspect submission
         $submissionSqlFile = '/workspace/submission/weather_observations_idx.sql';
         $submissionSql = '';
         if (file_exists($submissionSqlFile)) {
@@ -232,7 +304,6 @@ if ($command === 'test') {
             exit(1);
         }
 
-        // Execute EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
         $explainQuery = "
             EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
             SELECT id, station_code, temperature_c, recorded_at 

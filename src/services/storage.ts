@@ -127,11 +127,41 @@ export async function getOralScoresForDrill(drillId: string): Promise<OralRubric
   return all.filter(s => s.drillId === drillId);
 }
 
-// Export / Import Validation Schemas (Zod)
+// Export / Import Validation Schemas (Strict Zod Validation)
+const HesitationSchema = z.object({
+  id: z.string(),
+  drillId: z.string(),
+  week: z.number(),
+  topic: z.string(),
+  timeToFirstActionSeconds: z.number(),
+  retryCount: z.number(),
+  hintsRequested: z.number(),
+  failedAssertionCount: z.number(),
+  rubricMisses: z.array(z.string().max(500)),
+  learnerFlagged: z.boolean(),
+  createdAt: z.string(),
+  reviewedSunday: z.boolean(),
+});
+
+const OralRubricScoreSchema = z.object({
+  drillId: z.string(),
+  timestamp: z.string(),
+  dimensionScores: z.object({
+    correctness: z.number().min(1).max(4),
+    tradeoff: z.number().min(1).max(4),
+    failure: z.number().min(1).max(4),
+    clarity: z.number().min(1).max(4),
+    challenge: z.number().min(1).max(4),
+  }),
+  durationSeconds: z.number(),
+  unscriptedPass: z.boolean(),
+  notes: z.string().max(2000),
+});
+
 const EnvelopeSchema = z.object({
-  schemaVersion: z.literal('1.0.0'),
+  schemaVersion: z.string().regex(/^1\.\d+\.\d+$/),
   exportedAt: z.string(),
-  appVersion: z.literal('1.0.0'),
+  appVersion: z.string().regex(/^1\.\d+\.\d+$/),
   payload: z.object({
     completedDrills: z.record(z.string(), z.object({
       completed: z.boolean(),
@@ -139,11 +169,23 @@ const EnvelopeSchema = z.object({
       verified: z.boolean(),
       verificationSource: z.enum(['simulation', 'local-runtime', 'self-reported']).optional(),
     })),
-    hesitations: z.array(z.any()),
-    oralScores: z.array(z.any()),
-    customNotes: z.record(z.string(), z.string()),
+    hesitations: z.array(HesitationSchema),
+    oralScores: z.array(OralRubricScoreSchema),
+    customNotes: z.record(z.string(), z.string().max(10000)),
   }),
 });
+
+// Recursive object depth guard
+function checkObjectDepth(obj: unknown, maxDepth = 6, currentDepth = 0): boolean {
+  if (currentDepth > maxDepth) return false;
+  if (typeof obj !== 'object' || obj === null) return true;
+  for (const key of Object.keys(obj)) {
+    if (!checkObjectDepth((obj as Record<string, unknown>)[key], maxDepth, currentDepth + 1)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 export async function exportEnvelopeJSON(): Promise<string> {
   const db = await getDatabase();
@@ -152,7 +194,7 @@ export async function exportEnvelopeJSON(): Promise<string> {
   const oralScores = await db.getAll('oralScores');
   const notesList = await db.getAll('notes');
 
-  const completedDrills: Record<string, { completed: boolean; score?: number; verified: boolean; verificationSource?: any }> = {};
+  const completedDrills: Record<string, { completed: boolean; score?: number; verified: boolean; verificationSource?: 'simulation' | 'local-runtime' | 'self-reported' }> = {};
   for (const p of progressList) {
     completedDrills[p.drillId] = { 
       completed: p.completed, 
@@ -181,7 +223,7 @@ export async function exportEnvelopeJSON(): Promise<string> {
   return JSON.stringify(envelope, null, 2);
 }
 
-// Prototype-Pollution-Safe JSON Import with Depth & Size Guards
+// Prototype-Pollution-Safe JSON Import with Strict Depth & Size Guards
 export async function importEnvelopeJSON(jsonString: string): Promise<{ success: boolean; message: string }> {
   if (jsonString.length > 2 * 1024 * 1024) {
     return { success: false, message: 'Payload exceeds maximum permitted size of 2MB.' };
@@ -195,6 +237,10 @@ export async function importEnvelopeJSON(jsonString: string): Promise<{ success:
       return value;
     });
 
+    if (!checkObjectDepth(parsed, 6)) {
+      return { success: false, message: 'Payload rejected: Object nesting exceeds maximum permitted depth of 6.' };
+    }
+
     const validated = EnvelopeSchema.parse(parsed);
     const db = await getDatabase();
 
@@ -203,6 +249,7 @@ export async function importEnvelopeJSON(jsonString: string): Promise<{ success:
         drillId,
         completed: val.completed,
         verified: val.verified,
+        verificationSource: val.verificationSource || 'simulation',
         completedAt: new Date().toISOString(),
         attempts: 1,
       });
@@ -220,7 +267,15 @@ export async function importEnvelopeJSON(jsonString: string): Promise<{ success:
       }
     }
 
-    return { success: true, message: 'Backup imported and verified successfully.' };
+    if (validated.payload.customNotes) {
+      for (const [drillId, content] of Object.entries(validated.payload.customNotes)) {
+        if (typeof content === 'string') {
+          await db.put('notes', { drillId, content, updatedAt: new Date().toISOString() });
+        }
+      }
+    }
+
+    return { success: true, message: 'Backup imported, schema-validated, and restored successfully.' };
   } catch (err: any) {
     return { success: false, message: `Import validation failed: ${err.message || 'Malformed schema'}` };
   }

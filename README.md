@@ -1,7 +1,7 @@
 # SysCraft: Interactive Systems & Backend Learning Studio
 
 > **Positioning Statement:**  
-> *SysCraft is a browser-first learning studio with deterministic simulations for systems concepts, semantic query-plan validation, and a secured local runtime integration that validates behavior in a pinned PostgreSQL 16.4 and Laravel 12.0.1 testbed.*
+> *SysCraft is a browser-first learning studio with deterministic simulations for systems concepts, semantic query-plan validation, and a secured local runtime integration that validates behavior against pinned PostgreSQL 16.4 with a deterministic PHP query-budget testbed prototype.*
 
 ---
 
@@ -37,11 +37,11 @@ graph TD
         T2_MEM[Simulated Driver Memory Growth Model - Explicitly Non-Live]
     end
 
-    subgraph Tier_3 [Tier 3: Secured Canonical Real Runtime - Local Docker / CLI]
+    subgraph Tier_3 [Tier 3: Secured Local Runtime Prototype - Local Docker / CLI]
         T3_NET[Internal Docker Network: syscraft-testnet - No External Egress]
-        T3_RUNNER[Custom Runner Image: syscraft-runner:1.0.0 UID 1000:1000 + Pre-cached Composer]
-        T3_LARAVEL[Laravel 12.0.1 Pinned Testbed]
-        T3_TEST[PHPUnit 11.3.3 / Pest 3.0.4 Test Suite]
+        T3_RUNNER[Custom Runner Image: syscraft-runner:1.0.0 UID 1000:1000]
+        T3_TESTBED[Deterministic PHP 8.3 / Eloquent Testbed Prototype]
+        T3_BUDGET[Real PDO Query-Budget Assertion Engine against PostgreSQL]
         T3_PG[PostgreSQL 16.4 Container: Runtime-Derived SELECT version]
     end
 
@@ -52,7 +52,7 @@ graph TD
 
 * **Tier 1 (Browser-Native):** Runs in-browser via WebAssembly (`sql.js@1.12.0`). Evaluates SQLite query plans semantically, tests JSON/HTTP contracts against **RFC 9457 (Problem Details)**, and persists progress locally in IndexedDB.
 * **Tier 2 (Simulated Backend):** Explicitly labeled as **"Deterministic Simulation"**. Visualizes abstract flows (request lifecycle, queue retry backoff, container bindings) using inspectable rules and documented assumptions rather than claiming live execution.
-* **Tier 3 (Secured Real Runtime):** Standardized local Docker project or native CLI fallback. Validates code in a pinned **Laravel 12.0.1 / PHP 8.3.11 / PostgreSQL 16.4** testbed connected via an isolated internal network (`syscraft-testnet`).
+* **Tier 3 (Secured Local Runtime Prototype):** Standardized local Docker project or native CLI fallback. Validates code in an isolated **PHP 8.3.11 / PostgreSQL 16.4** testbed prototype with real PDO query-budget evaluation, connected via an isolated internal network (`syscraft-testnet`). Full canonical Laravel 12 framework booting & Pest test suite integration is planned for upcoming expansion.
 
 ---
 
@@ -80,16 +80,16 @@ flowchart LR
 
 ### Phase 0: Scaffolding, Git Init & MYDS Proof-of-Installation (Completed)
 * [x] Initialize Git repository at `/home/nian014/projects/syscraft` with conventional commit structure.
-* [x] Scaffold Vite 5.4.2 + React 18.3.1 (TypeScript 5.4.5) project.
+* [x] Scaffold Vite 8.3.4 + React 19.3.0 (TypeScript 6.0.3) project.
 * [x] Install pinned `@govtechmy/myds-react@1.0.2` and `@govtechmy/myds-style@1.0.0`.
 * [x] Configure `.agents/` customizations directory (`rules/`, `skills/`, `notes/`) for cross-device development.
 * [x] Gate Check: Verify MYDS component rendering, CSS design tokens, dark/light theme switching, and local SQLite WASM execution (`3.45.2`).
 
-### Phase 1: MVP Core (Weeks 1 & 4 + Studio Shell) (Completed)
-* [x] **Studio Shell:** Draggable 5-step progressive workflow UI using `react-resizable-panels`, Monaco Editor (`@monaco-editor/react`), and React Flow (`@xyflow/react`).
+### Phase 1: MVP Core (Weeks 1 & 4 + Studio Shell) (Completed & Remediated)
+* [x] **Studio Shell:** Draggable 5-step progressive workflow UI using `react-resizable-panels`, Monaco Editor (`@monaco-editor/react`), and lazy-loaded React Flow (`@xyflow/react`).
 * [x] **Week 1 Simulator (Tier 2):** Deterministic Laravel Lifecycle mental model tracer with interactive breakpoint inspection.
-* [x] **Week 4 Database Lab (Tier 1):** `sql.js@1.12.0` SQLite sandbox with runtime version display and fixture-tested semantic query-plan parser.
-* [x] **Secured Local Bridge & Testbed (Tier 3):** Loopback bridge daemon (`127.0.0.1:49152`) connecting to `syscraft-testnet` with custom `syscraft-runner:1.0.0` and `postgres:16.4-alpine`, hardened with read-only rootfs, ephemeral code injection, and child process timeout management.
+* [x] **Week 4 Database Lab (Tier 1):** `sql.js@1.12.0` SQLite sandbox with dynamic runtime version display (`sqlite3_libversion()`), reset scaffold starter, and fixture-tested semantic query-plan parser.
+* [x] **Secured Local Bridge & Testbed Prototype (Tier 3):** Loopback bridge daemon (`127.0.0.1:49152`) connecting to `syscraft-testnet` with custom `syscraft-runner:1.0.0` and `postgres:16.4-alpine`, hardened with read-only rootfs, ephemeral learner code injection, real PDO query-budget tracking against PostgreSQL (51 unoptimized queries vs 3 batch eager-loaded queries), strict non-empty origin validation, and child process group timeout management.
 * [x] **Oral Recall Rubric & Operationalized Hesitation Queue:** 5-dimension scored rubric (1–4 scale), latency/retry metrics, and Sunday review queue in IndexedDB.
 
 ### Phase 2: High-Value Core Expansions & Home Hub (Weeks 6 & 7)

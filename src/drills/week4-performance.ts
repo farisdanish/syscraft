@@ -32,7 +32,8 @@ export const WEEK_4_DRILL: DrillDefinition = {
 -- that enables indexed SEARCH and avoids temporary B-Tree sorts.
 
 -- Write your CREATE INDEX statement below:
-
+-- INCOMPLETE STARTER SCAFFOLD:
+-- CREATE INDEX idx_station_recorded ON weather_observations (/* TODO: specify indexed column(s) */);
 `,
   solutionCode: `CREATE INDEX idx_station_recorded ON weather_observations (station_code, recorded_at DESC);`,
   validationRules: {

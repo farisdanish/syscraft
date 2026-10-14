@@ -71,11 +71,11 @@ function sanitizeOutput(text) {
 }
 
 const server = http.createServer(async (req, res) => {
-  // 1. Strict Origin Validation
+  // 1. Strict Non-Empty Origin Validation
   const origin = req.headers.origin;
-  if (origin && origin !== ALLOWED_ORIGIN) {
+  if (!origin || origin !== ALLOWED_ORIGIN) {
     res.writeHead(403, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: `Origin '${origin}' not permitted.` }));
+    res.end(JSON.stringify({ error: `Forbidden: Request Origin must be explicitly '${ALLOWED_ORIGIN}'.` }));
     return;
   }
 
@@ -108,16 +108,33 @@ const server = http.createServer(async (req, res) => {
         }, 1500);
       });
 
+      const runnerImageCheck = await new Promise((resolve) => {
+        const p = spawn('docker', ['image', 'inspect', 'syscraft-runner:1.0.0', '--format', '{{.Id}}'], {
+          cwd: projectRoot,
+          env: minimalEnv,
+        });
+        let out = '';
+        p.stdout.on('data', d => { out += d.toString(); });
+        p.on('close', code => resolve({ ok: code === 0, out: out.trim() }));
+        p.on('error', () => resolve({ ok: false, out: '' }));
+        setTimeout(() => {
+          try { p.kill('SIGKILL'); } catch {}
+          resolve({ ok: false, out: '' });
+        }, 1500);
+      });
+
       const postgresReady = dockerCheck.out.includes('syscraft-postgres') && 
         (dockerCheck.out.includes('healthy') || dockerCheck.out.includes('running'));
+      const runnerImageReady = runnerImageCheck.ok && runnerImageCheck.out.startsWith('sha256:');
+      const isHealthy = dockerCheck.ok && postgresReady && runnerImageReady;
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
-        status: dockerCheck.ok && postgresReady ? 'healthy' : 'degraded',
+        status: isHealthy ? 'healthy' : 'degraded',
         version: '1.0.0',
         dockerAvailable: dockerCheck.ok,
         postgresReady,
-        runnerImageReady: true,
+        runnerImageReady,
         network: 'syscraft-testnet',
       }));
     } catch {
@@ -243,9 +260,11 @@ const server = http.createServer(async (req, res) => {
           }
         });
 
+        let terminating = false;
         // Terminate child process with SIGINT -> SIGKILL escalation
         const terminateChild = () => {
-          if (child.pid && !finished) {
+          if (child.pid && !terminating) {
+            terminating = true;
             try {
               process.kill(-child.pid, 'SIGINT');
             } catch {}
@@ -261,8 +280,8 @@ const server = http.createServer(async (req, res) => {
         const timer = setTimeout(() => {
           if (!finished) {
             finished = true;
-            cleanupRunDir();
             terminateChild();
+            cleanupRunDir();
             res.writeHead(504, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Execution exceeded 10-second hard quota.' }));
           }
@@ -273,8 +292,8 @@ const server = http.createServer(async (req, res) => {
           if (!res.writableEnded && !finished) {
             finished = true;
             clearTimeout(timer);
-            cleanupRunDir();
             terminateChild();
+            cleanupRunDir();
           }
         });
 
