@@ -97,6 +97,7 @@ export function StudioLayout() {
   const [sundayCount, setSundayCount] = useState<number>(0);
   const [politeNotice, setPoliteNotice] = useState<string>('');
   const [importNotice, setImportNotice] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
+  const [showResetModal, setShowResetModal] = useState<boolean>(false);
 
   // Tier 3 Bridge Daemon State
   const [bridgeStatus, setBridgeStatus] = useState<BridgeHealth>({ connected: false });
@@ -564,23 +565,24 @@ export function StudioLayout() {
   };
 
   // Distinct Reset Action: Clear Learner Progress
-  const handleClearProgress = async () => {
-    const confirmed = window.confirm(
-      'Are you sure you want to clear all learner progress? This will reset your drill completions, sessions, oral scores, and hesitation records. Application preferences (theme) will be preserved.'
-    );
-    if (!confirmed) return;
-
-    await clearLearnerProgress();
-    setUserCode(activeDrill.initialCode);
-    setCurrentStep(1);
-    setHighestStepReached(1);
-    setStepCompletions({ 1: false, 2: false, 3: false, 4: false, 5: false });
-    setTestResults(null);
-    setTier3Result(null);
-    setVerificationSource('simulation');
-    setDrillCompleted(false);
-    refreshProgress();
-    setImportNotice({ type: 'success', text: 'All learner progress and drill sessions have been reset.' });
+  const handleConfirmResetProgress = async () => {
+    setShowResetModal(false);
+    try {
+      await clearLearnerProgress();
+      setUserCode(activeDrill.initialCode);
+      setCurrentStep(1);
+      setHighestStepReached(1);
+      setStepCompletions({ 1: false, 2: false, 3: false, 4: false, 5: false });
+      setTestResults(null);
+      setTier3Result(null);
+      setVerificationSource('simulation');
+      setDrillCompleted(false);
+      await refreshProgress();
+      setImportNotice({ type: 'success', text: 'All learner progress and drill sessions have been reset.' });
+    } catch (err) {
+      console.error('[storage] Failed to clear progress:', err);
+      setImportNotice({ type: 'danger', text: 'Failed to reset progress: ' + (err instanceof Error ? err.message : String(err)) });
+    }
   };
 
   return (
@@ -689,7 +691,14 @@ export function StudioLayout() {
             <Upload size={13} />
           </Button>
 
-          <Button variant="default-outline" size="small" onClick={handleClearProgress} aria-label="Clear learner progress" title="Clear learner progress">
+          <Button 
+            id="clear-progress-btn"
+            variant="default-outline" 
+            size="small" 
+            onClick={() => setShowResetModal(true)} 
+            aria-label="Clear learner progress" 
+            title="Clear learner progress"
+          >
             <Trash2 size={13} />
           </Button>
         </div>
@@ -820,13 +829,12 @@ export function StudioLayout() {
         {/* STEP 2: Focused Code Drill (Monaco Editor & Run Controls) */}
         {currentStep === 2 && (
           <div className="studio-drill-container">
-            
-            {activeDrill.week === 1 ? (
-              <Group orientation="horizontal" style={{ width: '100%', height: '100%' }}>
+                     {activeDrill.week === 1 ? (
+              <Group orientation="horizontal" style={{ flex: 1, minHeight: 0, width: '100%' }}>
                 
                 {/* Left Panel: Problem Context & Objective */}
-                <Panel defaultSize={38} minSize={25} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                  <div className="studio-panel-left">
+                <Panel defaultSize="38%" minSize="25%" maxSize="55%" style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                  <div className="studio-drill-sidebar" style={{ height: '100%', overflowY: 'auto' }}>
                     
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Tag variant="primary" size="small">Tier 2 Simulation</Tag>
@@ -908,14 +916,24 @@ export function StudioLayout() {
                   </div>
                 </Panel>
 
-                <Separator className="studio-resizer" />
+                <Separator style={{ width: '6px', cursor: 'col-resize', backgroundColor: 'var(--studio-border)' }} />
 
                 {/* Right Panel: Monaco Editor & Run Controls */}
-                <Panel defaultSize={62} minSize={35} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                  <div className="studio-panel-right">
+                <Panel defaultSize="62%" minSize="45%" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <div className="studio-drill-editor-pane" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                     
                     {/* Editor Header Bar */}
-                    <div className="studio-editor-bar">
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      padding: '0.45rem 0.75rem',
+                      borderBottom: '1px solid var(--studio-border)',
+                      backgroundColor: 'var(--studio-surface)',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
+                      flexShrink: 0
+                    }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <FileCode size={14} color="var(--studio-primary)" />
                         <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--studio-text)' }}>
@@ -936,23 +954,25 @@ export function StudioLayout() {
                         </Button>
 
                         {/* Tier 3 Docker Verification Trigger */}
-                        <Button 
-                          id="run-docker-tier3-btn"
-                          variant="primary-outline" 
-                          size="small"
-                          onClick={handleRunTier3Docker}
-                          disabled={isRunningDocker || !bridgeStatus.connected}
-                          aria-label="Run in Docker (Tier 3)"
-                        >
-                          <Server size={12} style={{ marginRight: '4px' }} />
-                          {isRunningDocker ? "Running Container..." : "Run in Docker (Tier 3)"}
-                        </Button>
+                        {bridgeStatus.connected && (
+                          <Button 
+                            id="run-docker-tier3-btn"
+                            variant="primary-outline" 
+                            size="small"
+                            onClick={handleRunTier3Docker}
+                            disabled={isRunningDocker}
+                            aria-label="Run in Docker (Tier 3)"
+                          >
+                            <Server size={12} style={{ marginRight: '4px' }} />
+                            {isRunningDocker ? "Running Container..." : "Run in Docker (Tier 3)"}
+                          </Button>
+                        )}
 
                         {/* Tier 2 Simulation Evaluation Trigger */}
                         <Button 
                           id="run-simulation-btn"
                           variant="primary-fill" 
-                          size="small"
+                          size="small" 
                           onClick={handleRunDrill}
                           disabled={isEvaluating}
                           aria-label="Run Test Harness (Tier 2)"
@@ -964,7 +984,7 @@ export function StudioLayout() {
                     </div>
 
                     {/* Monaco Editor Canvas */}
-                    <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+                    <div className="studio-drill-editor-wrapper">
                       <Editor
                         height="100%"
                         language={activeDrill.language}
@@ -973,12 +993,13 @@ export function StudioLayout() {
                         theme={isDark ? "vs-dark" : "light"}
                         options={{
                           minimap: { enabled: false },
-                          fontSize: 12,
+                          fontSize: 13,
                           lineNumbers: 'on',
                           scrollBeyondLastLine: false,
                           automaticLayout: true,
                           tabSize: 4,
                           renderLineHighlight: 'all',
+                          wordWrap: 'on',
                         }}
                       />
                     </div>
@@ -1001,7 +1022,6 @@ export function StudioLayout() {
 
                   </div>
                 </Panel>
-
               </Group>
             ) : (
               /* Week 4 Database & EXPLAIN Lab */
@@ -1343,6 +1363,93 @@ export function StudioLayout() {
           <span>Tab/Esc Navigation Enabled</span>
         </div>
       </footer>
+
+      {/* Modal: Confirm Clear Learner Progress */}
+      {showResetModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reset-modal-title"
+        >
+          <div style={{
+            maxWidth: '460px',
+            width: '100%',
+            backgroundColor: 'var(--studio-surface)',
+            border: '1px solid var(--studio-border)',
+            borderRadius: '10px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
+            padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ 
+                width: '36px', 
+                height: '36px', 
+                borderRadius: '50%', 
+                backgroundColor: 'rgba(239, 68, 68, 0.12)', 
+                color: 'var(--studio-danger)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <AlertCircle size={20} />
+              </div>
+              <div>
+                <h3 id="reset-modal-title" style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+                  Clear All Learner Progress?
+                </h3>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--studio-text-muted)', lineHeight: 1.45 }}>
+                  This will reset your drill completions, sessions, oral scores, and hesitation records.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ 
+              padding: '0.625rem 0.75rem', 
+              borderRadius: '6px', 
+              backgroundColor: 'var(--studio-surface-subtle)', 
+              fontSize: '0.75rem', 
+              color: 'var(--studio-text-muted)',
+              border: '1px solid var(--studio-border)'
+            }}>
+              Application preferences (such as light/dark theme) will be preserved.
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.25rem' }}>
+              <Button 
+                id="cancel-reset-btn"
+                variant="default-outline" 
+                size="small" 
+                onClick={() => setShowResetModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                id="confirm-reset-btn"
+                variant="danger-fill" 
+                size="small" 
+                onClick={handleConfirmResetProgress}
+              >
+                Yes, Reset All Progress
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

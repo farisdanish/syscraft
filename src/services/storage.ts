@@ -235,12 +235,16 @@ export async function getCustomNote(drillId: string): Promise<string> {
 // Distinct Reset Semantics
 export async function clearLearnerProgress(): Promise<void> {
   const db = await getDatabase();
-  await db.clear('tasks');
-  await db.clear('drillSessions');
-  await db.clear('progress');
-  await db.clear('hesitations');
-  await db.clear('oralScores');
-  await db.clear('notes');
+  const stores = ['tasks', 'drillSessions', 'progress', 'hesitations', 'oralScores', 'notes'] as const;
+  for (const store of stores) {
+    try {
+      if (db.objectStoreNames.contains(store)) {
+        await db.clear(store);
+      }
+    } catch (err) {
+      console.warn(`[storage] Could not clear store ${store}:`, err);
+    }
+  }
 }
 
 // Export / Import Validation Schemas (Strict Zod Validation)
