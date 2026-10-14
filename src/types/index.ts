@@ -106,13 +106,20 @@ export interface DrillDefinition {
   };
 }
 
+export type VerificationSource = "simulation" | "local-runtime" | "self-reported";
+
 // Persistence Envelope Schema (Versioned & Prototype-Safe)
 export interface ExportEnvelopeV1 {
   schemaVersion: "1.0.0";
   exportedAt: string;
   appVersion: "1.0.0";
   payload: {
-    completedDrills: Record<string, { completed: boolean; score?: number; verified: boolean }>;
+    completedDrills: Record<string, { 
+      completed: boolean; 
+      score?: number; 
+      verified: boolean;
+      verificationSource?: VerificationSource;
+    }>;
     hesitations: HesitationLogItem[];
     oralScores: OralRubricScore[];
     customNotes: Record<string, string>;

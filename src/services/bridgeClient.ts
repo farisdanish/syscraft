@@ -10,22 +10,26 @@ export interface BridgeHealth {
   status?: string;
   version?: string;
   network?: string;
+  dockerAvailable?: boolean;
+  postgresReady?: boolean;
+  runnerImageReady?: boolean;
   error?: string;
 }
 
 export interface BridgeRunResult {
   commandId: string;
   exitCode: number;
+  passed: boolean;
+  executionVerified: boolean;
   stdout: string;
   stderr: string;
-  verified: boolean;
   timestamp: string;
   error?: string;
 }
 
 export async function checkBridgeHealth(): Promise<BridgeHealth> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 1500);
+  const timeoutId = setTimeout(() => controller.abort(), 1800);
 
   try {
     const res = await fetch(`${BRIDGE_BASE_URL}/api/bridge/health`, {
@@ -44,6 +48,9 @@ export async function checkBridgeHealth(): Promise<BridgeHealth> {
       status: data.status,
       version: data.version,
       network: data.network,
+      dockerAvailable: data.dockerAvailable,
+      postgresReady: data.postgresReady,
+      runnerImageReady: data.runnerImageReady,
     };
   } catch (err) {
     clearTimeout(timeoutId);
@@ -68,15 +75,20 @@ export async function requestCapabilityToken(): Promise<string | null> {
   }
 }
 
-export async function runBridgeCommand(commandId: string): Promise<BridgeRunResult> {
+export async function runBridgeCommand(
+  commandId: string,
+  userCode?: string,
+  filename?: string
+): Promise<BridgeRunResult> {
   const token = await requestCapabilityToken();
   if (!token) {
     return {
       commandId,
       exitCode: 1,
+      passed: false,
+      executionVerified: false,
       stdout: '',
       stderr: 'Failed to acquire capability token from bridge daemon.',
-      verified: false,
       timestamp: new Date().toISOString(),
       error: 'Token acquisition failed',
     };
@@ -89,6 +101,8 @@ export async function runBridgeCommand(commandId: string): Promise<BridgeRunResu
       body: JSON.stringify({
         commandId,
         capabilityToken: token,
+        userCode,
+        filename,
       }),
     });
 
@@ -97,9 +111,10 @@ export async function runBridgeCommand(commandId: string): Promise<BridgeRunResu
       return {
         commandId,
         exitCode: res.status,
+        passed: false,
+        executionVerified: false,
         stdout: '',
         stderr: errText,
-        verified: false,
         timestamp: new Date().toISOString(),
         error: `Bridge execution failed with HTTP ${res.status}`,
       };
@@ -109,18 +124,20 @@ export async function runBridgeCommand(commandId: string): Promise<BridgeRunResu
     return {
       commandId: data.commandId,
       exitCode: data.exitCode,
+      passed: Boolean(data.passed ?? (data.exitCode === 0)),
+      executionVerified: Boolean(data.executionVerified ?? true),
       stdout: data.stdout,
       stderr: data.stderr,
-      verified: Boolean(data.verified),
       timestamp: data.timestamp,
     };
   } catch (err) {
     return {
       commandId,
       exitCode: 1,
+      passed: false,
+      executionVerified: false,
       stdout: '',
       stderr: err instanceof Error ? err.message : 'Bridge execution error',
-      verified: false,
       timestamp: new Date().toISOString(),
       error: 'Execution communication failure',
     };

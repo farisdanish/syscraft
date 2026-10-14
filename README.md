@@ -85,12 +85,12 @@ flowchart LR
 * [x] Configure `.agents/` customizations directory (`rules/`, `skills/`, `notes/`) for cross-device development.
 * [x] Gate Check: Verify MYDS component rendering, CSS design tokens, dark/light theme switching, and local SQLite WASM execution (`3.45.2`).
 
-### Phase 1: MVP Core (Weeks 1 & 4 + Studio Shell) (In Progress)
-* [ ] **Studio Shell:** Draggable 5-step progressive workflow UI using `react-resizable-panels`, Monaco Editor (`@monaco-editor/react`), and React Flow (`@xyflow/react`).
-* [ ] **Week 1 Simulator (Tier 2):** Deterministic Laravel Lifecycle mental model tracer with interactive breakpoint inspection.
-* [ ] **Week 4 Database Lab (Tier 1):** `sql.js@1.12.0` SQLite sandbox with runtime version display and fixture-tested semantic query-plan parser.
-* [ ] **Secured Local Bridge & Testbed (Tier 3):** Loopback bridge daemon (`127.0.0.1:49152`) connecting to `syscraft-testnet` with custom `syscraft-runner:1.0.0` and `postgres:16.4-alpine`.
-* [ ] **Oral Recall Rubric & Operationalized Hesitation Queue:** 5-dimension scored rubric (1–4 scale), latency/retry metrics, and Sunday review queue in IndexedDB.
+### Phase 1: MVP Core (Weeks 1 & 4 + Studio Shell) (Completed)
+* [x] **Studio Shell:** Draggable 5-step progressive workflow UI using `react-resizable-panels`, Monaco Editor (`@monaco-editor/react`), and React Flow (`@xyflow/react`).
+* [x] **Week 1 Simulator (Tier 2):** Deterministic Laravel Lifecycle mental model tracer with interactive breakpoint inspection.
+* [x] **Week 4 Database Lab (Tier 1):** `sql.js@1.12.0` SQLite sandbox with runtime version display and fixture-tested semantic query-plan parser.
+* [x] **Secured Local Bridge & Testbed (Tier 3):** Loopback bridge daemon (`127.0.0.1:49152`) connecting to `syscraft-testnet` with custom `syscraft-runner:1.0.0` and `postgres:16.4-alpine`, hardened with read-only rootfs, ephemeral code injection, and child process timeout management.
+* [x] **Oral Recall Rubric & Operationalized Hesitation Queue:** 5-dimension scored rubric (1–4 scale), latency/retry metrics, and Sunday review queue in IndexedDB.
 
 ### Phase 2: High-Value Core Expansions (Weeks 6 & 7)
 * [ ] **Week 7 Timed CRUD & Auth Sprint:** 90-minute timed mock featuring threat-modeled session fixation regeneration (`$request->session()->regenerate()`), FormRequests, and policy authorization (`$this->authorize()`).
@@ -152,10 +152,10 @@ Stack Adapters (Modular Plugins)
 
 | Component | Pinned Version / Digest |
 |---|---|
-| **Frontend Framework** | React `18.3.1` + TypeScript `5.4.5` + Vite `5.4.2` |
+| **Frontend Framework** | React `19.3.0` + TypeScript `6.0.3` + Vite `8.3.4` |
 | **Design System** | `@govtechmy/myds-react@1.0.2` & `@govtechmy/myds-style@1.0.0` |
-| **Visual Tracer** | `@xyflow/react` (`^12.12.0`) |
-| **IDE & Diff Editor** | `@monaco-editor/react` (`^4.7.0`) |
+| **Visual Tracer** | `@xyflow/react` (`12.12.0`) |
+| **IDE & Diff Editor** | `@monaco-editor/react` (`4.7.0`) |
 | **Tier 1 Database** | `sql.js@1.12.0` (SQLite `3.45.2` WASM) |
 | **Tier 3 Runner Image** | `syscraft-runner:1.0.0` (`php:8.3.11-cli-alpine` + Composer `2.7.7` + `pdo_pgsql`) |
 | **Tier 3 Database** | `postgres:16.4-alpine` |
@@ -178,8 +178,18 @@ npm run dev
 ```
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### 2. Verify Local Build
+### 2. Start the Tier 3 Docker Environment & Bridge Daemon
 ```bash
+# In terminal 1: start internal PostgreSQL container
+docker compose -f docker/docker-compose.yml up -d postgres
+
+# In terminal 2: start loopback capability bridge daemon
+npm run bridge
+```
+
+### 3. Verify Local Build & Linter
+```bash
+npm run lint
 npm run build
 ```
 

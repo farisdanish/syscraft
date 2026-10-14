@@ -25,205 +25,16 @@ import {
   Sparkles
 } from 'lucide-react';
 
-export interface LifecycleStepData {
-  id: string;
-  stepNum: number;
-  label: string;
-  sublabel: string;
-  phase: 'bootstrap' | 'middleware' | 'resolution' | 'execution' | 'termination';
-  explanation: string;
-  assumptions: string;
-  interviewNote: string;
-}
-
-export const LARAVEL_LIFECYCLE_STEPS: LifecycleStepData[] = [
-  {
-    id: 'node-client',
-    stepNum: 1,
-    label: 'Client HTTP Ingress',
-    sublabel: 'GET /api/posts',
-    phase: 'bootstrap',
-    explanation: 'Client sends raw HTTP request (headers, method, body, cookies). Web server (Nginx/FrankenPHP) routes entry to public/index.php.',
-    assumptions: 'Deterministic HTTP/1.1 or HTTP/2 request with standard headers.',
-    interviewNote: 'The web server does not execute Laravel logic directly; it invokes PHP-FPM or persistent FrankenPHP worker.',
-  },
-  {
-    id: 'node-index',
-    stepNum: 2,
-    label: 'public/index.php',
-    sublabel: 'Composer Autoload & Entry',
-    phase: 'bootstrap',
-    explanation: 'Requires vendor/autoload.php and initializes the Laravel application context from bootstrap/app.php.',
-    assumptions: 'PSR-4 compliant autoloader pre-compiled for production speed.',
-    interviewNote: 'In Laravel 11/12, bootstrap/app.php replaces old Kernel class hierarchies, defining routing and middleware declaratively.',
-  },
-  {
-    id: 'node-kernel',
-    stepNum: 3,
-    label: 'HTTP Kernel Bootstrap',
-    sublabel: 'Config, Providers & Facades',
-    phase: 'bootstrap',
-    explanation: 'Bootstraps core services: Environment, Config, Exception handling, Service Providers (calls register() then boot() on all registered providers).',
-    assumptions: 'Providers register bindings before any service boot() is invoked.',
-    interviewNote: 'Crucial interview question: Why is service provider register() separated from boot()? (Register binds singletons; boot runs after ALL bindings exist).',
-  },
-  {
-    id: 'node-global-mw',
-    stepNum: 4,
-    label: 'Global Middleware',
-    sublabel: 'TrustProxies, TrimStrings, CORS',
-    phase: 'middleware',
-    explanation: 'Request enters pipeline stack. Modifies request headers, checks maintenance mode, sanitizes inputs, and handles CORS preflights.',
-    assumptions: 'All global middleware pass without throwing early 503 or 403 responses.',
-    interviewNote: 'Middleware uses the Onion pattern (Pipeline design pattern) wrapping around the core route dispatcher.',
-  },
-  {
-    id: 'node-router',
-    stepNum: 5,
-    label: 'Routing Pipeline',
-    sublabel: 'Route Match & Route Middleware',
-    phase: 'middleware',
-    explanation: 'Matches URI against routes/api.php. Dispatches route-specific middleware (auth:sanctum, throttle:api, role checks).',
-    assumptions: 'Route is matched; model route binding resolves implicitly by ID if configured.',
-    interviewNote: 'Explain route caching: route:cache generates a fast lookup array, bypassing route compilation on every request.',
-  },
-  {
-    id: 'node-container',
-    stepNum: 6,
-    label: 'Service Container',
-    sublabel: 'Reflection & DI Resolution',
-    phase: 'resolution',
-    explanation: 'The IoC container inspects PostController constructor parameters using PHP Reflection. Automatically resolves and injects dependencies.',
-    assumptions: 'All injected dependencies are registered or resolvable via concrete class names.',
-    interviewNote: 'Facade vs DI: Facades dynamically proxy static calls to container bindings via __callStatic(). DI makes dependencies explicit and easy to mock in Pest.',
-  },
-  {
-    id: 'node-controller',
-    stepNum: 7,
-    label: 'Controller & Eloquent',
-    sublabel: 'PostController@index',
-    phase: 'execution',
-    explanation: 'Business logic runs. Executes Eloquent queries against the data layer. If eager loading is missing, N+1 query loop multiplies queries!',
-    assumptions: 'Eager loading with([\'author\', \'comments\']) satisfies query budget <= 3.',
-    interviewNote: 'Explain N+1 prevention: Eloquent executes whereIn() queries to batch related rows, rather than fetching in a foreach loop.',
-  },
-  {
-    id: 'node-response',
-    stepNum: 8,
-    label: 'HTTP Response Creation',
-    sublabel: 'JsonResponse (200 OK)',
-    phase: 'execution',
-    explanation: 'Controller returns JSON payload. Response flows back outward through the middleware pipeline where headers (ETag, Cache-Control) are attached.',
-    assumptions: 'Standard application/json content-type returned.',
-    interviewNote: 'Controllers can return Eloquent models directly because Laravel implements Jsonable and Arrayable interfaces.',
-  },
-  {
-    id: 'node-terminating',
-    stepNum: 9,
-    label: 'Terminating Middleware',
-    sublabel: 'Session Save & Log Handlers',
-    phase: 'termination',
-    explanation: 'After response is sent to the client (fast-cgi finish request), terminate() middleware hooks fire to save session data, flush telemetry, and trigger deferred jobs.',
-    assumptions: 'Response already delivered to client; cleanup tasks do not delay user latency.',
-    interviewNote: 'A common senior interview question: What happens after the client receives the response? (Terminating middleware, queue dispatching).',
-  },
-];
-
-// Backwards-compatible alias
-export const LIFECYCLE_STEPS = LARAVEL_LIFECYCLE_STEPS;
-
-export const BTREE_INDEX_TRACER_STEPS: LifecycleStepData[] = [
-  {
-    id: 'node-sql-ast',
-    stepNum: 1,
-    label: 'SQL Parser & AST',
-    sublabel: 'Lexer & AST Parse Tree',
-    phase: 'bootstrap',
-    explanation: 'SQLite lexer and Lemon parser parse query into an Abstract Syntax Tree (AST): projections (id, station_code, temperature_c, recorded_at), filter predicate (station_code = ?), sorting (recorded_at DESC), and LIMIT 50.',
-    assumptions: 'Syntactically valid SQL conforming to SQLite ANSI grammar.',
-    interviewNote: 'Query compilation generates VDBE bytecodes. Prepared statements cache this compilation to avoid re-parsing identical SQL templates.',
-  },
-  {
-    id: 'node-catalog',
-    stepNum: 2,
-    label: 'Catalog & Index Lookup',
-    sublabel: 'sqlite_schema / Dictionary',
-    phase: 'bootstrap',
-    explanation: 'Storage engine queries catalog metadata to inspect weather_observations schema and discovered indexes: identifies candidate compound index idx_station_recorded(station_code, recorded_at DESC).',
-    assumptions: 'Table schema metadata and index structures are pre-loaded into memory cache.',
-    interviewNote: 'Data dictionary lookups verify column types and nullability constraints. In concurrent systems, metadata locks (MDL) prevent schema drift during execution.',
-  },
-  {
-    id: 'node-optimizer',
-    stepNum: 3,
-    label: 'Cost Optimizer Decision',
-    sublabel: 'SCAN vs SEARCH Decision',
-    phase: 'resolution',
-    explanation: 'Cost planner compares full table scan (5,000 rows, 42 pages) vs compound index seek. Identifies leftmost prefix match on station_code and presorted match on recorded_at DESC, picking idx_station_recorded with 0 temporary sorts.',
-    assumptions: 'Filter selectivity is high (<10% rows matching); index seek cost is far lower than sequential scan.',
-    interviewNote: 'Senior interview defense: If a query matches >25% of all rows, optimizer may discard the index in favor of sequential scan to avoid random I/O page thrashing.',
-  },
-  {
-    id: 'node-root-page',
-    stepNum: 4,
-    label: 'B-Tree Root Page Read',
-    sublabel: 'Buffer Pool / Pager Cache',
-    phase: 'resolution',
-    explanation: 'Storage engine requests root page for idx_station_recorded from pager cache. Root page contains separator keys dividing index key ranges across branch child pages.',
-    assumptions: 'Root page is pinned in memory buffer cache (0 physical disk I/O reads).',
-    interviewNote: 'Index root pages are perpetually memory-resident. Tree height (typically 2-4 levels) caps maximum page seeks even for datasets with billions of rows.',
-  },
-  {
-    id: 'node-branch-seek',
-    stepNum: 5,
-    label: 'Branch Node Binary Seek',
-    sublabel: 'O(log N) Key Partitioning',
-    phase: 'resolution',
-    explanation: 'Binary search across interior branch cell keys determines the child page pointer matching the key partition for \'STN-MY-042\', descending directly toward the leaf layer.',
-    assumptions: 'Internal keys are strictly sorted by station_code ASC, recorded_at DESC.',
-    interviewNote: 'B+Trees store payloads and rowid pointers exclusively in leaf pages, maximizing branch fan-out (thousands of child pointers per 4KB page).',
-  },
-  {
-    id: 'node-leaf-boundary',
-    stepNum: 6,
-    label: 'Leaf Key Boundary Seek',
-    sublabel: 'Locate 1st Matching Key',
-    phase: 'execution',
-    explanation: 'Engine lands on target leaf page and seeks to the very first record where station_code = \'STN-MY-042\'. Because index is sorted DESC by recorded_at, the first matching leaf key is already the latest timestamp.',
-    assumptions: 'Leftmost prefix rule satisfied; collation order aligns with ORDER BY clause.',
-    interviewNote: 'Leftmost prefix rule: If the index was defined as (recorded_at DESC, station_code), SQLite could not seek by station_code and would fall back to full index scan.',
-  },
-  {
-    id: 'node-rowid-deref',
-    stepNum: 7,
-    label: 'Rowid Table Dereference',
-    sublabel: 'Clustered Table Page Lookup',
-    phase: 'execution',
-    explanation: 'For each matching leaf entry, engine reads the 64-bit rowid and fetches non-indexed columns (temperature_c) from the primary clustered B-Tree table page.',
-    assumptions: 'Secondary index contains rowid pointer into primary table B-Tree.',
-    interviewNote: 'Tradeoff checkpoint: If the index was covering (station_code, recorded_at, temperature_c), table page dereferencing is skipped completely (Index-Only Scan).',
-  },
-  {
-    id: 'node-limit-exit',
-    stepNum: 8,
-    label: 'LIMIT 50 Early Exit',
-    sublabel: 'Cursor Halts at 50 Rows',
-    phase: 'execution',
-    explanation: 'Having iterated through 50 matching rows in index order, the query cursor hits LIMIT 50 threshold and aborts traversal immediately. The remaining thousands of rows are never visited.',
-    assumptions: 'Cursor iterator supports streaming pipeline early exit.',
-    interviewNote: 'Without the composite index sorting match, SQLite would have to scan ALL matching rows, sort them in a temporary B-Tree or memory buffer, before truncating to 50.',
-  },
-  {
-    id: 'node-result-stream',
-    stepNum: 9,
-    label: 'Resultset Streaming',
-    sublabel: 'Yield Rows & Release Locks',
-    phase: 'termination',
-    explanation: 'Engine serializes the 50 record tuples, yields the record buffer to the WASM caller, unpins buffer pool pages, and closes the read cursor.',
-    assumptions: 'Caller consumes record stream without backpressure.',
-    interviewNote: 'Explain cursor lifecycle: Unclosed cursors hold shared read locks (or SQLite WAL read marks), preventing WAL checkpointing and database truncation.',
-  },
-];
+export { 
+  type LifecycleStepData, 
+  LARAVEL_LIFECYCLE_STEPS, 
+  BTREE_INDEX_TRACER_STEPS, 
+  LIFECYCLE_STEPS 
+} from './tracerSteps';
+import { 
+  type LifecycleStepData, 
+  LARAVEL_LIFECYCLE_STEPS 
+} from './tracerSteps';
 
 const PHASE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   bootstrap: { bg: 'rgba(2, 132, 199, 0.12)', text: '#0284c7', border: 'rgba(2, 132, 199, 0.3)' },
@@ -394,15 +205,9 @@ export function LifecycleTracer({
 
   const [activeStep, setActiveStep] = useState<number>(1);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [selectedNodeData, setSelectedNodeData] = useState<LifecycleStepData>(currentSteps[0]);
   const [viewMode, setViewMode] = useState<'canvas' | 'table'>('canvas');
 
-  // Reset to step 1 whenever step definitions change (e.g. switching between curriculum modules)
-  useEffect(() => {
-    setActiveStep(1);
-    setSelectedNodeData(currentSteps[0]);
-    setIsPlaying(false);
-  }, [steps]);
+  const selectedNodeData = currentSteps.find((s) => s.stepNum === activeStep) || currentSteps[0];
 
   // Auto-play interval
   useEffect(() => {
@@ -420,14 +225,6 @@ export function LifecycleTracer({
     }
     return () => clearInterval(timer);
   }, [isPlaying, currentSteps.length]);
-
-  // Keep selected node in sync when step changes
-  useEffect(() => {
-    const stepData = currentSteps.find((s) => s.stepNum === activeStep);
-    if (stepData) {
-      setSelectedNodeData(stepData);
-    }
-  }, [activeStep, currentSteps]);
 
   // React Flow Nodes with Custom Node Types
   const nodes: Node[] = useMemo(() => {
@@ -578,7 +375,6 @@ export function LifecycleTracer({
                 const s = currentSteps.find(item => item.id === node.id);
                 if (s) {
                   setActiveStep(s.stepNum);
-                  setSelectedNodeData(s);
                 }
               }}
               fitView
@@ -606,7 +402,6 @@ export function LifecycleTracer({
                     key={step.id} 
                     onClick={() => {
                       setActiveStep(step.stepNum);
-                      setSelectedNodeData(step);
                     }}
                     style={{ 
                       borderBottom: '1px solid var(--studio-border)',

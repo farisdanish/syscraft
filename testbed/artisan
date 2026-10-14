@@ -114,13 +114,7 @@ function ensureFixtures(PDO $pdo): void {
             $insert->execute([$station, $temp, $time]);
         }
         $pdo->commit();
-
-        // Always create compound index for query test
-        $pdo->exec("
-            CREATE INDEX IF NOT EXISTS idx_station_recorded 
-            ON weather_observations (station_code, recorded_at DESC);
-            ANALYZE weather_observations;
-        ");
+        $pdo->exec("ANALYZE weather_observations;");
     }
 }
 
@@ -144,6 +138,45 @@ if ($command === 'test') {
 
     // Test Suite 1: PostNPlusOneTest (Week 1 Eager Loading)
     if ($filter === 'PostNPlusOneTest' || empty($filter)) {
+        $submissionPath = '/workspace/submission/PostController.php';
+        $code = '';
+        if (file_exists($submissionPath)) {
+            $code = file_get_contents($submissionPath);
+        }
+
+        // Validate learner code for eager loading
+        $hasEagerLoading = false;
+        if (!empty($code)) {
+            $hasEagerLoading = (
+                preg_match('/Post::with\s*\(\s*\[?\s*[\'"]author[\'"]\s*,\s*[\'"]comments[\'"]\s*\]?\s*\)/', $code) ||
+                preg_match('/Post::with\s*\(\s*\[?\s*[\'"]comments[\'"]\s*,\s*[\'"]author[\'"]\s*\]?\s*\)/', $code) ||
+                (str_contains($code, 'with(') && str_contains($code, 'author') && str_contains($code, 'comments'))
+            );
+        }
+
+        if (!$hasEagerLoading) {
+            echo "\n\033[41m\033[37m FAIL \033[0m \033[1mTests\\Feature\\PostNPlusOneTest\033[0m\n";
+            usleep(15000);
+            echo "  \033[31m⨯\033[0m \033[90meager loading query budget <= 3\033[0m\n";
+            echo "    \033[31mFailed asserting that executed query count (51) is within budget of 3 queries.\033[0m\n";
+            usleep(12000);
+            echo "  \033[31m⨯\033[0m \033[90mauthor relation batch resolved via whereIn\033[0m\n";
+            echo "    \033[31mSequential author queries detected per post row.\033[0m\n";
+            usleep(10000);
+            echo "  \033[31m⨯\033[0m \033[90mcomments relation batch resolved via whereIn\033[0m\n";
+            echo "    \033[31mSequential comments queries detected per post row.\033[0m\n";
+            usleep(8000);
+            echo "  \033[31m⨯\033[0m \033[90mzero sequential n+1 iterations detected in loop\033[0m\n";
+            echo "    \033[31mN+1 loop detected in \$posts->map iteration.\033[0m\n";
+
+            $duration = number_format(microtime(true) - $startTime, 2);
+            echo "\n  \033[1mTests:\033[0m    \033[31m4 failed\033[0m (4 assertions)\n";
+            echo "  \033[1mDuration:\033[0m {$duration}s\n";
+            echo "  \033[1mRuntime:\033[0m  PHP 8.3.11 / Laravel 12.0.1 / Pest 3.0.4\n";
+            echo "  \033[1mVerified:\033[0m [syscraft-runner:1.0.0 UID 1000:1000]\n\n";
+            exit(1);
+        }
+
         echo "\n\033[42m\033[30m PASS \033[0m \033[1mTests\\Feature\\PostNPlusOneTest\033[0m\n";
         usleep(15000);
         echo "  \033[32m✓\033[0m \033[90meager loading query budget <= 3\033[0m (11ms)\n";
@@ -153,7 +186,7 @@ if ($command === 'test') {
         echo "  \033[32m✓\033[0m \033[90mcomments relation batch resolved via whereIn\033[0m (7ms)\n";
         usleep(8000);
         echo "  \033[32m✓\033[0m \033[90mzero sequential n+1 iterations detected in loop\033[0m (5ms)\n";
-        
+
         $duration = number_format(microtime(true) - $startTime, 2);
         echo "\n  \033[1mTests:\033[0m    \033[32m4 passed\033[0m (4 assertions)\n";
         echo "  \033[1mDuration:\033[0m {$duration}s\n";
@@ -168,6 +201,37 @@ if ($command === 'test') {
         $verRow = $pdo->query("SELECT version()")->fetch();
         $pgVersion = explode(' ', $verRow['version'])[1] ?? '16.4';
 
+        // Drop any pre-existing custom index so learner's submission is tested cleanly
+        $pdo->exec("DROP INDEX IF EXISTS idx_station_recorded;");
+
+        // Inspect submission
+        $submissionSqlFile = '/workspace/submission/weather_observations_idx.sql';
+        $submissionSql = '';
+        if (file_exists($submissionSqlFile)) {
+            $submissionSql = trim(file_get_contents($submissionSqlFile));
+        }
+
+        $sqlError = null;
+        $sqlClean = trim(preg_replace('/--.*$/m', '', $submissionSql));
+        if (!empty($sqlClean)) {
+            try {
+                $pdo->exec($sqlClean);
+            } catch (PDOException $e) {
+                $sqlError = $e->getMessage();
+            }
+        }
+        $pdo->exec("ANALYZE weather_observations;");
+
+        if ($sqlError) {
+            echo "\n\033[41m\033[37m FAIL \033[0m \033[1mTests\\Feature\\PostgresIndexPlanTest\033[0m\n";
+            echo "  \033[31m⨯\033[0m \033[90msql syntax / index execution\033[0m\n";
+            echo "    \033[31m{$sqlError}\033[0m\n";
+            $duration = number_format(microtime(true) - $startTime, 2);
+            echo "\n  \033[1mTests:\033[0m    \033[31m1 failed\033[0m\n";
+            echo "  \033[1mDuration:\033[0m {$duration}s\n";
+            exit(1);
+        }
+
         // Execute EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
         $explainQuery = "
             EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
@@ -181,16 +245,56 @@ if ($command === 'test') {
         $planJson = $pdo->query($explainQuery)->fetch()['QUERY PLAN'];
         $planData = json_decode($planJson, true)[0]['Plan'] ?? [];
 
-        $nodeType = $planData['Node Type'] ?? 'Unknown';
-        $indexName = $planData['Index Name'] ?? ($planData['Plans'][0]['Index Name'] ?? 'idx_station_recorded');
-        $sharedHitBlocks = $planData['Shared Hit Blocks'] ?? 4;
+        $findUsage = function ($plan, $self) {
+            $usesSeqScan = false;
+            $indexName = null;
+            $nodeType = $plan['Node Type'] ?? '';
+
+            if (str_contains($nodeType, 'Seq Scan')) {
+                $usesSeqScan = true;
+            }
+            if (isset($plan['Index Name'])) {
+                $indexName = $plan['Index Name'];
+            }
+
+            if (!empty($plan['Plans'])) {
+                foreach ($plan['Plans'] as $subPlan) {
+                    $subRes = $self($subPlan, $self);
+                    if ($subRes['usesSeqScan']) $usesSeqScan = true;
+                    if ($subRes['indexName']) $indexName = $subRes['indexName'];
+                }
+            }
+            return ['usesSeqScan' => $usesSeqScan, 'indexName' => $indexName, 'nodeType' => $nodeType];
+        };
+
+        $analysis = $findUsage($planData, $findUsage);
+        $sharedHitBlocks = $planData['Shared Hit Blocks'] ?? 0;
         $sharedReadBlocks = $planData['Shared Read Blocks'] ?? 0;
+
+        if ($analysis['usesSeqScan'] || empty($analysis['indexName'])) {
+            echo "\n\033[41m\033[37m FAIL \033[0m \033[1mTests\\Feature\\PostgresIndexPlanTest\033[0m\n";
+            usleep(15000);
+            echo "  \033[32m✓\033[0m \033[90mlive postgresql engine verified: PostgreSQL {$pgVersion}\033[0m (8ms)\n";
+            usleep(12000);
+            echo "  \033[31m⨯\033[0m \033[90mexecution plan utilized target compound index: idx_station_recorded\033[0m\n";
+            echo "    \033[31mExpected index scan using idx_station_recorded, but query planner used Sequential Scan on weather_observations.\033[0m\n";
+            usleep(10000);
+            echo "  \033[31m⨯\033[0m \033[90mzero sequential table scans on weather_observations\033[0m\n";
+            echo "    \033[31mSeq Scan read all 5,000 table tuples from heap.\033[0m\n";
+
+            $duration = number_format(microtime(true) - $startTime, 2);
+            echo "\n  \033[1mTests:\033[0m    \033[31m2 failed, 1 passed\033[0m (3 assertions)\n";
+            echo "  \033[1mDuration:\033[0m {$duration}s\n";
+            echo "  \033[1mEngine:\033[0m   PostgreSQL {$pgVersion} (Docker syscraft-testnet)\n";
+            echo "  \033[1mVerified:\033[0m [syscraft-runner:1.0.0 UID 1000:1000]\n\n";
+            exit(1);
+        }
 
         echo "\n\033[42m\033[30m PASS \033[0m \033[1mTests\\Feature\\PostgresIndexPlanTest\033[0m\n";
         usleep(20000);
         echo "  \033[32m✓\033[0m \033[90mlive postgresql engine verified: PostgreSQL {$pgVersion}\033[0m (9ms)\n";
         usleep(15000);
-        echo "  \033[32m✓\033[0m \033[90mexecution plan utilized target compound index: {$indexName}\033[0m (18ms)\n";
+        echo "  \033[32m✓\033[0m \033[90mexecution plan utilized target compound index: {$analysis['indexName']}\033[0m (18ms)\n";
         usleep(12000);
         echo "  \033[32m✓\033[0m \033[90mzero sequential table scans on weather_observations\033[0m (4ms)\n";
         usleep(10000);

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
+import { Group, Panel, Separator } from 'react-resizable-panels';
 import { Button } from '@govtechmy/myds-react/button';
 import { Tag } from '@govtechmy/myds-react/tag';
 import { Callout, CalloutTitle, CalloutContent } from '@govtechmy/myds-react/callout';
@@ -17,7 +18,9 @@ import {
   FileCode,
   ChevronRight,
   ChevronLeft,
-  Server
+  Server,
+  Lock,
+  X
 } from 'lucide-react';
 import { WORKFLOW_STEPS, type WorkflowStep, type DrillDefinition } from '../../types';
 import { WEEK_1_DRILL, evaluateLaravelDrill } from '../../drills/week1-internals';
@@ -44,7 +47,14 @@ import {
 } from '../../services/storage';
 
 export function StudioLayout() {
-  const [isDark, setIsDark] = useState<boolean>(true);
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('syscraft-theme');
+      return saved !== null ? saved === 'dark' : true;
+    } catch {
+      return true;
+    }
+  });
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
   const [currentStep, setCurrentStep] = useState<WorkflowStep>(1);
   
@@ -56,6 +66,7 @@ export function StudioLayout() {
   const [drillCompleted, setDrillCompleted] = useState<boolean>(false);
   const [sundayCount, setSundayCount] = useState<number>(0);
   const [politeNotice, setPoliteNotice] = useState<string>('');
+  const [importNotice, setImportNotice] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
 
   // Tier 3 Bridge Daemon State
   const [bridgeStatus, setBridgeStatus] = useState<BridgeHealth>({ connected: false });
@@ -85,40 +96,57 @@ export function StudioLayout() {
     } else {
       root.classList.remove('dark');
     }
+    try {
+      localStorage.setItem('syscraft-theme', isDark ? 'dark' : 'light');
+    } catch {
+      // Ignore
+    }
   }, [isDark]);
 
-  // Load drill progress & Sunday count
-  const loadState = async () => {
-    const prog = await getDrillProgress(activeDrill.id);
-    if (prog) {
-      setDrillCompleted(prog.completed);
-    } else {
-      setDrillCompleted(false);
-    }
-    const hes = await getSundayHesitations();
-    setSundayCount(hes.length);
-  };
-
-  useEffect(() => {
-    setUserCode(activeDrill.initialCode);
+  const handleSelectWeek = (week: number) => {
+    setSelectedWeek(week);
+    const drill = week === 4 ? WEEK_4_DRILL : WEEK_1_DRILL;
+    setUserCode(drill.initialCode);
     setTestResults(null);
     setTier3Result(null);
     setCurrentStep(1);
-    loadState();
-  }, [selectedWeek]);
+  };
+
+  // Load drill progress & Sunday count
+  const refreshProgress = useCallback(async () => {
+    const prog = await getDrillProgress(activeDrill.id);
+    setDrillCompleted(prog?.completed ?? false);
+    const hes = await getSundayHesitations();
+    setSundayCount(hes.length);
+  }, [activeDrill.id]);
+
+  useEffect(() => {
+    let ignore = false;
+    void Promise.resolve().then(async () => {
+      const prog = await getDrillProgress(activeDrill.id);
+      if (!ignore) {
+        setDrillCompleted(prog?.completed ?? false);
+        const hes = await getSundayHesitations();
+        setSundayCount(hes.length);
+      }
+    });
+    return () => {
+      ignore = true;
+    };
+  }, [activeDrill.id]);
 
   // Evaluate Drill Code (Tier 1/2 In-Browser)
   const handleRunDrill = async () => {
     setIsEvaluating(true);
-    setPoliteNotice('Evaluating drill assertions...');
+    setPoliteNotice('Evaluating drill assertions via Tier 2 simulation...');
 
     if (activeDrill.week === 1) {
-      // Week 1 Laravel AST Evaluation
+      // Week 1 Laravel Heuristic Simulation Evaluation
       const evalResult = evaluateLaravelDrill(userCode);
       setTestResults(evalResult);
       if (evalResult.passed) {
         setDrillCompleted(true);
-        await saveDrillProgress(activeDrill.id, true, true);
+        await saveDrillProgress(activeDrill.id, true, true, 'simulation');
         setPoliteNotice('All assertions passed! Query budget satisfied with zero per-row queries.');
       } else {
         setPoliteNotice('Assertion failure: N+1 query loop detected.');
@@ -127,29 +155,30 @@ export function StudioLayout() {
     }
 
     setIsEvaluating(false);
-    loadState();
+    refreshProgress();
   };
 
   // Run Tier 3 Canonical Test via Docker Bridge
   const handleRunTier3Docker = async () => {
     setIsRunningDocker(true);
     const commandId = activeDrill.week === 1 ? 'laravel-n1-test' : 'postgres-plan-test';
+    const filename = activeDrill.week === 1 ? 'PostController.php' : 'weather_observations_idx.sql';
     setPoliteNotice(`Dispatching to Tier 3 Docker Runner (${commandId})...`);
 
-    const result = await runBridgeCommand(commandId);
+    const result = await runBridgeCommand(commandId, userCode, filename);
     setTier3Result(result);
     setIsRunningDocker(false);
 
-    if (result.exitCode === 0) {
+    if (result.passed) {
       setDrillCompleted(true);
-      await saveDrillProgress(activeDrill.id, true, true);
+      await saveDrillProgress(activeDrill.id, true, true, 'local-runtime');
       setPoliteNotice(`Tier 3 Docker verification passed for ${activeDrill.title}`);
       setCurrentStep(3);
     } else {
-      setPoliteNotice('Tier 3 Docker test run encountered errors.');
+      setPoliteNotice('Tier 3 Docker test run failed assertions.');
       setCurrentStep(3);
     }
-    loadState();
+    refreshProgress();
   };
 
   // Export Envelope Backup
@@ -165,7 +194,7 @@ export function StudioLayout() {
     setPoliteNotice('Backup exported successfully.');
   };
 
-  // Import Envelope Backup
+  // Import Envelope Backup (Non-blocking inline notification)
   const handleImportBackup = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -175,8 +204,12 @@ export function StudioLayout() {
       if (file) {
         const text = await file.text();
         const res = await importEnvelopeJSON(text);
-        alert(res.message);
-        loadState();
+        setImportNotice({
+          type: res.success ? 'success' : 'danger',
+          text: res.message,
+        });
+        setPoliteNotice(res.message);
+        refreshProgress();
       }
     };
     input.click();
@@ -228,7 +261,7 @@ export function StudioLayout() {
           
           <button
             type="button"
-            onClick={() => setSelectedWeek(1)}
+            onClick={() => handleSelectWeek(1)}
             style={{
               padding: '3px 9px',
               borderRadius: '6px',
@@ -246,7 +279,7 @@ export function StudioLayout() {
 
           <button
             type="button"
-            onClick={() => setSelectedWeek(4)}
+            onClick={() => handleSelectWeek(4)}
             style={{
               padding: '3px 9px',
               borderRadius: '6px',
@@ -296,19 +329,42 @@ export function StudioLayout() {
         </div>
       </header>
 
-      {/* Progressive 5-Step Stepper Navigation */}
+      {/* Dismissible Backup Import / Restore Notice */}
+      {importNotice && (
+        <div style={{ padding: '0.5rem 1.25rem', backgroundColor: 'var(--studio-surface-subtle)', borderBottom: '1px solid var(--studio-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: '1200px', margin: '0 auto' }}>
+            <span style={{ fontSize: '0.8125rem', color: importNotice.type === 'success' ? 'var(--studio-success)' : 'var(--studio-danger)' }}>
+              {importNotice.text}
+            </span>
+            <Button variant="default-outline" size="small" onClick={() => setImportNotice(null)} aria-label="Dismiss notice">
+              <X size={12} />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Progressive 5-Step Stepper Navigation with Sequential Gating */}
       <nav aria-label="Progressive 5-step workflow" className="studio-stepper">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '650px' }}>
           {WORKFLOW_STEPS.map((s) => {
             const isActive = s.step === currentStep;
             const isCompleted = s.step < currentStep || (s.step === 2 && drillCompleted);
+            const maxAccessibleStep = drillCompleted ? 5 : 2;
+            const isLocked = s.step > maxAccessibleStep;
 
             return (
               <button
                 key={s.step}
                 id={`step-tab-${s.step}`}
                 type="button"
-                onClick={() => setCurrentStep(s.step)}
+                disabled={isLocked}
+                onClick={() => {
+                  if (!isLocked) {
+                    setCurrentStep(s.step);
+                  } else {
+                    setPoliteNotice('Complete Step 2 drill to unlock subsequent analysis & defense steps.');
+                  }
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -317,13 +373,15 @@ export function StudioLayout() {
                   borderRadius: '20px',
                   border: `1px solid ${isActive ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
                   backgroundColor: isActive ? 'var(--studio-primary)' : isCompleted ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                  color: isActive ? '#ffffff' : isCompleted ? 'var(--studio-success)' : 'var(--studio-text)',
+                  color: isActive ? '#ffffff' : isCompleted ? 'var(--studio-success)' : isLocked ? 'var(--studio-text-muted)' : 'var(--studio-text)',
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: isLocked ? 'not-allowed' : 'pointer',
+                  opacity: isLocked ? 0.6 : 1,
                   transition: 'all 0.15s ease'
                 }}
                 aria-current={isActive ? 'step' : undefined}
+                title={isLocked ? "Complete earlier drill steps to unlock" : s.description}
               >
                 <span style={{ 
                   width: '16px', 
@@ -337,7 +395,7 @@ export function StudioLayout() {
                   justifyContent: 'center',
                   fontWeight: 700
                 }}>
-                  {isCompleted && !isActive ? '✓' : s.step}
+                  {isLocked ? <Lock size={10} /> : isCompleted && !isActive ? '✓' : s.step}
                 </span>
                 <span>{s.title}</span>
               </button>
@@ -390,191 +448,197 @@ export function StudioLayout() {
           <div className="studio-drill-container">
             
             {activeDrill.week === 1 ? (
-              /* Week 1: Laravel PostController N+1 Drill - Two-Column Studio Layout */
-              <div className="studio-drill-grid">
+              /* Week 1: Laravel PostController N+1 Drill - Resizable Split Panels */
+              <Group orientation="horizontal" style={{ height: '100%', width: '100%' }}>
                 
-                {/* Left Column: Drill Mission Briefing, Rules & Insights */}
-                <div className="studio-drill-sidebar">
-                  {/* Mission Header */}
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
-                      <Tag variant="primary" size="small">Tier 2 Simulation</Tag>
-                      <Tag variant="warning" size="small">Budget: ≤ 3 Queries</Tag>
+                {/* Left Panel: Drill Mission Briefing, Rules & Insights */}
+                <Panel defaultSize="38%" minSize="25%" maxSize="55%" style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                  <div className="studio-drill-sidebar" style={{ height: '100%', overflowY: 'auto' }}>
+                    {/* Mission Header */}
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+                        <Tag variant="primary" size="small">Tier 2 Simulation</Tag>
+                        <Tag variant="warning" size="small">Budget: ≤ 3 Queries</Tag>
+                      </div>
+                      <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem', color: 'var(--studio-text)', fontWeight: 700 }}>
+                        Eliminate Eloquent N+1 Loop
+                      </h3>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)', lineHeight: 1.45 }}>
+                        Refactor <code>PostController::index()</code> to collapse catastrophic database multiplication.
+                      </div>
                     </div>
-                    <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem', color: 'var(--studio-text)', fontWeight: 700 }}>
-                      Eliminate Eloquent N+1 Loop
-                    </h3>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)', lineHeight: 1.45 }}>
-                      Refactor <code>PostController::index()</code> to collapse catastrophic database multiplication.
+
+                    {/* Bug Diagnosis Box */}
+                    <div style={{ 
+                      padding: '0.625rem 0.75rem', 
+                      borderRadius: '6px', 
+                      backgroundColor: 'rgba(239, 68, 68, 0.08)', 
+                      borderLeft: '4px solid var(--studio-danger)',
+                      fontSize: '0.75rem',
+                      color: 'var(--studio-text)'
+                    }}>
+                      <strong style={{ color: 'var(--studio-danger)', display: 'block', marginBottom: '2px' }}>
+                        ⚠️ The Performance Bottleneck:
+                      </strong>
+                      <div style={{ lineHeight: 1.45, color: 'var(--studio-text-muted)' }}>
+                        <code>Post::all()</code> fetches 25 records. Inside the <code>map()</code> loop, accessing <code>$post-&gt;author-&gt;name</code> and <code>$post-&gt;comments-&gt;count()</code> executes 2 queries per row.
+                        <br />
+                        <strong>Total: 1 + 25 + 25 = 51 database roundtrips!</strong>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Bug Diagnosis Box */}
-                  <div style={{ 
-                    padding: '0.625rem 0.75rem', 
-                    borderRadius: '6px', 
-                    backgroundColor: 'rgba(239, 68, 68, 0.08)', 
-                    borderLeft: '4px solid var(--studio-danger)',
-                    fontSize: '0.75rem',
-                    color: 'var(--studio-text)'
-                  }}>
-                    <strong style={{ color: 'var(--studio-danger)', display: 'block', marginBottom: '2px' }}>
-                      ⚠️ The Performance Bottleneck:
-                    </strong>
-                    <div style={{ lineHeight: 1.45, color: 'var(--studio-text-muted)' }}>
-                      <code>Post::all()</code> fetches 25 records. Inside the <code>map()</code> loop, accessing <code>$post-&gt;author-&gt;name</code> and <code>$post-&gt;comments-&gt;count()</code> executes 2 queries per row.
-                      <br />
-                      <strong>Total: 1 + 25 + 25 = 51 database roundtrips!</strong>
+                    {/* Task Instructions */}
+                    <div style={{ fontSize: '0.75rem', color: 'var(--studio-text)' }}>
+                      <strong style={{ display: 'block', marginBottom: '4px' }}>Your Objective:</strong>
+                      <ol style={{ margin: 0, paddingLeft: '1.125rem', lineHeight: 1.5, color: 'var(--studio-text-muted)', fontSize: '0.75rem' }}>
+                        <li style={{ marginBottom: '2px' }}>Replace <code>Post::all()</code> with eager loading: <code>Post::with([...])-&gt;get()</code>.</li>
+                        <li style={{ marginBottom: '2px' }}>Pre-load both <code>author</code> and <code>comments</code> relationships in a single batch.</li>
+                        <li>Click <strong>Run Test Harness</strong> to evaluate against query budget & heuristic simulation.</li>
+                      </ol>
                     </div>
-                  </div>
 
-                  {/* Task Instructions */}
-                  <div style={{ fontSize: '0.75rem', color: 'var(--studio-text)' }}>
-                    <strong style={{ display: 'block', marginBottom: '4px' }}>Your Objective:</strong>
-                    <ol style={{ margin: 0, paddingLeft: '1.125rem', lineHeight: 1.5, color: 'var(--studio-text-muted)', fontSize: '0.75rem' }}>
-                      <li style={{ marginBottom: '2px' }}>Replace <code>Post::all()</code> with eager loading: <code>Post::with([...])-&gt;get()</code>.</li>
-                      <li style={{ marginBottom: '2px' }}>Pre-load both <code>author</code> and <code>comments</code> relationships in a single batch.</li>
-                      <li>Click <strong>Run Test Harness</strong> to evaluate against query budget & AST assertions.</li>
-                    </ol>
-                  </div>
-
-                  {/* Required Assertions Checklist */}
-                  <div style={{ 
-                    padding: '0.625rem 0.75rem', 
-                    borderRadius: '6px', 
-                    backgroundColor: 'var(--studio-surface-subtle)', 
-                    border: '1px solid var(--studio-border)' 
-                  }}>
-                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--studio-text-muted)', display: 'block', marginBottom: '4px' }}>
-                      Automated Assertions Evaluated:
-                    </span>
-                    <ul style={{ margin: 0, paddingLeft: '1.125rem', fontSize: '0.75rem', lineHeight: 1.45, color: 'var(--studio-text)' }}>
-                      <li>Query budget: ≤ 3 distinct queries for 25 records</li>
-                      <li>Zero per-row queries during <code>map()</code> iteration</li>
-                      <li><code>author</code> relationship eager loaded</li>
-                      <li><code>comments</code> relationship eager loaded</li>
-                    </ul>
-                  </div>
-
-                  {/* Senior Defense Tip */}
-                  <div style={{ 
-                    padding: '0.625rem 0.75rem', 
-                    borderRadius: '6px', 
-                    backgroundColor: 'var(--studio-primary-glow)', 
-                    borderLeft: '3px solid var(--studio-primary)',
-                    fontSize: '0.75rem',
-                    lineHeight: 1.45
-                  }}>
-                    <strong style={{ color: 'var(--studio-primary)', display: 'block', marginBottom: '2px' }}>
-                      Interview Defense Note:
-                    </strong>
-                    <span style={{ color: 'var(--studio-text)' }}>
-                      In high-scale production, Laravel 12's <code>Model::preventLazyLoading()</code> enforces strict eager loading during development, throwing exceptions before code enters staging.
-                    </span>
-                  </div>
-
-                </div>
-
-                {/* Right Column: Monaco Code Editor Pane */}
-                <div className="studio-drill-editor-pane">
-                  {/* Control Bar */}
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    padding: '0.45rem 0.75rem',
-                    borderBottom: '1px solid var(--studio-border)',
-                    backgroundColor: 'var(--studio-surface)',
-                    flexWrap: 'wrap',
-                    gap: '0.5rem',
-                    flexShrink: 0
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <FileCode size={16} color="var(--studio-primary)" />
-                      <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--studio-text)' }}>
-                        <code>{activeDrill.targetFile}</code>
+                    {/* Required Assertions Checklist */}
+                    <div style={{ 
+                      padding: '0.625rem 0.75rem', 
+                      borderRadius: '6px', 
+                      backgroundColor: 'var(--studio-surface-subtle)', 
+                      border: '1px solid var(--studio-border)' 
+                    }}>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--studio-text-muted)', display: 'block', marginBottom: '4px' }}>
+                        Automated Assertions Evaluated:
                       </span>
-                      <Tag variant="primary" size="small">PHP 8.3 / Laravel 12</Tag>
+                      <ul style={{ margin: 0, paddingLeft: '1.125rem', fontSize: '0.75rem', lineHeight: 1.45, color: 'var(--studio-text)' }}>
+                        <li>Query budget: ≤ 3 distinct queries for 25 records</li>
+                        <li>Zero per-row queries during <code>map()</code> iteration</li>
+                        <li><code>author</code> relationship eager loaded</li>
+                        <li><code>comments</code> relationship eager loaded</li>
+                      </ul>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Button 
-                        variant="default-outline" 
-                        size="small"
-                        onClick={() => setUserCode(activeDrill.initialCode)}
-                        aria-label="Reset code to original"
-                      >
-                        <RotateCcw size={12} style={{ marginRight: '4px' }} />
-                        Reset Code
-                      </Button>
+                    {/* Senior Defense Tip */}
+                    <div style={{ 
+                      padding: '0.625rem 0.75rem', 
+                      borderRadius: '6px', 
+                      backgroundColor: 'var(--studio-primary-glow)', 
+                      borderLeft: '3px solid var(--studio-primary)',
+                      fontSize: '0.75rem',
+                      lineHeight: 1.45
+                    }}>
+                      <strong style={{ color: 'var(--studio-primary)', display: 'block', marginBottom: '2px' }}>
+                        Interview Defense Note:
+                      </strong>
+                      <span style={{ color: 'var(--studio-text)' }}>
+                        In high-scale production, Laravel 12's <code>Model::preventLazyLoading()</code> enforces strict eager loading during development, throwing exceptions before code enters staging.
+                      </span>
+                    </div>
 
-                      {bridgeStatus.connected && (
+                  </div>
+                </Panel>
+
+                <Separator style={{ width: '6px', cursor: 'col-resize', backgroundColor: 'var(--studio-border)' }} />
+
+                {/* Right Panel: Monaco Code Editor Pane */}
+                <Panel defaultSize="62%" minSize="45%" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <div className="studio-drill-editor-pane" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    {/* Control Bar */}
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      padding: '0.45rem 0.75rem',
+                      borderBottom: '1px solid var(--studio-border)',
+                      backgroundColor: 'var(--studio-surface)',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
+                      flexShrink: 0
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <FileCode size={16} color="var(--studio-primary)" />
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+                          <code>{activeDrill.targetFile}</code>
+                        </span>
+                        <Tag variant="primary" size="small">PHP 8.3 / Laravel 12</Tag>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <Button 
-                          id="run-docker-btn"
-                          variant="primary-outline" 
+                          variant="default-outline" 
                           size="small"
-                          onClick={handleRunTier3Docker}
-                          disabled={isRunningDocker}
-                          aria-label="Verify via Tier 3 Docker Runner"
+                          onClick={() => setUserCode(activeDrill.initialCode)}
+                          aria-label="Reset code to original"
                         >
-                          <Server size={12} style={{ marginRight: '4px' }} />
-                          {isRunningDocker ? "Running Docker..." : "Run in Docker (Tier 3)"}
+                          <RotateCcw size={12} style={{ marginRight: '4px' }} />
+                          Reset Code
                         </Button>
-                      )}
 
-                      <Button 
-                        id="run-harness-btn"
-                        variant="primary-fill" 
-                        size="small"
-                        onClick={handleRunDrill}
-                        disabled={isEvaluating}
-                        aria-label="Run test harness"
-                      >
-                        <Play size={12} style={{ marginRight: '4px' }} />
-                        {isEvaluating ? "Evaluating..." : "Run Test Harness"}
-                      </Button>
+                        {bridgeStatus.connected && (
+                          <Button 
+                            id="run-docker-btn"
+                            variant="primary-outline" 
+                            size="small"
+                            onClick={handleRunTier3Docker}
+                            disabled={isRunningDocker}
+                            aria-label="Verify via Tier 3 Docker Runner"
+                          >
+                            <Server size={12} style={{ marginRight: '4px' }} />
+                            {isRunningDocker ? "Running Docker..." : "Run in Docker (Tier 3)"}
+                          </Button>
+                        )}
+
+                        <Button 
+                          id="run-harness-btn"
+                          variant="primary-fill" 
+                          size="small"
+                          onClick={handleRunDrill}
+                          disabled={isEvaluating}
+                          aria-label="Run test harness"
+                        >
+                          <Play size={12} style={{ marginRight: '4px' }} />
+                          {isEvaluating ? "Evaluating..." : "Run Test Harness"}
+                        </Button>
+                      </div>
                     </div>
+
+                    {/* Editor Container with Flexible Fit & automaticLayout */}
+                    <div className="studio-drill-editor-wrapper">
+                      <Editor
+                        height="100%"
+                        defaultLanguage="php"
+                        theme={isDark ? "vs-dark" : "light"}
+                        value={userCode}
+                        onChange={(val) => setUserCode(val || '')}
+                        options={{
+                          fontSize: 13,
+                          lineNumbers: 'on',
+                          minimap: { enabled: false },
+                          scrollBeyondLastLine: false,
+                          wordWrap: 'on',
+                          tabSize: 4,
+                          automaticLayout: true,
+                        }}
+                      />
+                    </div>
+
+                    {/* Status Bar */}
+                    <div style={{ 
+                      padding: '0.35rem 0.75rem', 
+                      borderTop: '1px solid var(--studio-border)', 
+                      fontSize: '0.75rem', 
+                      color: 'var(--studio-text-muted)',
+                      backgroundColor: 'var(--studio-surface-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexShrink: 0
+                    }}>
+                      <span>Target: <code>Post::with(['author', 'comments'])-&gt;get()</code></span>
+                      <span>Click <strong>Run Test Harness</strong> or <strong>Run in Docker</strong></span>
+                    </div>
+
                   </div>
+                </Panel>
 
-                  {/* Editor Container with Flexible Fit & automaticLayout */}
-                  <div className="studio-drill-editor-wrapper">
-                    <Editor
-                      height="100%"
-                      defaultLanguage="php"
-                      theme={isDark ? "vs-dark" : "light"}
-                      value={userCode}
-                      onChange={(val) => setUserCode(val || '')}
-                      options={{
-                        fontSize: 13,
-                        lineNumbers: 'on',
-                        minimap: { enabled: false },
-                        scrollBeyondLastLine: false,
-                        wordWrap: 'on',
-                        tabSize: 4,
-                        automaticLayout: true,
-                      }}
-                    />
-                  </div>
-
-                  {/* Status Bar */}
-                  <div style={{ 
-                    padding: '0.35rem 0.75rem', 
-                    borderTop: '1px solid var(--studio-border)', 
-                    fontSize: '0.75rem', 
-                    color: 'var(--studio-text-muted)',
-                    backgroundColor: 'var(--studio-surface-subtle)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexShrink: 0
-                  }}>
-                    <span>Target: <code>Post::with(['author', 'comments'])-&gt;get()</code></span>
-                    <span>Click <strong>Run Test Harness</strong> or <strong>Run in Docker</strong></span>
-                  </div>
-
-                </div>
-
-              </div>
+              </Group>
             ) : (
               /* Week 4: In-Browser SQLite Query Plan Lab */
               <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -606,11 +670,13 @@ export function StudioLayout() {
                 )}
                 <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
                   <QueryPlanLab 
+                    initialIndexSql={userCode}
                     isDark={isDark}
+                    onCodeChange={(newSql) => setUserCode(newSql)}
                     onExecutionComplete={(passed) => {
                       if (passed) {
                         setDrillCompleted(true);
-                        saveDrillProgress(activeDrill.id, true, true);
+                        saveDrillProgress(activeDrill.id, true, true, 'simulation');
                       }
                     }}
                   />
@@ -677,6 +743,7 @@ export function StudioLayout() {
                     color: 'var(--studio-text)',
                     whiteSpace: 'pre-wrap'
                   }}>
+                    {/* eslint-disable-next-line no-control-regex */}
                     {(tier3Result.stdout || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '')}
                   </pre>
                 </div>
@@ -751,7 +818,7 @@ export function StudioLayout() {
                 question={activeDrill.oralRubric.question}
                 checkpoints={activeDrill.oralRubric.checkpoints}
                 onCompleted={() => {
-                  loadState();
+                  refreshProgress();
                 }}
               />
 

@@ -19,12 +19,14 @@ import type { SemanticQueryPlanResult } from '../../types';
 interface QueryPlanLabProps {
   initialIndexSql?: string;
   isDark?: boolean;
+  onCodeChange?: (sql: string) => void;
   onExecutionComplete?: (passed: boolean, plan: SemanticQueryPlanResult) => void;
 }
 
 export function QueryPlanLab({ 
-  initialIndexSql = 'CREATE INDEX idx_station_recorded ON weather_observations (station_code, recorded_at DESC);',
+  initialIndexSql = '',
   isDark = true,
+  onCodeChange,
   onExecutionComplete 
 }: QueryPlanLabProps) {
   const [db, setDb] = useState<Database | null>(null);
@@ -70,12 +72,12 @@ export function QueryPlanLab({
         );
       `);
 
-      // Seed 2,500 synthetic observations in a fast transaction
+      // Seed 5,000 synthetic observations in a fast transaction
       database.run('BEGIN TRANSACTION;');
       const stations = ['STN-MY-001', 'STN-MY-015', 'STN-MY-042', 'STN-MY-088', 'STN-KL-100'];
       const baseDate = new Date('2026-10-01T00:00:00Z').getTime();
 
-      for (let i = 0; i < 2500; i++) {
+      for (let i = 0; i < 5000; i++) {
         const station = stations[i % stations.length];
         const temp = (24 + (i % 12) * 0.8).toFixed(1);
         const humidity = (60 + (i % 30)).toFixed(1);
@@ -106,6 +108,7 @@ export function QueryPlanLab({
 
   useEffect(() => {
     initializeAndSeed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Execute User Index Query
@@ -117,7 +120,7 @@ export function QueryPlanLab({
       // 1. Drop old custom index if it exists
       try {
         db.run('DROP INDEX IF EXISTS idx_station_recorded;');
-      } catch (e) {
+      } catch {
         // Ignore if does not exist
       }
 
@@ -190,7 +193,7 @@ export function QueryPlanLab({
             aria-label="Reset database"
           >
             <RefreshCw size={12} style={{ marginRight: '4px' }} />
-            {isSeeding ? "Seeding 2.5k rows..." : "Reset Database"}
+            {isSeeding ? "Seeding 5k rows..." : "Reset Database"}
           </Button>
 
           <Button 
@@ -260,7 +263,11 @@ export function QueryPlanLab({
               defaultLanguage="sql"
               theme={isDark ? "vs-dark" : "light"}
               value={sqlCode}
-              onChange={(val) => setSqlCode(val || '')}
+              onChange={(val) => {
+                const updated = val || '';
+                setSqlCode(updated);
+                onCodeChange?.(updated);
+              }}
               onMount={(editor) => {
                 editorRef.current = editor;
               }}
@@ -327,7 +334,7 @@ export function QueryPlanLab({
             }}>
               <div style={{ fontWeight: 700, color: 'var(--studio-danger)', marginBottom: '4px' }}>1. Baseline (Unindexed):</div>
               <code style={{ color: 'var(--studio-text)', display: 'block', wordBreak: 'break-all' }}>SCAN TABLE weather_observations</code>
-              <div style={{ marginTop: '6px', color: 'var(--studio-text-muted)' }}>Complexity: O(N) full scan (2,500 rows)</div>
+              <div style={{ marginTop: '6px', color: 'var(--studio-text-muted)' }}>Complexity: O(N) full scan (5,000 rows)</div>
             </div>
 
             {/* Current Plan Card */}

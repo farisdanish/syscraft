@@ -18,19 +18,7 @@ export function parseSqliteExplainPlan(
     const detail = row[3];
     rawExplain.push(detail);
 
-    // 1. Full Table Scan Detection: SCAN [TABLE] <tableName>
-    const scanMatch = detail.match(/SCAN\s+(?:TABLE\s+)?([a-zA-Z0-9_]+)/i);
-    if (scanMatch) {
-      usesFullTableScan = true;
-      nodes.push({
-        operation: 'scan',
-        table: scanMatch[1],
-        detail,
-      });
-      continue;
-    }
-
-    // 2. Index Search Detection: SEARCH [TABLE] <tableName> USING [COVERING] INDEX <indexName>
+    // 1. Index Search / Seek Detection: SEARCH [TABLE] <tableName> USING [COVERING] INDEX <indexName>
     const searchMatch = detail.match(/SEARCH\s+(?:TABLE\s+)?([a-zA-Z0-9_]+)\s+USING\s+(?:(COVERING)\s+)?INDEX\s+([a-zA-Z0-9_]+)/i);
     if (searchMatch) {
       const tableName = searchMatch[1];
@@ -51,7 +39,7 @@ export function parseSqliteExplainPlan(
       continue;
     }
 
-    // 3. Primary Key Direct Lookup: SEARCH [TABLE] <tableName> USING INTEGER PRIMARY KEY
+    // 2. Primary Key Direct Lookup: SEARCH [TABLE] <tableName> USING INTEGER PRIMARY KEY
     const pkMatch = detail.match(/SEARCH\s+(?:TABLE\s+)?([a-zA-Z0-9_]+)\s+USING\s+(?:INTEGER\s+)?PRIMARY\s+KEY/i);
     if (pkMatch) {
       const tableName = pkMatch[1];
@@ -60,6 +48,39 @@ export function parseSqliteExplainPlan(
         table: tableName,
         index: 'PRIMARY_KEY',
         coveringIndex: true,
+        detail,
+      });
+      continue;
+    }
+
+    // 3. Index Scan Detection (Iterating over index B-Tree without binary seek)
+    const indexScanMatch = detail.match(/SCAN\s+(?:TABLE\s+)?([a-zA-Z0-9_]+)\s+USING\s+(?:(COVERING)\s+)?INDEX\s+([a-zA-Z0-9_]+)/i);
+    if (indexScanMatch) {
+      const tableName = indexScanMatch[1];
+      const isCovering = Boolean(indexScanMatch[2]);
+      const indexName = indexScanMatch[3];
+
+      if (!indexesUsed.includes(indexName)) {
+        indexesUsed.push(indexName);
+      }
+
+      nodes.push({
+        operation: 'scan',
+        table: tableName,
+        index: indexName,
+        coveringIndex: isCovering,
+        detail,
+      });
+      continue;
+    }
+
+    // 4. Full Table Scan Detection: SCAN [TABLE] <tableName> (heap sequential scan)
+    const scanMatch = detail.match(/SCAN\s+(?:TABLE\s+)?([a-zA-Z0-9_]+)/i);
+    if (scanMatch) {
+      usesFullTableScan = true;
+      nodes.push({
+        operation: 'scan',
+        table: scanMatch[1],
         detail,
       });
       continue;

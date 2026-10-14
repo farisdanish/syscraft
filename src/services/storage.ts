@@ -9,6 +9,7 @@ interface SysCraftDB extends DBSchema {
       drillId: string;
       completed: boolean;
       verified: boolean;
+      verificationSource?: 'simulation' | 'local-runtime' | 'self-reported';
       completedAt: string;
       attempts: number;
     };
@@ -57,13 +58,19 @@ export function getDatabase(): Promise<IDBPDatabase<SysCraftDB>> {
 }
 
 // Progress Operations
-export async function saveDrillProgress(drillId: string, completed: boolean, verified: boolean): Promise<void> {
+export async function saveDrillProgress(
+  drillId: string, 
+  completed: boolean, 
+  verified: boolean,
+  verificationSource: 'simulation' | 'local-runtime' | 'self-reported' = 'simulation'
+): Promise<void> {
   const db = await getDatabase();
   const existing = await db.get('progress', drillId);
   await db.put('progress', {
     drillId,
     completed,
     verified,
+    verificationSource,
     completedAt: new Date().toISOString(),
     attempts: (existing?.attempts || 0) + 1,
   });
@@ -130,6 +137,7 @@ const EnvelopeSchema = z.object({
       completed: z.boolean(),
       score: z.number().optional(),
       verified: z.boolean(),
+      verificationSource: z.enum(['simulation', 'local-runtime', 'self-reported']).optional(),
     })),
     hesitations: z.array(z.any()),
     oralScores: z.array(z.any()),
@@ -144,9 +152,13 @@ export async function exportEnvelopeJSON(): Promise<string> {
   const oralScores = await db.getAll('oralScores');
   const notesList = await db.getAll('notes');
 
-  const completedDrills: Record<string, { completed: boolean; score?: number; verified: boolean }> = {};
+  const completedDrills: Record<string, { completed: boolean; score?: number; verified: boolean; verificationSource?: any }> = {};
   for (const p of progressList) {
-    completedDrills[p.drillId] = { completed: p.completed, verified: p.verified };
+    completedDrills[p.drillId] = { 
+      completed: p.completed, 
+      verified: p.verified,
+      verificationSource: p.verificationSource || 'simulation',
+    };
   }
 
   const customNotes: Record<string, string> = {};

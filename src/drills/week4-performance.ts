@@ -31,7 +31,8 @@ export const WEEK_4_DRILL: DrillDefinition = {
 -- TASK: Write a CREATE INDEX statement named 'idx_station_recorded' on weather_observations
 -- that enables indexed SEARCH and avoids temporary B-Tree sorts.
 
-CREATE INDEX idx_station_recorded ON weather_observations (station_code, recorded_at DESC);
+-- Write your CREATE INDEX statement below:
+
 `,
   solutionCode: `CREATE INDEX idx_station_recorded ON weather_observations (station_code, recorded_at DESC);`,
   validationRules: {

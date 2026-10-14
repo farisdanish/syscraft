@@ -19,7 +19,6 @@ services:
     image: syscraft-runner:1.0.0
     build:
       context: ./runner
-    container_name: syscraft-runner
     depends_on:
       postgres:
         condition: service_healthy
@@ -27,6 +26,10 @@ services:
       - syscraft-testnet
     cap_drop:
       - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 100
+    read_only: true
     volumes:
       - ../testbed:/workspace:ro
     tmpfs:

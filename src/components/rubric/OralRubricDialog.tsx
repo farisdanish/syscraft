@@ -107,7 +107,7 @@ export function OralRubricDialog({
         retryCount: 1,
         hintsRequested: 0,
         failedAssertionCount: 0,
-        rubricMisses: Object.entries(scores).filter(([_, s]) => s <= 2).map(([d]) => d),
+        rubricMisses: Object.entries(scores).filter(([, s]) => s <= 2).map(([d]) => d),
         learnerFlagged: true,
       });
       setHesitationFlagged(true);
