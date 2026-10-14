@@ -92,7 +92,8 @@ flowchart LR
 * [x] **Secured Local Bridge & Testbed (Tier 3):** Loopback bridge daemon (`127.0.0.1:49152`) connecting to `syscraft-testnet` with custom `syscraft-runner:1.0.0` and `postgres:16.4-alpine`, hardened with read-only rootfs, ephemeral code injection, and child process timeout management.
 * [x] **Oral Recall Rubric & Operationalized Hesitation Queue:** 5-dimension scored rubric (1–4 scale), latency/retry metrics, and Sunday review queue in IndexedDB.
 
-### Phase 2: High-Value Core Expansions (Weeks 6 & 7)
+### Phase 2: High-Value Core Expansions & Home Hub (Weeks 6 & 7)
+* [ ] **Home Page & Curriculum Dashboard:** Central navigation hub with 7-week curriculum matrix, IndexedDB telemetry, Sunday review queue stats, 3-tier architecture status, and direct workbench launcher.
 * [ ] **Week 7 Timed CRUD & Auth Sprint:** 90-minute timed mock featuring threat-modeled session fixation regeneration (`$request->session()->regenerate()`), FormRequests, and policy authorization (`$this->authorize()`).
 * [ ] **Week 6 Scoped MVP:** 1 timed system design (Weather Data Pipeline), 2 STAR stories (Report Export Speedup & Memory OOM Fix), and 1 reusable 1-page design document template.
 
