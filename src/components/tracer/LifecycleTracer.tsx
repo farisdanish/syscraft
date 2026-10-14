@@ -36,7 +36,7 @@ export interface LifecycleStepData {
   interviewNote: string;
 }
 
-export const LIFECYCLE_STEPS: LifecycleStepData[] = [
+export const LARAVEL_LIFECYCLE_STEPS: LifecycleStepData[] = [
   {
     id: 'node-client',
     stepNum: 1,
@@ -129,11 +129,108 @@ export const LIFECYCLE_STEPS: LifecycleStepData[] = [
   },
 ];
 
+// Backwards-compatible alias
+export const LIFECYCLE_STEPS = LARAVEL_LIFECYCLE_STEPS;
+
+export const BTREE_INDEX_TRACER_STEPS: LifecycleStepData[] = [
+  {
+    id: 'node-sql-ast',
+    stepNum: 1,
+    label: 'SQL Parser & AST',
+    sublabel: 'Lexer & AST Parse Tree',
+    phase: 'bootstrap',
+    explanation: 'SQLite lexer and Lemon parser parse query into an Abstract Syntax Tree (AST): projections (id, station_code, temperature_c, recorded_at), filter predicate (station_code = ?), sorting (recorded_at DESC), and LIMIT 50.',
+    assumptions: 'Syntactically valid SQL conforming to SQLite ANSI grammar.',
+    interviewNote: 'Query compilation generates VDBE bytecodes. Prepared statements cache this compilation to avoid re-parsing identical SQL templates.',
+  },
+  {
+    id: 'node-catalog',
+    stepNum: 2,
+    label: 'Catalog & Index Lookup',
+    sublabel: 'sqlite_schema / Dictionary',
+    phase: 'bootstrap',
+    explanation: 'Storage engine queries catalog metadata to inspect weather_observations schema and discovered indexes: identifies candidate compound index idx_station_recorded(station_code, recorded_at DESC).',
+    assumptions: 'Table schema metadata and index structures are pre-loaded into memory cache.',
+    interviewNote: 'Data dictionary lookups verify column types and nullability constraints. In concurrent systems, metadata locks (MDL) prevent schema drift during execution.',
+  },
+  {
+    id: 'node-optimizer',
+    stepNum: 3,
+    label: 'Cost Optimizer Decision',
+    sublabel: 'SCAN vs SEARCH Decision',
+    phase: 'resolution',
+    explanation: 'Cost planner compares full table scan (5,000 rows, 42 pages) vs compound index seek. Identifies leftmost prefix match on station_code and presorted match on recorded_at DESC, picking idx_station_recorded with 0 temporary sorts.',
+    assumptions: 'Filter selectivity is high (<10% rows matching); index seek cost is far lower than sequential scan.',
+    interviewNote: 'Senior interview defense: If a query matches >25% of all rows, optimizer may discard the index in favor of sequential scan to avoid random I/O page thrashing.',
+  },
+  {
+    id: 'node-root-page',
+    stepNum: 4,
+    label: 'B-Tree Root Page Read',
+    sublabel: 'Buffer Pool / Pager Cache',
+    phase: 'resolution',
+    explanation: 'Storage engine requests root page for idx_station_recorded from pager cache. Root page contains separator keys dividing index key ranges across branch child pages.',
+    assumptions: 'Root page is pinned in memory buffer cache (0 physical disk I/O reads).',
+    interviewNote: 'Index root pages are perpetually memory-resident. Tree height (typically 2-4 levels) caps maximum page seeks even for datasets with billions of rows.',
+  },
+  {
+    id: 'node-branch-seek',
+    stepNum: 5,
+    label: 'Branch Node Binary Seek',
+    sublabel: 'O(log N) Key Partitioning',
+    phase: 'resolution',
+    explanation: 'Binary search across interior branch cell keys determines the child page pointer matching the key partition for \'STN-MY-042\', descending directly toward the leaf layer.',
+    assumptions: 'Internal keys are strictly sorted by station_code ASC, recorded_at DESC.',
+    interviewNote: 'B+Trees store payloads and rowid pointers exclusively in leaf pages, maximizing branch fan-out (thousands of child pointers per 4KB page).',
+  },
+  {
+    id: 'node-leaf-boundary',
+    stepNum: 6,
+    label: 'Leaf Key Boundary Seek',
+    sublabel: 'Locate 1st Matching Key',
+    phase: 'execution',
+    explanation: 'Engine lands on target leaf page and seeks to the very first record where station_code = \'STN-MY-042\'. Because index is sorted DESC by recorded_at, the first matching leaf key is already the latest timestamp.',
+    assumptions: 'Leftmost prefix rule satisfied; collation order aligns with ORDER BY clause.',
+    interviewNote: 'Leftmost prefix rule: If the index was defined as (recorded_at DESC, station_code), SQLite could not seek by station_code and would fall back to full index scan.',
+  },
+  {
+    id: 'node-rowid-deref',
+    stepNum: 7,
+    label: 'Rowid Table Dereference',
+    sublabel: 'Clustered Table Page Lookup',
+    phase: 'execution',
+    explanation: 'For each matching leaf entry, engine reads the 64-bit rowid and fetches non-indexed columns (temperature_c) from the primary clustered B-Tree table page.',
+    assumptions: 'Secondary index contains rowid pointer into primary table B-Tree.',
+    interviewNote: 'Tradeoff checkpoint: If the index was covering (station_code, recorded_at, temperature_c), table page dereferencing is skipped completely (Index-Only Scan).',
+  },
+  {
+    id: 'node-limit-exit',
+    stepNum: 8,
+    label: 'LIMIT 50 Early Exit',
+    sublabel: 'Cursor Halts at 50 Rows',
+    phase: 'execution',
+    explanation: 'Having iterated through 50 matching rows in index order, the query cursor hits LIMIT 50 threshold and aborts traversal immediately. The remaining thousands of rows are never visited.',
+    assumptions: 'Cursor iterator supports streaming pipeline early exit.',
+    interviewNote: 'Without the composite index sorting match, SQLite would have to scan ALL matching rows, sort them in a temporary B-Tree or memory buffer, before truncating to 50.',
+  },
+  {
+    id: 'node-result-stream',
+    stepNum: 9,
+    label: 'Resultset Streaming',
+    sublabel: 'Yield Rows & Release Locks',
+    phase: 'termination',
+    explanation: 'Engine serializes the 50 record tuples, yields the record buffer to the WASM caller, unpins buffer pool pages, and closes the read cursor.',
+    assumptions: 'Caller consumes record stream without backpressure.',
+    interviewNote: 'Explain cursor lifecycle: Unclosed cursors hold shared read locks (or SQLite WAL read marks), preventing WAL checkpointing and database truncation.',
+  },
+];
+
 const PHASE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   bootstrap: { bg: 'rgba(2, 132, 199, 0.12)', text: '#0284c7', border: 'rgba(2, 132, 199, 0.3)' },
   middleware: { bg: 'rgba(245, 158, 11, 0.12)', text: '#f59e0b', border: 'rgba(245, 158, 11, 0.3)' },
   resolution: { bg: 'rgba(124, 58, 237, 0.12)', text: '#8b5cf6', border: 'rgba(124, 58, 237, 0.3)' },
   execution: { bg: 'rgba(16, 185, 129, 0.12)', text: '#10b981', border: 'rgba(16, 185, 129, 0.3)' },
+  termination: { bg: 'rgba(100, 116, 139, 0.12)', text: '#94a3b8', border: 'rgba(100, 116, 139, 0.3)' },
 };
 
 // Planar snake pipeline handle topology (strictly non-overlapping)
@@ -149,11 +246,19 @@ const HANDLE_CONFIGS: Record<number, { target?: Position; source?: Position }> =
   9: { target: Position.Left },
 };
 
+export interface LifecycleTracerProps {
+  steps?: LifecycleStepData[];
+  engineBadge?: string;
+  badgeVariant?: 'primary' | 'success' | 'warning' | 'default';
+  packetName?: string;
+}
+
 // Custom React Flow Node Component
 function LifecycleCustomNode({ data }: NodeProps) {
   const step = data.step as LifecycleStepData;
   const isActive = Boolean(data.isActive);
   const isPast = Boolean(data.isPast);
+  const packetName = (data.packetName as string) || 'Active Ingress Packet';
   const phaseTheme = PHASE_COLORS[step.phase] || PHASE_COLORS.bootstrap;
   const config = HANDLE_CONFIGS[step.stepNum] || {};
 
@@ -268,7 +373,7 @@ function LifecycleCustomNode({ data }: NodeProps) {
           color: 'var(--studio-primary)'
         }}>
           <Sparkles size={12} />
-          <span>Active Ingress Packet</span>
+          <span>{packetName}</span>
         </div>
       )}
     </div>
@@ -279,11 +384,25 @@ const nodeTypes = {
   lifecycleNode: LifecycleCustomNode,
 };
 
-export function LifecycleTracer() {
+export function LifecycleTracer({
+  steps = LARAVEL_LIFECYCLE_STEPS,
+  engineBadge = 'Tier 2: Deterministic Simulation',
+  badgeVariant = 'primary',
+  packetName = 'Active Ingress Packet',
+}: LifecycleTracerProps = {}) {
+  const currentSteps = steps && steps.length > 0 ? steps : LARAVEL_LIFECYCLE_STEPS;
+
   const [activeStep, setActiveStep] = useState<number>(1);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [selectedNodeData, setSelectedNodeData] = useState<LifecycleStepData>(LIFECYCLE_STEPS[0]);
+  const [selectedNodeData, setSelectedNodeData] = useState<LifecycleStepData>(currentSteps[0]);
   const [viewMode, setViewMode] = useState<'canvas' | 'table'>('canvas');
+
+  // Reset to step 1 whenever step definitions change (e.g. switching between curriculum modules)
+  useEffect(() => {
+    setActiveStep(1);
+    setSelectedNodeData(currentSteps[0]);
+    setIsPlaying(false);
+  }, [steps]);
 
   // Auto-play interval
   useEffect(() => {
@@ -291,7 +410,7 @@ export function LifecycleTracer() {
     if (isPlaying) {
       timer = setInterval(() => {
         setActiveStep((prev) => {
-          if (prev >= LIFECYCLE_STEPS.length) {
+          if (prev >= currentSteps.length) {
             setIsPlaying(false);
             return 1;
           }
@@ -300,19 +419,19 @@ export function LifecycleTracer() {
       }, 2000);
     }
     return () => clearInterval(timer);
-  }, [isPlaying]);
+  }, [isPlaying, currentSteps.length]);
 
   // Keep selected node in sync when step changes
   useEffect(() => {
-    const stepData = LIFECYCLE_STEPS.find((s) => s.stepNum === activeStep);
+    const stepData = currentSteps.find((s) => s.stepNum === activeStep);
     if (stepData) {
       setSelectedNodeData(stepData);
     }
-  }, [activeStep]);
+  }, [activeStep, currentSteps]);
 
   // React Flow Nodes with Custom Node Types
   const nodes: Node[] = useMemo(() => {
-    return LIFECYCLE_STEPS.map((step, idx) => {
+    return currentSteps.map((step, idx) => {
       const isActive = step.stepNum === activeStep;
       const isPast = step.stepNum < activeStep;
 
@@ -330,17 +449,18 @@ export function LifecycleTracer() {
           step,
           isActive,
           isPast,
+          packetName,
         },
       };
     });
-  }, [activeStep]);
+  }, [activeStep, currentSteps, packetName]);
 
   // React Flow Edges with SmoothStep & Planar Handle Bindings
   const edges: Edge[] = useMemo(() => {
     const result: Edge[] = [];
-    for (let i = 0; i < LIFECYCLE_STEPS.length - 1; i++) {
-      const source = LIFECYCLE_STEPS[i];
-      const target = LIFECYCLE_STEPS[i + 1];
+    for (let i = 0; i < currentSteps.length - 1; i++) {
+      const source = currentSteps[i];
+      const target = currentSteps[i + 1];
       const isEdgeActive = source.stepNum === activeStep;
       const isEdgePast = source.stepNum < activeStep;
 
@@ -364,7 +484,7 @@ export function LifecycleTracer() {
       });
     }
     return result;
-  }, [activeStep]);
+  }, [activeStep, currentSteps]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, backgroundColor: 'var(--studio-bg)' }}>
@@ -381,11 +501,11 @@ export function LifecycleTracer() {
         gap: '0.75rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Tag variant="primary" size="small">
-            Tier 2: Deterministic Simulation
+          <Tag variant={badgeVariant} size="small">
+            {engineBadge}
           </Tag>
           <span style={{ fontSize: '0.8125rem', color: 'var(--studio-text-muted)' }}>
-            Step {activeStep} of {LIFECYCLE_STEPS.length}: <strong style={{ color: 'var(--studio-text)' }}>{selectedNodeData.label}</strong>
+            Step {activeStep} of {currentSteps.length}: <strong style={{ color: 'var(--studio-text)' }}>{selectedNodeData.label}</strong>
           </span>
         </div>
 
@@ -414,8 +534,8 @@ export function LifecycleTracer() {
           <Button 
             variant="default-outline" 
             size="small"
-            onClick={() => setActiveStep(prev => Math.min(LIFECYCLE_STEPS.length, prev + 1))}
-            disabled={activeStep >= LIFECYCLE_STEPS.length}
+            onClick={() => setActiveStep(prev => Math.min(currentSteps.length, prev + 1))}
+            disabled={activeStep >= currentSteps.length}
             aria-label="Next step"
           >
             <ChevronRight size={14} />
@@ -455,7 +575,7 @@ export function LifecycleTracer() {
               edges={edges}
               nodeTypes={nodeTypes}
               onNodeClick={(_, node) => {
-                const s = LIFECYCLE_STEPS.find(item => item.id === node.id);
+                const s = currentSteps.find(item => item.id === node.id);
                 if (s) {
                   setActiveStep(s.stepNum);
                   setSelectedNodeData(s);
@@ -481,7 +601,7 @@ export function LifecycleTracer() {
                 </tr>
               </thead>
               <tbody>
-                {LIFECYCLE_STEPS.map((step) => (
+                {currentSteps.map((step) => (
                   <tr 
                     key={step.id} 
                     onClick={() => {
@@ -529,7 +649,7 @@ export function LifecycleTracer() {
             </span>
             <Tag variant="success" size="small">
               <CheckCircle2 size={11} style={{ marginRight: '3px' }} />
-              Step {selectedNodeData.stepNum}/9
+              Step {selectedNodeData.stepNum}/{currentSteps.length}
             </Tag>
           </div>
 

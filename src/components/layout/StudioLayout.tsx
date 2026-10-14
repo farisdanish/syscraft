@@ -21,7 +21,11 @@ import {
 import { WORKFLOW_STEPS, type WorkflowStep, type DrillDefinition } from '../../types';
 import { WEEK_1_DRILL, evaluateLaravelDrill } from '../../drills/week1-internals';
 import { WEEK_4_DRILL } from '../../drills/week4-performance';
-import { LifecycleTracer } from '../tracer/LifecycleTracer';
+import { 
+  LifecycleTracer, 
+  LARAVEL_LIFECYCLE_STEPS, 
+  BTREE_INDEX_TRACER_STEPS 
+} from '../tracer/LifecycleTracer';
 import { QueryPlanLab } from '../database/QueryPlanLab';
 import { OralRubricDialog } from '../rubric/OralRubricDialog';
 import { 
@@ -639,18 +643,29 @@ export function StudioLayout() {
               flexShrink: 0
             }}>
               <div>
-                <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-text)' }}>Step 5: Visual System Tracer Replay</strong>
+                <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-text)' }}>
+                  {activeDrill.week === 1 
+                    ? 'Step 5: Visual HTTP Request Lifecycle Tracer' 
+                    : 'Step 5: Visual B-Tree Compound Index & Query Execution Tracer'}
+                </strong>
                 <span style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)', display: 'block' }}>
-                  Interactive state machine visualizing the request journey. Click any node to inspect internal variables and assumptions.
+                  {activeDrill.week === 1
+                    ? 'Interactive state machine visualizing the Laravel request journey from HTTP ingress to terminating middleware.'
+                    : 'Interactive state machine visualizing the SQLite storage engine B-Tree index traversal, key seek, and early LIMIT exit.'}
                 </span>
               </div>
-              <Tag variant="success" size="small">
-                Review & Consolidate
+              <Tag variant={activeDrill.week === 1 ? "primary" : "success"} size="small">
+                {activeDrill.week === 1 ? "Week 1: Laravel Internals" : "Week 4: Storage Engine"}
               </Tag>
             </div>
 
             <div style={{ flex: 1, minHeight: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--studio-border)' }}>
-              <LifecycleTracer />
+              <LifecycleTracer 
+                steps={activeDrill.week === 1 ? LARAVEL_LIFECYCLE_STEPS : BTREE_INDEX_TRACER_STEPS}
+                engineBadge={activeDrill.week === 1 ? "Tier 2: Deterministic Simulation" : "Tier 1: SQLite 3.45.2 (WASM Engine)"}
+                badgeVariant={activeDrill.week === 1 ? "primary" : "success"}
+                packetName={activeDrill.week === 1 ? "Active Ingress Packet" : "Active Cursor Pointer"}
+              />
             </div>
 
             <div className="studio-step-actions">
