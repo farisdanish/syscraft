@@ -98,11 +98,18 @@ flowchart LR
 * [X] **Secured Local Bridge & Testbed Prototype (Tier 3):** Loopback bridge daemon (`127.0.0.1:49152`) connecting to `syscraft-testnet` with custom `syscraft-runner:1.0.0` and `postgres:16.4-alpine`, hardened with read-only rootfs, ephemeral learner code injection, real PDO query-budget tracking against PostgreSQL (51 unoptimized queries vs 3 batch eager-loaded queries), strict non-empty origin validation, and child process group timeout management.
 * [X] **Oral Recall Rubric & Operationalized Hesitation Queue:** 5-dimension scored rubric (1–4 scale), latency/retry metrics, and Sunday review queue in IndexedDB.
 
-### Phase 2: High-Value Core Expansions & Home Hub (Weeks 6 & 7)
+### Phase 2: High-Value Core Expansions & Home Hub (In Progress)
 
-* [ ] **Home Page & Curriculum Dashboard:** Central navigation hub with 7-week curriculum matrix, IndexedDB telemetry, Sunday review queue stats, 3-tier architecture status, and direct workbench launcher.
-* [ ] **Week 7 Timed CRUD & Auth Sprint:** 90-minute timed mock featuring threat-modeled session fixation regeneration (`$request->session()->regenerate()`), FormRequests, and policy authorization (`$this->authorize()`).
-* [ ] **Week 6 Scoped MVP:** 1 timed system design (Weather Data Pipeline), 2 STAR stories (Report Export Speedup & Memory OOM Fix), and 1 reusable 1-page design document template.
+#### Phase 2A: Learner-First Home Hub & Architectural Separation (Completed & Hardened)
+
+* [X] **Learner-First Home Hub & Three-Node Navigation:** Outcome-driven homepage leading with clear core learning tracks (Framework Internals, Database Engineering, Distributed Queues, Architecture & Security), streamlined telemetry metrics, zero-secrets JSON envelope import/export, WCAG 2.2 AA reset confirmation modal, and persistent theme switching across `Curriculum`, `How It Works`, and `Studio Workbench` views.
+* [X] **Dedicated "How It Works" Architectural View:** Dedicated technical transparency view separating runtime execution details (Tier 1 WASM SQLite, Tier 2 Simulation FSM, Tier 3 loopback Docker bridge at `127.0.0.1:49152`) and live container diagnostics from learner curriculum discovery.
+* [X] **Desktop Viewport & Layout Sizing Hardening:** Enforced flex-shrink invariants (`.home-main > * { flex-shrink: 0; }`) preventing hero banner and dashboard card squishing, guaranteeing full typography legibility, comfortable tag/button spacing, and smooth scrolling across viewports.
+
+#### Phase 2B: High-Value Core Expansions (Next Steps)
+
+* [ ] **Week 7 Timed CRUD & Auth Sprint:** 90-minute timed mock featuring threat-modeled session fixation regeneration (`$request->session()->regenerate()`), FormRequests, role checks, and policy authorization (`$this->authorize()`).
+* [ ] **Week 6 Scoped MVP:** 1 timed system design (Weather Data Pipeline: 100k req/s), 2 structured STAR stories (Report Export Speedup & Memory OOM Fix), and 1 reusable 1-page architecture design document template.
 
 ### Phase 3: Enrichment Modules (Weeks 2, 3, 5)
 
