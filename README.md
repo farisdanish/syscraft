@@ -1,32 +1,190 @@
-# React + TypeScript + Vite
+# SysCraft: Interactive Systems & Backend Learning Studio
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+> **Positioning Statement:**  
+> *SysCraft is a browser-first learning studio with deterministic simulations for systems concepts, semantic query-plan validation, and a secured local runtime integration that validates behavior in a pinned PostgreSQL 16.4 and Laravel 12.0.1 testbed.*
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 1. Target Audience & Scope
 
-## React Compiler
+SysCraft is engineered specifically for **self-directed backend engineers** preparing for:
+* **Senior Backend & Systems Design Interviews:** Deep architectural trade-offs, backpressure handling, cursor vs. offset pagination, and unscripted oral defense.
+* **Laravel / PHP Technical Roles:** Framework internals, HTTP request lifecycle, Service Container resolution, Eloquent N+1 elimination, and Horizon queue semantics.
+* **Malaysian Government & GovTech Technical Assessments:** Conformance with official public sector digital standards (**MYDS - Malaysia Government Design System**), WCAG 2.2 accessibility, clean repository hygiene, threat-modeled authorization policies, and reproducible deployments.
+* **Practical Engineering Evaluation:** Hands-on mastery of relational databases, query-plan optimization, session security, and deployment hygiene.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+*Note: While SysCraft's progressive workflow accommodates structured onboarding, it is not a general-purpose tutorial platform for novice programmers. It assumes baseline familiarity with backend programming and focuses on senior-level conceptual depth and interview readiness.*
 
-## Expanding the Oxlint configuration
+---
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## 2. Core Architectural Philosophy: The 3-Tier Execution Model
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+A browser-only sandbox cannot replicate Zend engine memory internals, PDO driver buffering, or framework state. SysCraft enforces technical honesty by dividing all learning tasks into three explicit tiers:
+
+```mermaid
+graph TD
+    subgraph Tier_1 [Tier 1: Browser-Native Runtime]
+        T1_SQL[WebAssembly SQLite: sql.js@1.12.0 with Runtime Version & Semantic Parser]
+        T1_HTTP[HTTP & RFC 9457 Problem Details Contract Validators]
+        T1_STATE[State Machine Simulators & Visual Flow Canvas]
+        T1_PERSIST[IndexedDB with Schema Versioning & Encrypted Export]
+    end
+
+    subgraph Tier_2 [Tier 2: Deterministic Simulated Backend]
+        T2_LIFE[Laravel Lifecycle Mental Model State Machine - Explicitly Simulated]
+        T2_QUEUE[Queue Retry & Dead-Letter Queue Simulator - Explicitly Simulated]
+        T2_DI[Service Container Dependency Graph Visualizer]
+        T2_MEM[Simulated Driver Memory Growth Model - Explicitly Non-Live]
+    end
+
+    subgraph Tier_3 [Tier 3: Secured Canonical Real Runtime - Local Docker / CLI]
+        T3_NET[Internal Docker Network: syscraft-testnet - No External Egress]
+        T3_RUNNER[Custom Runner Image: syscraft-runner:1.0.0 UID 1000:1000 + Pre-cached Composer]
+        T3_LARAVEL[Laravel 12.0.1 Pinned Testbed]
+        T3_TEST[PHPUnit 11.3.3 / Pest 3.0.4 Test Suite]
+        T3_PG[PostgreSQL 16.4 Container: Runtime-Derived SELECT version]
+    end
+
+    Tier_1 -->|Instant Client Feedback| Learner[Learner Studio]
+    Tier_2 -->|Mental Models with Stated Assumptions| Learner
+    Tier_3 -->|Loopback Capability Bridge - 127.0.0.1:49152| Learner
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+* **Tier 1 (Browser-Native):** Runs in-browser via WebAssembly (`sql.js@1.12.0`). Evaluates SQLite query plans semantically, tests JSON/HTTP contracts against **RFC 9457 (Problem Details)**, and persists progress locally in IndexedDB.
+* **Tier 2 (Simulated Backend):** Explicitly labeled as **"Deterministic Simulation"**. Visualizes abstract flows (request lifecycle, queue retry backoff, container bindings) using inspectable rules and documented assumptions rather than claiming live execution.
+* **Tier 3 (Secured Real Runtime):** Standardized local Docker project or native CLI fallback. Validates code in a pinned **Laravel 12.0.1 / PHP 8.3.11 / PostgreSQL 16.4** testbed connected via an isolated internal network (`syscraft-testnet`).
+
+---
+
+## 3. Cognitive Load Control: The Progressive 5-Step Workflow
+
+To eliminate split-screen cognitive overload, exercises flow through a focused sequential structure:
+
+```mermaid
+flowchart LR
+    S1[1. Concept Brief & Single Diagram] --> S2[2. Focused Code / SQL Drill]
+    S2 --> S3[3. Assertion Feedback & Plan Analysis]
+    S3 --> S4[4. Scored Oral Recall Rubric]
+    S4 --> S5[5. Optional Tracer Replay]
+```
+
+1. **Step 1: Concept Brief & Single Diagram:** Clean focus on the mental model (e.g. single diagram of B-Tree seek vs. sequential scan).
+2. **Step 2: Focused Drill:** The code or query editor takes primary focus with clear instructions and query budgets.
+3. **Step 3: Feedback & Plan Analysis:** Structural assertions evaluate query plans or code ASTs, highlighting *why* an index was skipped or *why* an authorization check failed.
+4. **Step 4: Scored Oral Recall Rubric:** Timed, unscripted verbal practice against an explicit 5-dimension rubric (Correctness, Trade-Off Awareness, Failure Handling, Communication Clarity, Follow-Up Challenge).
+5. **Step 5: Optional Tracer Replay:** Playback the request path or pipeline state machine to consolidate the mental model.
+
+---
+
+## 4. Development Roadmap
+
+### Phase 0: Scaffolding, Git Init & MYDS Proof-of-Installation (Completed)
+* [x] Initialize Git repository at `/home/nian014/projects/syscraft` with conventional commit structure.
+* [x] Scaffold Vite 5.4.2 + React 18.3.1 (TypeScript 5.4.5) project.
+* [x] Install pinned `@govtechmy/myds-react@1.0.2` and `@govtechmy/myds-style@1.0.0`.
+* [x] Configure `.agents/` customizations directory (`rules/`, `skills/`, `notes/`) for cross-device development.
+* [x] Gate Check: Verify MYDS component rendering, CSS design tokens, dark/light theme switching, and local SQLite WASM execution (`3.45.2`).
+
+### Phase 1: MVP Core (Weeks 1 & 4 + Studio Shell) (In Progress)
+* [ ] **Studio Shell:** Draggable 5-step progressive workflow UI using `react-resizable-panels`, Monaco Editor (`@monaco-editor/react`), and React Flow (`@xyflow/react`).
+* [ ] **Week 1 Simulator (Tier 2):** Deterministic Laravel Lifecycle mental model tracer with interactive breakpoint inspection.
+* [ ] **Week 4 Database Lab (Tier 1):** `sql.js@1.12.0` SQLite sandbox with runtime version display and fixture-tested semantic query-plan parser.
+* [ ] **Secured Local Bridge & Testbed (Tier 3):** Loopback bridge daemon (`127.0.0.1:49152`) connecting to `syscraft-testnet` with custom `syscraft-runner:1.0.0` and `postgres:16.4-alpine`.
+* [ ] **Oral Recall Rubric & Operationalized Hesitation Queue:** 5-dimension scored rubric (1–4 scale), latency/retry metrics, and Sunday review queue in IndexedDB.
+
+### Phase 2: High-Value Core Expansions (Weeks 6 & 7)
+* [ ] **Week 7 Timed CRUD & Auth Sprint:** 90-minute timed mock featuring threat-modeled session fixation regeneration (`$request->session()->regenerate()`), FormRequests, and policy authorization (`$this->authorize()`).
+* [ ] **Week 6 Scoped MVP:** 1 timed system design (Weather Data Pipeline), 2 STAR stories (Report Export Speedup & Memory OOM Fix), and 1 reusable 1-page design document template.
+
+### Phase 3: Enrichment Modules (Weeks 2, 3, 5)
+* [ ] **Week 2:** REST API cursor pagination with concurrency contracts & RFC 9457 Problem Details error formats.
+* [ ] **Week 3:** Refactoring diff studio with dependency injection and Pest 3.0.4 test harness.
+* [ ] **Week 5:** Resilient multi-queue ingestion pipeline and failure-mode matrix.
+
+---
+
+## 5. Further Enhancements: Stack-Adaptable Architecture
+
+While SysCraft's initial curriculum focuses on Laravel, PHP, and PostgreSQL, its underlying learning framework is fundamentally **stack-adaptable**. The platform separates portable learning mechanics from stack-specific execution:
+
+### 5.1 Portable Learning Layer vs. Stack-Specific Layer
+
+| Dimension | Portable Layer (Core Platform) | Stack-Specific Layer (Adapter Module) |
+|---|---|---|
+| **Learning Workflow** | Concept $\rightarrow$ Drill $\rightarrow$ Feedback $\rightarrow$ Oral Recall $\rightarrow$ Review | Language/runtime syntax and toolchains |
+| **Hesitation Tracking** | Action latency, retry counts, hint tracking, rubric misses | Language-specific compilation & linter errors |
+| **System Design** | URL shorteners, ingestion pipelines, notification systems | High-level architectural diagrams & trade-offs |
+| **API Contracts** | Pagination mechanics, idempotency keys, RFC 9457 contracts | Routing frameworks (Laravel, FastAPI, Express, Spring) |
+| **Database Concepts** | B-Tree indexing, table scans vs. seeks, transaction safety | Engine specifics (PostgreSQL, SQLite, MySQL, SQL Server) |
+| **Simulations** | Deterministic state machines and animated visual tracers | Framework lifecycle nodes (Kernel, Middleware, Container) |
+
+### 5.2 Stack Adapter Interface Architecture
+
+Future releases can swap or extend the backend runtime by implementing a standardized **Stack Adapter Interface**:
+
+```text
+Core Learning Platform
+├── lessons/                        # Conceptual briefs, guidelines, and schemas
+├── drills/                         # Drill definitions, budgets, and criteria
+├── rubrics/                        # 5-dimension oral defense scoring models
+├── tracking/                       # Hesitation metrics and Sunday review queues
+├── persistence/                    # IndexedDB envelope & prototype-safe exports
+├── simulations/                    # Abstract state machines & visual tracers
+└── runtime/
+    └── StackAdapterInterface.ts    # Contract for test execution & AST evaluation
+
+Stack Adapters (Modular Plugins)
+├── adapters/laravel/               # Reference Implementation: PHP 8.3 + Laravel 12 + Pest 3
+├── adapters/django/                # Future: Python 3.12 + Django 5 + Pytest
+├── adapters/spring/                # Future: Java 21 + Spring Boot 3 + JUnit 5
+├── adapters/nestjs/                # Future: Node 22 + NestJS 10 + Prisma + Jest
+└── adapters/golang/                # Future: Go 1.23 + Gin/Echo + GORM + Go Test
+```
+
+### 5.3 Implementation Sequencing Strategy
+1. **Reference Implementation (Current):** Build and harden the Laravel 12 / PHP 8.3 / PostgreSQL 16 reference system first. Ensure that lesson schemas, drill models, rubric scoring, IndexedDB storage, and loopback bridge protocols are robust and battle-tested.
+2. **Adapter Decoupling:** Keep curriculum content and prompt templates strictly separated from Laravel-specific execution details.
+3. **Pluggable Adapters:** Once the core platform is proven, introduce new stack adapters behind the `StackAdapterInterface` without touching the studio shell, visual flow engine, or hesitation tracker.
+
+---
+
+## 6. Pinned Technology Stack Matrix
+
+| Component | Pinned Version / Digest |
+|---|---|
+| **Frontend Framework** | React `18.3.1` + TypeScript `5.4.5` + Vite `5.4.2` |
+| **Design System** | `@govtechmy/myds-react@1.0.2` & `@govtechmy/myds-style@1.0.0` |
+| **Visual Tracer** | `@xyflow/react` (`^12.12.0`) |
+| **IDE & Diff Editor** | `@monaco-editor/react` (`^4.7.0`) |
+| **Tier 1 Database** | `sql.js@1.12.0` (SQLite `3.45.2` WASM) |
+| **Tier 3 Runner Image** | `syscraft-runner:1.0.0` (`php:8.3.11-cli-alpine` + Composer `2.7.7` + `pdo_pgsql`) |
+| **Tier 3 Database** | `postgres:16.4-alpine` |
+| **Tier 3 Framework** | Laravel `12.0.1` + PHPUnit `11.3.3` + Pest `3.0.4` |
+
+---
+
+## 7. Local Development Quickstart
+
+### Prerequisites
+* Node.js v20.x or v22.x LTS
+* Docker Engine & Docker Compose v2.20+ (for Tier 3 exercises)
+
+### 1. Start the Studio Development Server
+```bash
+git clone <repo-url> syscraft
+cd syscraft
+npm install
+npm run dev
+```
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+### 2. Verify Local Build
+```bash
+npm run build
+```
+
+---
+
+## 8. License & Standards
+* Built in alignment with the **Malaysia Government Design System (MYDS)** standards.
+* Conforms to **WCAG 2.2 AA** accessibility guidelines.
