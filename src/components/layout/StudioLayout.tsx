@@ -348,7 +348,7 @@ export function StudioLayout() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '650px' }}>
           {WORKFLOW_STEPS.map((s) => {
             const isActive = s.step === currentStep;
-            const isCompleted = s.step < currentStep || (s.step === 2 && drillCompleted);
+            const isCompleted = s.step < currentStep;
             const maxAccessibleStep = drillCompleted ? 5 : 2;
             const isLocked = s.step > maxAccessibleStep;
 
