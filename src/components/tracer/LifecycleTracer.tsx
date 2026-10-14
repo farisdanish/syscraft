@@ -134,7 +134,19 @@ const PHASE_COLORS: Record<string, { bg: string; text: string; border: string }>
   middleware: { bg: 'rgba(245, 158, 11, 0.12)', text: '#f59e0b', border: 'rgba(245, 158, 11, 0.3)' },
   resolution: { bg: 'rgba(124, 58, 237, 0.12)', text: '#8b5cf6', border: 'rgba(124, 58, 237, 0.3)' },
   execution: { bg: 'rgba(16, 185, 129, 0.12)', text: '#10b981', border: 'rgba(16, 185, 129, 0.3)' },
-  termination: { bg: 'rgba(100, 116, 139, 0.12)', text: '#94a3b8', border: 'rgba(100, 116, 139, 0.3)' },
+};
+
+// Planar snake pipeline handle topology (strictly non-overlapping)
+const HANDLE_CONFIGS: Record<number, { target?: Position; source?: Position }> = {
+  1: { source: Position.Right },
+  2: { target: Position.Left, source: Position.Right },
+  3: { target: Position.Left, source: Position.Bottom },
+  4: { target: Position.Top, source: Position.Left },
+  5: { target: Position.Right, source: Position.Left },
+  6: { target: Position.Right, source: Position.Bottom },
+  7: { target: Position.Top, source: Position.Right },
+  8: { target: Position.Left, source: Position.Right },
+  9: { target: Position.Left },
 };
 
 // Custom React Flow Node Component
@@ -143,6 +155,7 @@ function LifecycleCustomNode({ data }: NodeProps) {
   const isActive = Boolean(data.isActive);
   const isPast = Boolean(data.isPast);
   const phaseTheme = PHASE_COLORS[step.phase] || PHASE_COLORS.bootstrap;
+  const config = HANDLE_CONFIGS[step.stepNum] || {};
 
   return (
     <div style={{
@@ -157,9 +170,33 @@ function LifecycleCustomNode({ data }: NodeProps) {
       cursor: 'pointer',
       transform: isActive ? 'scale(1.03)' : 'scale(1)',
     }}>
-      {/* Handles */}
-      <Handle type="target" position={Position.Top} style={{ background: 'var(--studio-border-strong)', width: 8, height: 8 }} />
-      <Handle type="source" position={Position.Bottom} style={{ background: 'var(--studio-border-strong)', width: 8, height: 8 }} />
+      {/* Planar Non-Overlapping Directional Handles */}
+      {config.target && (
+        <Handle 
+          id="target"
+          type="target" 
+          position={config.target} 
+          style={{ 
+            background: isActive ? 'var(--studio-primary)' : isPast ? 'var(--studio-success)' : 'var(--studio-border-strong)', 
+            width: 8, 
+            height: 8,
+            border: '2px solid var(--studio-surface)',
+          }} 
+        />
+      )}
+      {config.source && (
+        <Handle 
+          id="source"
+          type="source" 
+          position={config.source} 
+          style={{ 
+            background: isActive ? 'var(--studio-primary)' : isPast ? 'var(--studio-success)' : 'var(--studio-border-strong)', 
+            width: 8, 
+            height: 8,
+            border: '2px solid var(--studio-surface)',
+          }} 
+        />
+      )}
 
       {/* Top Meta Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -279,11 +316,11 @@ export function LifecycleTracer() {
       const isActive = step.stepNum === activeStep;
       const isPast = step.stepNum < activeStep;
 
-      // 3-column snake layout
+      // 3-column snake layout with comfortable spacing
       const row = Math.floor(idx / 3);
       const col = row % 2 === 0 ? idx % 3 : 2 - (idx % 3);
-      const x = col * 280 + 30;
-      const y = row * 160 + 30;
+      const x = col * 300 + 30;
+      const y = row * 170 + 30;
 
       return {
         id: step.id,
@@ -298,7 +335,7 @@ export function LifecycleTracer() {
     });
   }, [activeStep]);
 
-  // React Flow Edges with SmoothStep
+  // React Flow Edges with SmoothStep & Planar Handle Bindings
   const edges: Edge[] = useMemo(() => {
     const result: Edge[] = [];
     for (let i = 0; i < LIFECYCLE_STEPS.length - 1; i++) {
@@ -311,6 +348,8 @@ export function LifecycleTracer() {
         id: `edge-${source.id}-${target.id}`,
         source: source.id,
         target: target.id,
+        sourceHandle: 'source',
+        targetHandle: 'target',
         type: 'smoothstep',
         animated: isEdgeActive,
         style: {
