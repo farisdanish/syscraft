@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16.4-alpine
+    container_name: syscraft-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: syscraft_test
+      POSTGRES_USER: syscraft_user
+      POSTGRES_PASSWORD: syscraft_secret
+    networks:
+      - syscraft-testnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U syscraft_user -d syscraft_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  test:
+    build:
+      context: ./runner
+    container_name: syscraft-runner
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - syscraft-testnet
+    cap_drop:
+      - ALL
+    volumes:
+      - ..:/workspace:ro
+    tmpfs:
+      - /tmp:rw,size=64m
+      - /workspace/storage/framework:rw,size=32m
+      - /workspace/bootstrap/cache:rw,size=16m
+
+networks:
+  syscraft-testnet:
+    internal: true

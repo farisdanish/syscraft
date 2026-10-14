@@ -1,0 +1,41 @@
+{
+  "manifestVersion": "1.0.0",
+  "allowedCommands": [
+    {
+      "id": "laravel-n1-test",
+      "drillId": "w1-laravel-internals-n1",
+      "description": "Run Pest test for Laravel N+1 query elimination and eager loading",
+      "executable": "docker",
+      "args": [
+        "compose",
+        "-f",
+        "docker/docker-compose.yml",
+        "run",
+        "--rm",
+        "test",
+        "php",
+        "artisan",
+        "test",
+        "--filter=PostNPlusOneTest"
+      ]
+    },
+    {
+      "id": "postgres-plan-test",
+      "drillId": "w4-data-layer-indexes",
+      "description": "Run PostgreSQL EXPLAIN ANALYZE index performance assertion",
+      "executable": "docker",
+      "args": [
+        "compose",
+        "-f",
+        "docker/docker-compose.yml",
+        "run",
+        "--rm",
+        "test",
+        "php",
+        "artisan",
+        "test",
+        "--filter=PostgresIndexPlanTest"
+      ]
+    }
+  ]
+}
