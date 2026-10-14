@@ -1,4 +1,4 @@
-import type { CurriculumTask, TaskState, TaskStatus } from '../types';
+import type { CurriculumTask, TaskState, TaskStatus, TaskAvailability } from '../types';
 
 export const CURRICULUM_TASKS: CurriculumTask[] = [
   {
@@ -93,6 +93,11 @@ export function resolveTaskStatus(
     return taskState.status;
   }
 
+  // If the module is not yet active in MVP, it is planned
+  if (!task.statusActiveInMvp) {
+    return 'planned';
+  }
+
   // Check if prerequisites are satisfied
   const prereqsSatisfied = task.prerequisites.every((prereqId) => {
     const s = allStates[prereqId]?.status;
@@ -108,4 +113,20 @@ export function resolveTaskStatus(
   }
 
   return 'available';
+}
+
+/**
+ * Resolves macroscopic UI availability for dashboard cards & launchers
+ */
+export function resolveTaskAvailability(
+  task: CurriculumTask,
+  status: TaskStatus
+): TaskAvailability {
+  if (status === 'locked') {
+    return 'blocked';
+  }
+  if (!task.statusActiveInMvp || status === 'planned') {
+    return 'planned';
+  }
+  return 'active';
 }

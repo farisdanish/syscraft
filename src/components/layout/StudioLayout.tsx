@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import Editor from '@monaco-editor/react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { Button } from '@govtechmy/myds-react/button';
@@ -98,6 +98,51 @@ export function StudioLayout() {
   const [politeNotice, setPoliteNotice] = useState<string>('');
   const [importNotice, setImportNotice] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
+  const cancelResetBtnRef = useRef<HTMLButtonElement | null>(null);
+  const confirmResetBtnRef = useRef<HTMLButtonElement | null>(null);
+  const clearTriggerBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  // Accessible Modal Keyboard Trap & Escape-to-Close
+  useEffect(() => {
+    if (!showResetModal) return;
+
+    // Auto-focus Cancel button when modal opens
+    const timer = setTimeout(() => {
+      cancelResetBtnRef.current?.focus();
+    }, 40);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowResetModal(false);
+        clearTriggerBtnRef.current?.focus();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const cancelBtn = cancelResetBtnRef.current;
+        const confirmBtn = confirmResetBtnRef.current;
+        if (!cancelBtn || !confirmBtn) return;
+
+        if (e.shiftKey) {
+          if (document.activeElement === cancelBtn) {
+            e.preventDefault();
+            confirmBtn.focus();
+          }
+        } else {
+          if (document.activeElement === confirmBtn) {
+            e.preventDefault();
+            cancelBtn.focus();
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showResetModal]);
 
   // Tier 3 Bridge Daemon State
   const [bridgeStatus, setBridgeStatus] = useState<BridgeHealth>({ connected: false });
@@ -366,8 +411,18 @@ export function StudioLayout() {
         const updated: DrillStepCompletions = { ...stepCompletions, 1: true, 2: true };
         setStepCompletions(updated);
         setVerificationSource('simulation');
-        setDrillCompleted(true);
-        await saveDrillProgress(activeDrill.id, true, true, 'simulation');
+        setDrillCompleted(false); // Step 2 passed, but full mastery requires all 5 steps
+
+        const existingTask = await getTaskState(activeDrill.id);
+        await saveTaskState({
+          taskId: activeDrill.id,
+          status: 'in_progress',
+          attempts: (existingTask?.attempts ?? 0) + 1,
+          verificationSource: 'simulation',
+          lastOpenedAt: new Date().toISOString(),
+        });
+
+        await saveDrillProgress(activeDrill.id, false, false, 'simulation');
         await saveDrillSession({
           drillId: activeDrill.id,
           week: activeDrill.week,
@@ -378,7 +433,7 @@ export function StudioLayout() {
           testResults: evalResult,
           tier3Result,
           verificationSource: 'simulation',
-          completed: true,
+          completed: false,
           oralDefenseCompleted: updated[4],
           lastActiveAt: new Date().toISOString(),
         });
@@ -409,8 +464,18 @@ export function StudioLayout() {
       const updated: DrillStepCompletions = { ...stepCompletions, 1: true, 2: true };
       setStepCompletions(updated);
       setVerificationSource('local-runtime');
-      setDrillCompleted(true);
-      await saveDrillProgress(activeDrill.id, true, true, 'local-runtime');
+      setDrillCompleted(false); // Step 2 passed, but full mastery requires all 5 steps
+
+      const existingTask = await getTaskState(activeDrill.id);
+      await saveTaskState({
+        taskId: activeDrill.id,
+        status: 'in_progress',
+        attempts: (existingTask?.attempts ?? 0) + 1,
+        verificationSource: 'local-runtime',
+        lastOpenedAt: new Date().toISOString(),
+      });
+
+      await saveDrillProgress(activeDrill.id, false, false, 'local-runtime');
       await saveDrillSession({
         drillId: activeDrill.id,
         week: activeDrill.week,
@@ -421,7 +486,7 @@ export function StudioLayout() {
         testResults,
         tier3Result: result,
         verificationSource: 'local-runtime',
-        completed: true,
+        completed: false,
         oralDefenseCompleted: updated[4],
         lastActiveAt: new Date().toISOString(),
       });
@@ -485,6 +550,7 @@ export function StudioLayout() {
   const handleCompleteMastery = async () => {
     const updated: DrillStepCompletions = { ...stepCompletions, 5: true };
     setStepCompletions(updated);
+    setDrillCompleted(true);
 
     await saveDrillSession({
       drillId: activeDrill.id,
@@ -501,11 +567,19 @@ export function StudioLayout() {
       lastActiveAt: new Date().toISOString(),
     });
 
+    await saveDrillProgress(
+      activeDrill.id,
+      true,
+      verificationSource === 'local-runtime',
+      verificationSource
+    );
+
+    const existingTask = await getTaskState(activeDrill.id);
     const status: TaskStatus = verificationSource === 'local-runtime' ? 'verified' : 'completed';
     await saveTaskState({
       taskId: activeDrill.id,
       status,
-      attempts: 1,
+      attempts: (existingTask?.attempts ?? 0) + 1,
       verificationSource,
       completedAt: new Date().toISOString(),
       lastOpenedAt: new Date().toISOString(),
@@ -567,6 +641,7 @@ export function StudioLayout() {
   // Distinct Reset Action: Clear Learner Progress
   const handleConfirmResetProgress = async () => {
     setShowResetModal(false);
+    clearTriggerBtnRef.current?.focus();
     try {
       await clearLearnerProgress();
       setUserCode(activeDrill.initialCode);
@@ -692,6 +767,7 @@ export function StudioLayout() {
           </Button>
 
           <Button 
+            ref={clearTriggerBtnRef}
             id="clear-progress-btn"
             variant="default-outline" 
             size="small" 
@@ -1059,14 +1135,24 @@ export function StudioLayout() {
                       isDark={isDark}
                       onCodeChange={(newSql) => setUserCode(newSql)}
                       onVersionDetected={(ver) => setRuntimeSqlVersion(ver)}
-                      onExecutionComplete={(passed) => {
+                      onExecutionComplete={async (passed) => {
                         if (passed) {
                           const updated: DrillStepCompletions = { ...stepCompletions, 1: true, 2: true };
                           setStepCompletions(updated);
                           setVerificationSource('simulation');
-                          setDrillCompleted(true);
-                          void saveDrillProgress(activeDrill.id, true, true, 'simulation');
-                          void saveDrillSession({
+                          setDrillCompleted(false);
+
+                          const existingTask = await getTaskState(activeDrill.id);
+                          await saveTaskState({
+                            taskId: activeDrill.id,
+                            status: 'in_progress',
+                            attempts: (existingTask?.attempts ?? 0) + 1,
+                            verificationSource: 'simulation',
+                            lastOpenedAt: new Date().toISOString(),
+                          });
+
+                          await saveDrillProgress(activeDrill.id, false, false, 'simulation');
+                          await saveDrillSession({
                             drillId: activeDrill.id,
                             week: activeDrill.week,
                             currentStep: 3,
@@ -1076,7 +1162,7 @@ export function StudioLayout() {
                             testResults: { passed: true, message: 'B-Tree compound index seek verified on idx_station_recorded.' },
                             tier3Result,
                             verificationSource: 'simulation',
-                            completed: true,
+                            completed: false,
                             oralDefenseCompleted: updated[4],
                             lastActiveAt: new Date().toISOString(),
                           });
@@ -1431,14 +1517,19 @@ export function StudioLayout() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.25rem' }}>
               <Button 
+                ref={cancelResetBtnRef}
                 id="cancel-reset-btn"
                 variant="default-outline" 
                 size="small" 
-                onClick={() => setShowResetModal(false)}
+                onClick={() => {
+                  setShowResetModal(false);
+                  clearTriggerBtnRef.current?.focus();
+                }}
               >
                 Cancel
               </Button>
               <Button 
+                ref={confirmResetBtnRef}
                 id="confirm-reset-btn"
                 variant="danger-fill" 
                 size="small" 

@@ -5,6 +5,7 @@ vendor/
 # Build outputs
 dist/
 dist-ssr/
+dist-test/
 build/
 
 # Environment & Local Secrets

@@ -280,7 +280,7 @@ const OralRubricScoreSchema = z.object({
 
 const TaskStateSchema = z.object({
   taskId: z.string(),
-  status: z.enum(['locked', 'available', 'in_progress', 'completed', 'verified', 'deferred']),
+  status: z.enum(['locked', 'available', 'in_progress', 'completed', 'verified', 'deferred', 'planned']),
   attempts: z.number(),
   verificationSource: z.enum(['simulation', 'local-runtime', 'self-reported']).optional(),
   lastOpenedAt: z.string().optional(),

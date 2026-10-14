@@ -6,7 +6,10 @@ export type TaskStatus =
   | 'in_progress'
   | 'completed'
   | 'verified'
-  | 'deferred';
+  | 'deferred'
+  | 'planned';
+
+export type TaskAvailability = 'active' | 'planned' | 'blocked';
 
 export interface CurriculumTask {
   id: string; // e.g. 'w1-laravel-internals-n1', 'w4-btree-indexing'
