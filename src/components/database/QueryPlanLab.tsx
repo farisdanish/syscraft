@@ -225,7 +225,7 @@ export function QueryPlanLab({
       </div>
 
       {/* Two-Column Editor & Plan Inspector */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1rem', flex: 1, minHeight: '380px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.875rem', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         
         {/* Left Column: Monaco SQL Editor */}
         <div style={{ 
@@ -234,10 +234,12 @@ export function QueryPlanLab({
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
+          height: '100%',
+          minHeight: 0,
           backgroundColor: 'var(--studio-surface)'
         }}>
           <div style={{ 
-            padding: '0.625rem 0.875rem', 
+            padding: '0.5rem 0.875rem', 
             borderBottom: '1px solid var(--studio-border)',
             fontSize: '0.8125rem',
             fontWeight: 600,
@@ -245,15 +247,16 @@ export function QueryPlanLab({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: 'var(--studio-surface)'
+            backgroundColor: 'var(--studio-surface)',
+            flexShrink: 0
           }}>
             <span>SQL Index Definition</span>
             <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-muted)' }}>Esc releases focus</span>
           </div>
 
-          <div style={{ height: '320px', width: '100%' }}>
+          <div style={{ flex: 1, minHeight: 0, width: '100%', position: 'relative' }}>
             <Editor
-              height="320px"
+              height="100%"
               defaultLanguage="sql"
               theme={isDark ? "vs-dark" : "light"}
               value={sqlCode}
@@ -267,11 +270,12 @@ export function QueryPlanLab({
                 lineNumbers: 'on',
                 scrollBeyondLastLine: false,
                 wordWrap: 'on',
+                automaticLayout: true,
               }}
             />
           </div>
 
-          <div style={{ padding: '0.625rem 0.875rem', borderTop: '1px solid var(--studio-border)', fontSize: '0.75rem', color: 'var(--studio-text-muted)', backgroundColor: 'var(--studio-surface-subtle)' }}>
+          <div style={{ padding: '0.5rem 0.875rem', borderTop: '1px solid var(--studio-border)', fontSize: '0.75rem', color: 'var(--studio-text-muted)', backgroundColor: 'var(--studio-surface-subtle)', flexShrink: 0 }}>
             <strong>Benchmark Target:</strong> <code>SELECT ... WHERE station_code = 'STN-MY-042' ORDER BY recorded_at DESC LIMIT 50;</code>
           </div>
         </div>
@@ -280,11 +284,12 @@ export function QueryPlanLab({
         <div style={{ 
           border: '1px solid var(--studio-border)',
           borderRadius: '8px',
-          padding: '1.25rem',
+          padding: '1rem',
           backgroundColor: 'var(--studio-surface)',
           display: 'flex',
           flexDirection: 'column',
           gap: '0.875rem',
+          height: '100%',
           overflowY: 'auto'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

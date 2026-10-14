@@ -328,7 +328,7 @@ export function LifecycleTracer() {
   }, [activeStep]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '520px', backgroundColor: 'var(--studio-bg)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, backgroundColor: 'var(--studio-bg)' }}>
       
       {/* Simulation Banner & Controls Bar */}
       <div style={{ 
@@ -407,10 +407,10 @@ export function LifecycleTracer() {
       </div>
 
       {/* Main Visual or Accessible Table Body */}
-      <div style={{ flex: 1, position: 'relative', display: 'flex' }}>
+      <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex', overflow: 'hidden' }}>
         
         {viewMode === 'canvas' ? (
-          <div style={{ flex: 1, minHeight: '440px', backgroundColor: 'var(--studio-bg)' }}>
+          <div style={{ flex: 1, minHeight: 0, height: '100%', backgroundColor: 'var(--studio-bg)' }}>
             <ReactFlow
               nodes={nodes}
               edges={edges}

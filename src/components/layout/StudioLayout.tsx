@@ -129,7 +129,7 @@ export function StudioLayout() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--studio-bg)', color: 'var(--studio-text)' }}>
+    <div className="studio-shell">
       
       {/* Screen Reader Polite Live Region */}
       <div 
@@ -141,22 +141,12 @@ export function StudioLayout() {
       </div>
 
       {/* Top Masthead & Curriculum Selector Bar */}
-      <header style={{ 
-        borderBottom: '1px solid var(--studio-border)', 
-        backgroundColor: 'var(--studio-surface)', 
-        padding: '0.625rem 1.25rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '0.75rem',
-        color: 'var(--studio-text)'
-      }}>
+      <header className="studio-header">
         {/* Brand & Studio ID */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ 
-            width: '30px', 
-            height: '30px', 
+            width: '28px', 
+            height: '28px', 
             borderRadius: '6px', 
             backgroundColor: 'var(--studio-primary)', 
             display: 'flex', 
@@ -164,12 +154,12 @@ export function StudioLayout() {
             justifyContent: 'center',
             color: '#ffffff',
             fontWeight: 800,
-            fontSize: '13px'
+            fontSize: '12px'
           }}>
             SC
           </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: '0.9375rem', letterSpacing: '-0.02em', color: 'var(--studio-text)' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.875rem', letterSpacing: '-0.02em', color: 'var(--studio-text)' }}>
               SysCraft Studio
             </div>
             <div style={{ fontSize: '0.6875rem', color: 'var(--studio-text-muted)' }}>
@@ -186,13 +176,13 @@ export function StudioLayout() {
             type="button"
             onClick={() => setSelectedWeek(1)}
             style={{
-              padding: '4px 10px',
+              padding: '3px 9px',
               borderRadius: '6px',
               border: `1px solid ${selectedWeek === 1 ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
               backgroundColor: selectedWeek === 1 ? 'var(--studio-primary-glow)' : 'transparent',
               color: selectedWeek === 1 ? 'var(--studio-primary)' : 'var(--studio-text)',
               fontWeight: 600,
-              fontSize: '0.8125rem',
+              fontSize: '0.75rem',
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
@@ -204,13 +194,13 @@ export function StudioLayout() {
             type="button"
             onClick={() => setSelectedWeek(4)}
             style={{
-              padding: '4px 10px',
+              padding: '3px 9px',
               borderRadius: '6px',
               border: `1px solid ${selectedWeek === 4 ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
               backgroundColor: selectedWeek === 4 ? 'var(--studio-primary-glow)' : 'transparent',
               color: selectedWeek === 4 ? 'var(--studio-primary)' : 'var(--studio-text)',
               fontWeight: 600,
-              fontSize: '0.8125rem',
+              fontSize: '0.75rem',
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
@@ -248,13 +238,8 @@ export function StudioLayout() {
       </header>
 
       {/* Progressive 5-Step Stepper Navigation */}
-      <nav aria-label="Progressive 5-step workflow" style={{ 
-        borderBottom: '1px solid var(--studio-border)', 
-        backgroundColor: 'var(--studio-surface)', 
-        padding: '0.5rem 1.25rem',
-        overflowX: 'auto'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '700px' }}>
+      <nav aria-label="Progressive 5-step workflow" className="studio-stepper">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '650px' }}>
           {WORKFLOW_STEPS.map((s) => {
             const isActive = s.step === currentStep;
             const isCompleted = s.step < currentStep || (s.step === 2 && drillCompleted);
@@ -269,12 +254,12 @@ export function StudioLayout() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.375rem',
-                  padding: '5px 12px',
+                  padding: '4px 10px',
                   borderRadius: '20px',
                   border: `1px solid ${isActive ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
                   backgroundColor: isActive ? 'var(--studio-primary)' : isCompleted ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
                   color: isActive ? '#ffffff' : isCompleted ? 'var(--studio-success)' : 'var(--studio-text)',
-                  fontSize: '0.8125rem',
+                  fontSize: '0.75rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
@@ -282,12 +267,12 @@ export function StudioLayout() {
                 aria-current={isActive ? 'step' : undefined}
               >
                 <span style={{ 
-                  width: '18px', 
-                  height: '18px', 
+                  width: '16px', 
+                  height: '16px', 
                   borderRadius: '50%', 
                   backgroundColor: isActive ? '#ffffff' : isCompleted ? 'var(--studio-success)' : 'var(--studio-surface-hover)',
                   color: isActive ? 'var(--studio-primary)' : isCompleted ? '#ffffff' : 'var(--studio-text-muted)',
-                  fontSize: '11px',
+                  fontSize: '10px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -303,84 +288,78 @@ export function StudioLayout() {
       </nav>
 
       {/* Main Studio Body Area */}
-      <main style={{ flex: 1, padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <main className="studio-main">
         
         {/* STEP 1: Concept Brief */}
         {currentStep === 1 && (
-          <div style={{ maxWidth: '900px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <Callout variant="info">
-              <CalloutTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <BookOpen size={18} color="var(--studio-primary)" />
-                Step 1: Concept Brief • {activeDrill.title}
-              </CalloutTitle>
-              <CalloutContent>
-                {activeDrill.conceptBrief.thesis}
-              </CalloutContent>
-            </Callout>
+          <div className="studio-scrollable-step">
+            <div style={{ maxWidth: '860px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <Callout variant="info">
+                <CalloutTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <BookOpen size={18} color="var(--studio-primary)" />
+                  Step 1: Concept Brief • {activeDrill.title}
+                </CalloutTitle>
+                <CalloutContent>
+                  {activeDrill.conceptBrief.thesis}
+                </CalloutContent>
+              </Callout>
 
-            {/* Key Checkpoints Card */}
-            <div style={{ padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--studio-border)', backgroundColor: 'var(--studio-surface)' }}>
-              <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', color: 'var(--studio-text)' }}>
-                Core Architectural Checkpoints:
-              </h3>
-              <ul style={{ margin: 0, paddingLeft: '1.25rem', lineHeight: 1.6, fontSize: '0.875rem', color: 'var(--studio-text-muted)' }}>
-                {activeDrill.conceptBrief.keyPoints.map((pt, i) => (
-                  <li key={i} style={{ marginBottom: '0.375rem' }}>{pt}</li>
-                ))}
-              </ul>
-            </div>
+              {/* Key Checkpoints Card */}
+              <div style={{ padding: '1.125rem', borderRadius: '8px', border: '1px solid var(--studio-border)', backgroundColor: 'var(--studio-surface)' }}>
+                <h3 style={{ margin: '0 0 0.625rem 0', fontSize: '0.9375rem', color: 'var(--studio-text)' }}>
+                  Core Architectural Checkpoints:
+                </h3>
+                <ul style={{ margin: 0, paddingLeft: '1.25rem', lineHeight: 1.55, fontSize: '0.8125rem', color: 'var(--studio-text-muted)' }}>
+                  {activeDrill.conceptBrief.keyPoints.map((pt, i) => (
+                    <li key={i} style={{ marginBottom: '0.35rem' }}>{pt}</li>
+                  ))}
+                </ul>
+              </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button variant="primary-fill" size="medium" onClick={() => setCurrentStep(2)}>
-                Proceed to Step 2: Focused Drill
-                <ChevronRight size={16} style={{ marginLeft: '4px' }} />
-              </Button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.25rem' }}>
+                <Button variant="primary-fill" size="medium" onClick={() => setCurrentStep(2)}>
+                  Proceed to Step 2: Focused Drill
+                  <ChevronRight size={16} style={{ marginLeft: '4px' }} />
+                </Button>
+              </div>
             </div>
           </div>
         )}
 
         {/* STEP 2: Focused Code Drill (Monaco Editor & Run Controls) */}
         {currentStep === 2 && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="studio-drill-container">
             
             {activeDrill.week === 1 ? (
               /* Week 1: Laravel PostController N+1 Drill - Two-Column Studio Layout */
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 380px) 1fr', gap: '1rem', alignItems: 'start' }}>
+              <div className="studio-drill-grid">
                 
                 {/* Left Column: Drill Mission Briefing, Rules & Insights */}
-                <div style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  gap: '0.875rem',
-                  backgroundColor: 'var(--studio-surface)',
-                  border: '1px solid var(--studio-border)',
-                  borderRadius: '8px',
-                  padding: '1.125rem'
-                }}>
+                <div className="studio-drill-sidebar">
                   {/* Mission Header */}
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
                       <Tag variant="primary" size="small">Tier 2 Simulation</Tag>
                       <Tag variant="warning" size="small">Budget: ≤ 3 Queries</Tag>
                     </div>
-                    <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.0625rem', color: 'var(--studio-text)', fontWeight: 700 }}>
+                    <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem', color: 'var(--studio-text)', fontWeight: 700 }}>
                       Eliminate Eloquent N+1 Loop
                     </h3>
-                    <div style={{ fontSize: '0.8125rem', color: 'var(--studio-text-muted)', lineHeight: 1.45 }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)', lineHeight: 1.45 }}>
                       Refactor <code>PostController::index()</code> to collapse catastrophic database multiplication.
                     </div>
                   </div>
 
                   {/* Bug Diagnosis Box */}
                   <div style={{ 
-                    padding: '0.75rem', 
+                    padding: '0.625rem 0.75rem', 
                     borderRadius: '6px', 
                     backgroundColor: 'rgba(239, 68, 68, 0.08)', 
                     borderLeft: '4px solid var(--studio-danger)',
                     fontSize: '0.75rem',
                     color: 'var(--studio-text)'
                   }}>
-                    <strong style={{ color: 'var(--studio-danger)', display: 'block', marginBottom: '3px' }}>
+                    <strong style={{ color: 'var(--studio-danger)', display: 'block', marginBottom: '2px' }}>
                       ⚠️ The Performance Bottleneck:
                     </strong>
                     <div style={{ lineHeight: 1.45, color: 'var(--studio-text-muted)' }}>
@@ -391,26 +370,26 @@ export function StudioLayout() {
                   </div>
 
                   {/* Task Instructions */}
-                  <div style={{ fontSize: '0.8125rem', color: 'var(--studio-text)' }}>
-                    <strong style={{ display: 'block', marginBottom: '5px' }}>Your Objective:</strong>
-                    <ol style={{ margin: 0, paddingLeft: '1.25rem', lineHeight: 1.55, color: 'var(--studio-text-muted)', fontSize: '0.75rem' }}>
-                      <li style={{ marginBottom: '3px' }}>Replace <code>Post::all()</code> with eager loading: <code>Post::with([...])-&gt;get()</code>.</li>
-                      <li style={{ marginBottom: '3px' }}>Pre-load both <code>author</code> and <code>comments</code> relationships in a single batch.</li>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--studio-text)' }}>
+                    <strong style={{ display: 'block', marginBottom: '4px' }}>Your Objective:</strong>
+                    <ol style={{ margin: 0, paddingLeft: '1.125rem', lineHeight: 1.5, color: 'var(--studio-text-muted)', fontSize: '0.75rem' }}>
+                      <li style={{ marginBottom: '2px' }}>Replace <code>Post::all()</code> with eager loading: <code>Post::with([...])-&gt;get()</code>.</li>
+                      <li style={{ marginBottom: '2px' }}>Pre-load both <code>author</code> and <code>comments</code> relationships in a single batch.</li>
                       <li>Click <strong>Run Test Harness</strong> to evaluate against query budget & AST assertions.</li>
                     </ol>
                   </div>
 
                   {/* Required Assertions Checklist */}
                   <div style={{ 
-                    padding: '0.75rem', 
+                    padding: '0.625rem 0.75rem', 
                     borderRadius: '6px', 
                     backgroundColor: 'var(--studio-surface-subtle)', 
                     border: '1px solid var(--studio-border)' 
                   }}>
-                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--studio-text-muted)', display: 'block', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--studio-text-muted)', display: 'block', marginBottom: '4px' }}>
                       Automated Assertions Evaluated:
                     </span>
-                    <ul style={{ margin: 0, paddingLeft: '1.125rem', fontSize: '0.75rem', lineHeight: 1.5, color: 'var(--studio-text)' }}>
+                    <ul style={{ margin: 0, paddingLeft: '1.125rem', fontSize: '0.75rem', lineHeight: 1.45, color: 'var(--studio-text)' }}>
                       <li>Query budget: ≤ 3 distinct queries for 25 records</li>
                       <li>Zero per-row queries during <code>map()</code> iteration</li>
                       <li><code>author</code> relationship eager loaded</li>
@@ -420,7 +399,7 @@ export function StudioLayout() {
 
                   {/* Senior Defense Tip */}
                   <div style={{ 
-                    padding: '0.75rem', 
+                    padding: '0.625rem 0.75rem', 
                     borderRadius: '6px', 
                     backgroundColor: 'var(--studio-primary-glow)', 
                     borderLeft: '3px solid var(--studio-primary)',
@@ -438,24 +417,18 @@ export function StudioLayout() {
                 </div>
 
                 {/* Right Column: Monaco Code Editor Pane */}
-                <div style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  border: '1px solid var(--studio-border)', 
-                  borderRadius: '8px', 
-                  overflow: 'hidden',
-                  backgroundColor: 'var(--studio-surface)'
-                }}>
+                <div className="studio-drill-editor-pane">
                   {/* Control Bar */}
                   <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'space-between',
-                    padding: '0.625rem 0.875rem',
+                    padding: '0.45rem 0.75rem',
                     borderBottom: '1px solid var(--studio-border)',
                     backgroundColor: 'var(--studio-surface)',
                     flexWrap: 'wrap',
-                    gap: '0.5rem'
+                    gap: '0.5rem',
+                    flexShrink: 0
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <FileCode size={16} color="var(--studio-primary)" />
@@ -490,10 +463,10 @@ export function StudioLayout() {
                     </div>
                   </div>
 
-                  {/* Editor Container with Explicit Height */}
-                  <div style={{ height: '540px', width: '100%' }}>
+                  {/* Editor Container with Flexible Fit & automaticLayout */}
+                  <div className="studio-drill-editor-wrapper">
                     <Editor
-                      height="540px"
+                      height="100%"
                       defaultLanguage="php"
                       theme={isDark ? "vs-dark" : "light"}
                       value={userCode}
@@ -505,20 +478,22 @@ export function StudioLayout() {
                         scrollBeyondLastLine: false,
                         wordWrap: 'on',
                         tabSize: 4,
+                        automaticLayout: true,
                       }}
                     />
                   </div>
 
                   {/* Status Bar */}
                   <div style={{ 
-                    padding: '0.5rem 0.875rem', 
+                    padding: '0.35rem 0.75rem', 
                     borderTop: '1px solid var(--studio-border)', 
                     fontSize: '0.75rem', 
                     color: 'var(--studio-text-muted)',
                     backgroundColor: 'var(--studio-surface-subtle)',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between'
+                    justifyContent: 'space-between',
+                    flexShrink: 0
                   }}>
                     <span>Target: <code>Post::with(['author', 'comments'])-&gt;get()</code></span>
                     <span>Click <strong>Run Test Harness</strong> when ready</span>
@@ -529,7 +504,7 @@ export function StudioLayout() {
               </div>
             ) : (
               /* Week 4: In-Browser SQLite Query Plan Lab */
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
                 <QueryPlanLab 
                   isDark={isDark}
                   onExecutionComplete={(passed) => {
@@ -542,7 +517,7 @@ export function StudioLayout() {
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+            <div className="studio-step-actions">
               <Button variant="default-outline" size="small" onClick={() => setCurrentStep(1)}>
                 <ChevronLeft size={14} style={{ marginRight: '4px' }} />
                 Back to Concept
@@ -557,109 +532,114 @@ export function StudioLayout() {
 
         {/* STEP 3: Plan & Assertion Analysis */}
         {currentStep === 3 && (
-          <div style={{ maxWidth: '900px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.125rem', color: 'var(--studio-text)' }}>
-              Step 3: Verification & Assertion Output
-            </h3>
+          <div className="studio-scrollable-step">
+            <div style={{ maxWidth: '860px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.0625rem', color: 'var(--studio-text)' }}>
+                Step 3: Verification & Assertion Output
+              </h3>
 
-            {testResults ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <Callout variant={testResults.passed ? "success" : "danger"}>
-                  <CalloutTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {testResults.passed ? <CheckCircle2 size={18} color="var(--studio-success)" /> : <AlertCircle size={18} color="var(--studio-danger)" />}
-                    {testResults.passed ? "All Assertions Passed • Zero N+1 Queries" : "Query Budget Violation • N+1 Queries Detected"}
-                  </CalloutTitle>
-                  <CalloutContent>
-                    Simulated execution time: ~{testResults.simulatedLatencyMs}ms • Queries Executed: {testResults.queriesExecuted} queries.
-                  </CalloutContent>
-                </Callout>
+              {testResults ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                  <Callout variant={testResults.passed ? "success" : "danger"}>
+                    <CalloutTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {testResults.passed ? <CheckCircle2 size={18} color="var(--studio-success)" /> : <AlertCircle size={18} color="var(--studio-danger)" />}
+                      {testResults.passed ? "All Assertions Passed • Zero N+1 Queries" : "Query Budget Violation • N+1 Queries Detected"}
+                    </CalloutTitle>
+                    <CalloutContent>
+                      Simulated execution time: ~{testResults.simulatedLatencyMs}ms • Queries Executed: {testResults.queriesExecuted} queries.
+                    </CalloutContent>
+                  </Callout>
 
-                {/* Assertion List Card */}
-                <div style={{ padding: '1rem', borderRadius: '8px', border: '1px solid var(--studio-border)', backgroundColor: 'var(--studio-surface)' }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--studio-text)' }}>
-                    EVALUATED ASSERTIONS:
-                  </div>
-                  {testResults.assertionResults.map((a: any, i: number) => (
-                    <div key={i} style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'space-between',
-                      padding: '0.5rem 0.75rem',
-                      borderRadius: '4px',
-                      backgroundColor: 'var(--studio-surface-subtle)',
-                      marginBottom: '0.375rem',
-                      fontSize: '0.8125rem',
-                      color: 'var(--studio-text)'
-                    }}>
-                      <span>{a.name} — <span style={{ color: 'var(--studio-text-muted)' }}>{a.message}</span></span>
-                      <Tag variant={a.passed ? "success" : "danger"} size="small">
-                        {a.passed ? "PASS" : "FAIL"}
-                      </Tag>
+                  {/* Assertion List Card */}
+                  <div style={{ padding: '1rem', borderRadius: '8px', border: '1px solid var(--studio-border)', backgroundColor: 'var(--studio-surface)' }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--studio-text)' }}>
+                      EVALUATED ASSERTIONS:
                     </div>
-                  ))}
+                    {testResults.assertionResults.map((a: any, i: number) => (
+                      <div key={i} style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between',
+                        padding: '0.45rem 0.75rem',
+                        borderRadius: '4px',
+                        backgroundColor: 'var(--studio-surface-subtle)',
+                        marginBottom: '0.375rem',
+                        fontSize: '0.8125rem',
+                        color: 'var(--studio-text)'
+                      }}>
+                        <span>{a.name} — <span style={{ color: 'var(--studio-text-muted)' }}>{a.message}</span></span>
+                        <Tag variant={a.passed ? "success" : "danger"} size="small">
+                          {a.passed ? "PASS" : "FAIL"}
+                        </Tag>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <Callout variant="warning">
-                <CalloutTitle>No test run recorded yet</CalloutTitle>
-                <CalloutContent>Return to Step 2 and click "Run Test Harness" to evaluate your code.</CalloutContent>
-              </Callout>
-            )}
+              ) : (
+                <Callout variant="warning">
+                  <CalloutTitle>No test run recorded yet</CalloutTitle>
+                  <CalloutContent>Return to Step 2 and click "Run Test Harness" to evaluate your code.</CalloutContent>
+                </Callout>
+              )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-              <Button variant="default-outline" size="small" onClick={() => setCurrentStep(2)}>
-                <ChevronLeft size={14} style={{ marginRight: '4px' }} />
-                Back to Code Drill
-              </Button>
-              <Button variant="primary-fill" size="small" onClick={() => setCurrentStep(4)}>
-                Proceed to Step 4: Oral Recall
-                <ChevronRight size={14} style={{ marginLeft: '4px' }} />
-              </Button>
+              <div className="studio-step-actions">
+                <Button variant="default-outline" size="small" onClick={() => setCurrentStep(2)}>
+                  <ChevronLeft size={14} style={{ marginRight: '4px' }} />
+                  Back to Code Drill
+                </Button>
+                <Button variant="primary-fill" size="small" onClick={() => setCurrentStep(4)}>
+                  Proceed to Step 4: Oral Recall
+                  <ChevronRight size={14} style={{ marginLeft: '4px' }} />
+                </Button>
+              </div>
             </div>
           </div>
         )}
 
         {/* STEP 4: Scored Oral Recall Rubric */}
         {currentStep === 4 && (
-          <div style={{ maxWidth: '900px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <OralRubricDialog
-              drillId={activeDrill.id}
-              week={activeDrill.week}
-              topic={activeDrill.title}
-              question={activeDrill.oralRubric.question}
-              checkpoints={activeDrill.oralRubric.checkpoints}
-              onCompleted={() => {
-                loadState();
-              }}
-            />
+          <div className="studio-scrollable-step">
+            <div style={{ maxWidth: '860px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+              <OralRubricDialog
+                drillId={activeDrill.id}
+                week={activeDrill.week}
+                topic={activeDrill.title}
+                question={activeDrill.oralRubric.question}
+                checkpoints={activeDrill.oralRubric.checkpoints}
+                onCompleted={() => {
+                  loadState();
+                }}
+              />
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-              <Button variant="default-outline" size="small" onClick={() => setCurrentStep(3)}>
-                <ChevronLeft size={14} style={{ marginRight: '4px' }} />
-                Back to Assertions
-              </Button>
-              <Button variant="primary-fill" size="small" onClick={() => setCurrentStep(5)}>
-                Proceed to Step 5: Tracer Replay
-                <ChevronRight size={14} style={{ marginLeft: '4px' }} />
-              </Button>
+              <div className="studio-step-actions">
+                <Button variant="default-outline" size="small" onClick={() => setCurrentStep(3)}>
+                  <ChevronLeft size={14} style={{ marginRight: '4px' }} />
+                  Back to Assertions
+                </Button>
+                <Button variant="primary-fill" size="small" onClick={() => setCurrentStep(5)}>
+                  Proceed to Step 5: Tracer Replay
+                  <ChevronRight size={14} style={{ marginLeft: '4px' }} />
+                </Button>
+              </div>
             </div>
           </div>
         )}
 
         {/* STEP 5: Visual Tracer Replay */}
         {currentStep === 5 && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem', overflow: 'hidden' }}>
             <div style={{ 
-              padding: '0.625rem 1rem', 
+              padding: '0.5rem 0.875rem', 
               borderRadius: '6px', 
               backgroundColor: 'var(--studio-surface)', 
               border: '1px solid var(--studio-border)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              flexShrink: 0
             }}>
               <div>
-                <strong style={{ fontSize: '0.875rem', color: 'var(--studio-text)' }}>Step 5: Visual System Tracer Replay</strong>
+                <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-text)' }}>Step 5: Visual System Tracer Replay</strong>
                 <span style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)', display: 'block' }}>
                   Interactive state machine visualizing the request journey. Click any node to inspect internal variables and assumptions.
                 </span>
@@ -669,11 +649,11 @@ export function StudioLayout() {
               </Tag>
             </div>
 
-            <div style={{ flex: 1, minHeight: '520px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--studio-border)' }}>
+            <div style={{ flex: 1, minHeight: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--studio-border)' }}>
               <LifecycleTracer />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '0.5rem' }}>
+            <div className="studio-step-actions">
               <Button variant="default-outline" size="small" onClick={() => setCurrentStep(4)}>
                 <ChevronLeft size={14} style={{ marginRight: '4px' }} />
                 Back to Oral Rubric
@@ -685,18 +665,7 @@ export function StudioLayout() {
       </main>
 
       {/* Bottom Status Footer with Engine Badges & Invariants */}
-      <footer style={{ 
-        borderTop: '1px solid var(--studio-border)', 
-        padding: '0.625rem 1.25rem',
-        backgroundColor: 'var(--studio-surface)',
-        fontSize: '0.75rem',
-        color: 'var(--studio-text-muted)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '0.75rem'
-      }}>
+      <footer className="studio-footer">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Tag variant={activeDrill.week === 1 ? "primary" : "success"} size="small">
             {activeDrill.week === 1 ? "[Tier 2: Deterministic Simulation]" : "[Engine: SQLite 3.45.2 (WASM)]"}
