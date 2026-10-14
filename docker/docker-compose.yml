@@ -16,6 +16,7 @@ services:
       retries: 5
 
   test:
+    image: syscraft-runner:1.0.0
     build:
       context: ./runner
     container_name: syscraft-runner
@@ -27,7 +28,7 @@ services:
     cap_drop:
       - ALL
     volumes:
-      - ..:/workspace:ro
+      - ../testbed:/workspace:ro
     tmpfs:
       - /tmp:rw,size=64m
       - /workspace/storage/framework:rw,size=32m

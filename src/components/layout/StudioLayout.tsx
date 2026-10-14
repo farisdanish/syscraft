@@ -16,11 +16,18 @@ import {
   Flag,
   FileCode,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Server
 } from 'lucide-react';
 import { WORKFLOW_STEPS, type WorkflowStep, type DrillDefinition } from '../../types';
 import { WEEK_1_DRILL, evaluateLaravelDrill } from '../../drills/week1-internals';
 import { WEEK_4_DRILL } from '../../drills/week4-performance';
+import { 
+  checkBridgeHealth, 
+  runBridgeCommand, 
+  type BridgeHealth, 
+  type BridgeRunResult 
+} from '../../services/bridgeClient';
 import { 
   LifecycleTracer, 
   LARAVEL_LIFECYCLE_STEPS, 
@@ -50,6 +57,26 @@ export function StudioLayout() {
   const [sundayCount, setSundayCount] = useState<number>(0);
   const [politeNotice, setPoliteNotice] = useState<string>('');
 
+  // Tier 3 Bridge Daemon State
+  const [bridgeStatus, setBridgeStatus] = useState<BridgeHealth>({ connected: false });
+  const [tier3Result, setTier3Result] = useState<BridgeRunResult | null>(null);
+  const [isRunningDocker, setIsRunningDocker] = useState<boolean>(false);
+
+  // Poll Tier 3 Bridge Health on mount and periodically
+  useEffect(() => {
+    let isMounted = true;
+    const pollBridge = async () => {
+      const health = await checkBridgeHealth();
+      if (isMounted) setBridgeStatus(health);
+    };
+    pollBridge();
+    const interval = setInterval(pollBridge, 8000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   // Sync theme
   useEffect(() => {
     const root = document.documentElement;
@@ -75,11 +102,12 @@ export function StudioLayout() {
   useEffect(() => {
     setUserCode(activeDrill.initialCode);
     setTestResults(null);
+    setTier3Result(null);
     setCurrentStep(1);
     loadState();
   }, [selectedWeek]);
 
-  // Evaluate Drill Code
+  // Evaluate Drill Code (Tier 1/2 In-Browser)
   const handleRunDrill = async () => {
     setIsEvaluating(true);
     setPoliteNotice('Evaluating drill assertions...');
@@ -99,6 +127,28 @@ export function StudioLayout() {
     }
 
     setIsEvaluating(false);
+    loadState();
+  };
+
+  // Run Tier 3 Canonical Test via Docker Bridge
+  const handleRunTier3Docker = async () => {
+    setIsRunningDocker(true);
+    const commandId = activeDrill.week === 1 ? 'laravel-n1-test' : 'postgres-plan-test';
+    setPoliteNotice(`Dispatching to Tier 3 Docker Runner (${commandId})...`);
+
+    const result = await runBridgeCommand(commandId);
+    setTier3Result(result);
+    setIsRunningDocker(false);
+
+    if (result.exitCode === 0) {
+      setDrillCompleted(true);
+      await saveDrillProgress(activeDrill.id, true, true);
+      setPoliteNotice(`Tier 3 Docker verification passed for ${activeDrill.title}`);
+      setCurrentStep(3);
+    } else {
+      setPoliteNotice('Tier 3 Docker test run encountered errors.');
+      setCurrentStep(3);
+    }
     loadState();
   };
 
@@ -213,8 +263,13 @@ export function StudioLayout() {
           </button>
         </div>
 
-        {/* Header Right Tools: Theme & Sunday Queue */}
+        {/* Header Right Tools: Theme & Sunday Queue & Bridge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Tag variant={bridgeStatus.connected ? "success" : "default"} size="small">
+            <Server size={12} style={{ marginRight: '4px' }} />
+            {bridgeStatus.connected ? "Tier 3 Bridge Active" : "Bridge Offline"}
+          </Tag>
+
           <Tag variant={sundayCount > 0 ? "warning" : "default"} size="small">
             <Flag size={12} style={{ marginRight: '4px' }} />
             Sunday Review ({sundayCount})
@@ -453,6 +508,20 @@ export function StudioLayout() {
                         Reset Code
                       </Button>
 
+                      {bridgeStatus.connected && (
+                        <Button 
+                          id="run-docker-btn"
+                          variant="primary-outline" 
+                          size="small"
+                          onClick={handleRunTier3Docker}
+                          disabled={isRunningDocker}
+                          aria-label="Verify via Tier 3 Docker Runner"
+                        >
+                          <Server size={12} style={{ marginRight: '4px' }} />
+                          {isRunningDocker ? "Running Docker..." : "Run in Docker (Tier 3)"}
+                        </Button>
+                      )}
+
                       <Button 
                         id="run-harness-btn"
                         variant="primary-fill" 
@@ -500,7 +569,7 @@ export function StudioLayout() {
                     flexShrink: 0
                   }}>
                     <span>Target: <code>Post::with(['author', 'comments'])-&gt;get()</code></span>
-                    <span>Click <strong>Run Test Harness</strong> when ready</span>
+                    <span>Click <strong>Run Test Harness</strong> or <strong>Run in Docker</strong></span>
                   </div>
 
                 </div>
@@ -508,16 +577,44 @@ export function StudioLayout() {
               </div>
             ) : (
               /* Week 4: In-Browser SQLite Query Plan Lab */
-              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                <QueryPlanLab 
-                  isDark={isDark}
-                  onExecutionComplete={(passed) => {
-                    if (passed) {
-                      setDrillCompleted(true);
-                      saveDrillProgress(activeDrill.id, true, true);
-                    }
-                  }}
-                />
+              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                {bridgeStatus.connected && (
+                  <div style={{ 
+                    padding: '0.4rem 0.875rem', 
+                    borderBottom: '1px solid var(--studio-border)', 
+                    backgroundColor: 'var(--studio-surface)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexShrink: 0
+                  }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)' }}>
+                      Connected to Tier 3 Bridge: Verify query plan against live PostgreSQL 16.4 container
+                    </span>
+                    <Button 
+                      id="run-docker-pg-btn"
+                      variant="primary-outline" 
+                      size="small"
+                      onClick={handleRunTier3Docker}
+                      disabled={isRunningDocker}
+                      aria-label="Verify via PostgreSQL Docker Container"
+                    >
+                      <Server size={12} style={{ marginRight: '4px' }} />
+                      {isRunningDocker ? "Running Docker..." : "Verify PostgreSQL EXPLAIN (Tier 3)"}
+                    </Button>
+                  </div>
+                )}
+                <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                  <QueryPlanLab 
+                    isDark={isDark}
+                    onExecutionComplete={(passed) => {
+                      if (passed) {
+                        setDrillCompleted(true);
+                        saveDrillProgress(activeDrill.id, true, true);
+                      }
+                    }}
+                  />
+                </div>
               </div>
             )}
 
@@ -541,6 +638,49 @@ export function StudioLayout() {
               <h3 style={{ margin: 0, fontSize: '1.0625rem', color: 'var(--studio-text)' }}>
                 Step 3: Verification & Assertion Output
               </h3>
+
+              {/* Tier 3 Canonical Docker Runtime Output Card */}
+              {tier3Result && (
+                <div style={{ 
+                  padding: '1rem', 
+                  borderRadius: '8px', 
+                  border: `1px solid ${tier3Result.exitCode === 0 ? 'var(--studio-success)' : 'var(--studio-danger)'}`, 
+                  backgroundColor: 'var(--studio-surface)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Tag variant={tier3Result.exitCode === 0 ? "success" : "danger"} size="small">
+                        {tier3Result.exitCode === 0 ? "Tier 3: [Automated Pass]" : "Tier 3: [Failed]"}
+                      </Tag>
+                      <strong style={{ fontSize: '0.875rem', color: 'var(--studio-text)' }}>
+                        syscraft-runner:1.0.0 (Isolated Docker syscraft-testnet)
+                      </strong>
+                    </div>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-muted)' }}>
+                      Verified: {new Date(tier3Result.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+
+                  <pre style={{
+                    margin: 0,
+                    padding: '0.875rem',
+                    borderRadius: '6px',
+                    backgroundColor: 'var(--studio-surface-subtle)',
+                    border: '1px solid var(--studio-border)',
+                    fontSize: '0.75rem',
+                    fontFamily: 'monospace',
+                    lineHeight: 1.45,
+                    overflowX: 'auto',
+                    color: 'var(--studio-text)',
+                    whiteSpace: 'pre-wrap'
+                  }}>
+                    {(tier3Result.stdout || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '')}
+                  </pre>
+                </div>
+              )}
 
               {testResults ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
@@ -579,12 +719,12 @@ export function StudioLayout() {
                     ))}
                   </div>
                 </div>
-              ) : (
+              ) : !tier3Result ? (
                 <Callout variant="warning">
                   <CalloutTitle>No test run recorded yet</CalloutTitle>
-                  <CalloutContent>Return to Step 2 and click "Run Test Harness" to evaluate your code.</CalloutContent>
+                  <CalloutContent>Return to Step 2 and click "Run Test Harness" or "Run in Docker" to evaluate your code.</CalloutContent>
                 </Callout>
-              )}
+              ) : null}
 
               <div className="studio-step-actions">
                 <Button variant="default-outline" size="small" onClick={() => setCurrentStep(2)}>
@@ -682,11 +822,18 @@ export function StudioLayout() {
       {/* Bottom Status Footer with Engine Badges & Invariants */}
       <footer className="studio-footer">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Tag variant={activeDrill.week === 1 ? "primary" : "success"} size="small">
-            {activeDrill.week === 1 ? "[Tier 2: Deterministic Simulation]" : "[Engine: SQLite 3.45.2 (WASM)]"}
+          <Tag variant={tier3Result && tier3Result.exitCode === 0 ? "success" : activeDrill.week === 1 ? "primary" : "success"} size="small">
+            {tier3Result && tier3Result.exitCode === 0 
+              ? "[Tier 3: Verified syscraft-runner:1.0.0]"
+              : activeDrill.week === 1 
+                ? "[Tier 2: Deterministic Simulation]" 
+                : "[Engine: SQLite 3.45.2 (WASM)]"}
           </Tag>
           <Tag variant={drillCompleted ? "success" : "default"} size="small">
             {drillCompleted ? "Automated Pass" : "In Progress"}
+          </Tag>
+          <Tag variant={bridgeStatus.connected ? "success" : "default"} size="small">
+            {bridgeStatus.connected ? "Bridge: 127.0.0.1:49152 (Online)" : "Bridge: Offline"}
           </Tag>
         </div>
 

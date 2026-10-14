@@ -107,15 +107,14 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
+        console.log(`[SysCraft Bridge] Executing command: ${commandId}`);
         // Spawn with distinct process group for clean cancellation
         const projectRoot = path.resolve(__dirname, '..');
         const child = spawn(cmdEntry.executable, cmdEntry.args, {
           cwd: projectRoot,
           detached: true,
-          env: {
-            PATH: process.env.PATH,
-            HOME: process.env.HOME,
-          },
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: process.env,
         });
 
         let stdout = '';
@@ -137,15 +136,23 @@ const server = http.createServer(async (req, res) => {
           }
         }, 10000);
 
-        // Client Disconnect / Abort handling
-        req.on('close', () => {
-          if (!finished) {
+        // Client Abort handling (only if connection dropped before response ended)
+        res.on('close', () => {
+          if (!res.writableEnded && !finished) {
             finished = true;
             clearTimeout(timer);
             try {
               process.kill(-child.pid, 'SIGINT');
             } catch (e) {}
           }
+        });
+
+        child.on('error', (err) => {
+          if (finished) return;
+          finished = true;
+          clearTimeout(timer);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `Process execution error: ${err.message}` }));
         });
 
         child.on('close', (code) => {
