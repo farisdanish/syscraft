@@ -251,9 +251,9 @@ export function QueryPlanLab({
             <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-muted)' }}>Esc releases focus</span>
           </div>
 
-          <div style={{ flex: 1, minHeight: '260px' }}>
+          <div style={{ height: '320px', width: '100%' }}>
             <Editor
-              height="100%"
+              height="320px"
               defaultLanguage="sql"
               theme={isDark ? "vs-dark" : "light"}
               value={sqlCode}

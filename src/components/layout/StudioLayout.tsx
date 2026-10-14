@@ -227,6 +227,7 @@ export function StudioLayout() {
           </Tag>
 
           <Button 
+            id="theme-toggle-btn"
             variant="default-outline" 
             size="small" 
             onClick={() => setIsDark(!isDark)}
@@ -261,6 +262,7 @@ export function StudioLayout() {
             return (
               <button
                 key={s.step}
+                id={`step-tab-${s.step}`}
                 type="button"
                 onClick={() => setCurrentStep(s.step)}
                 style={{
@@ -342,72 +344,188 @@ export function StudioLayout() {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             
             {activeDrill.week === 1 ? (
-              /* Week 1: Laravel PostController N+1 Drill */
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              /* Week 1: Laravel PostController N+1 Drill - Two-Column Studio Layout */
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 380px) 1fr', gap: '1rem', alignItems: 'start' }}>
                 
-                {/* Control Bar */}
+                {/* Left Column: Drill Mission Briefing, Rules & Insights */}
                 <div style={{ 
                   display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '0.5rem 0.75rem',
-                  borderRadius: '6px',
+                  flexDirection: 'column', 
+                  gap: '0.875rem',
                   backgroundColor: 'var(--studio-surface)',
                   border: '1px solid var(--studio-border)',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem'
+                  borderRadius: '8px',
+                  padding: '1.125rem'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <FileCode size={16} color="var(--studio-primary)" />
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}><code>{activeDrill.targetFile}</code></span>
-                    <Tag variant="primary" size="small">PHP 8.3 / Laravel 12</Tag>
+                  {/* Mission Header */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <Tag variant="primary" size="small">Tier 2 Simulation</Tag>
+                      <Tag variant="warning" size="small">Budget: ≤ 3 Queries</Tag>
+                    </div>
+                    <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.0625rem', color: 'var(--studio-text)', fontWeight: 700 }}>
+                      Eliminate Eloquent N+1 Loop
+                    </h3>
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--studio-text-muted)', lineHeight: 1.45 }}>
+                      Refactor <code>PostController::index()</code> to collapse catastrophic database multiplication.
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Button 
-                      variant="default-outline" 
-                      size="small"
-                      onClick={() => setUserCode(activeDrill.initialCode)}
-                    >
-                      <RotateCcw size={12} style={{ marginRight: '4px' }} />
-                      Reset Code
-                    </Button>
-
-                    <Button 
-                      variant="primary-fill" 
-                      size="small"
-                      onClick={handleRunDrill}
-                      disabled={isEvaluating}
-                    >
-                      <Play size={12} style={{ marginRight: '4px' }} />
-                      {isEvaluating ? "Evaluating..." : "Run Test Harness"}
-                    </Button>
+                  {/* Bug Diagnosis Box */}
+                  <div style={{ 
+                    padding: '0.75rem', 
+                    borderRadius: '6px', 
+                    backgroundColor: 'rgba(239, 68, 68, 0.08)', 
+                    borderLeft: '4px solid var(--studio-danger)',
+                    fontSize: '0.75rem',
+                    color: 'var(--studio-text)'
+                  }}>
+                    <strong style={{ color: 'var(--studio-danger)', display: 'block', marginBottom: '3px' }}>
+                      ⚠️ The Performance Bottleneck:
+                    </strong>
+                    <div style={{ lineHeight: 1.45, color: 'var(--studio-text-muted)' }}>
+                      <code>Post::all()</code> fetches 25 records. Inside the <code>map()</code> loop, accessing <code>$post-&gt;author-&gt;name</code> and <code>$post-&gt;comments-&gt;count()</code> executes 2 queries per row.
+                      <br />
+                      <strong>Total: 1 + 25 + 25 = 51 database roundtrips!</strong>
+                    </div>
                   </div>
+
+                  {/* Task Instructions */}
+                  <div style={{ fontSize: '0.8125rem', color: 'var(--studio-text)' }}>
+                    <strong style={{ display: 'block', marginBottom: '5px' }}>Your Objective:</strong>
+                    <ol style={{ margin: 0, paddingLeft: '1.25rem', lineHeight: 1.55, color: 'var(--studio-text-muted)', fontSize: '0.75rem' }}>
+                      <li style={{ marginBottom: '3px' }}>Replace <code>Post::all()</code> with eager loading: <code>Post::with([...])-&gt;get()</code>.</li>
+                      <li style={{ marginBottom: '3px' }}>Pre-load both <code>author</code> and <code>comments</code> relationships in a single batch.</li>
+                      <li>Click <strong>Run Test Harness</strong> to evaluate against query budget & AST assertions.</li>
+                    </ol>
+                  </div>
+
+                  {/* Required Assertions Checklist */}
+                  <div style={{ 
+                    padding: '0.75rem', 
+                    borderRadius: '6px', 
+                    backgroundColor: 'var(--studio-surface-subtle)', 
+                    border: '1px solid var(--studio-border)' 
+                  }}>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--studio-text-muted)', display: 'block', marginBottom: '6px' }}>
+                      Automated Assertions Evaluated:
+                    </span>
+                    <ul style={{ margin: 0, paddingLeft: '1.125rem', fontSize: '0.75rem', lineHeight: 1.5, color: 'var(--studio-text)' }}>
+                      <li>Query budget: ≤ 3 distinct queries for 25 records</li>
+                      <li>Zero per-row queries during <code>map()</code> iteration</li>
+                      <li><code>author</code> relationship eager loaded</li>
+                      <li><code>comments</code> relationship eager loaded</li>
+                    </ul>
+                  </div>
+
+                  {/* Senior Defense Tip */}
+                  <div style={{ 
+                    padding: '0.75rem', 
+                    borderRadius: '6px', 
+                    backgroundColor: 'var(--studio-primary-glow)', 
+                    borderLeft: '3px solid var(--studio-primary)',
+                    fontSize: '0.75rem',
+                    lineHeight: 1.45
+                  }}>
+                    <strong style={{ color: 'var(--studio-primary)', display: 'block', marginBottom: '2px' }}>
+                      Interview Defense Note:
+                    </strong>
+                    <span style={{ color: 'var(--studio-text)' }}>
+                      In high-scale production, Laravel 12's <code>Model::preventLazyLoading()</code> enforces strict eager loading during development, throwing exceptions before code enters staging.
+                    </span>
+                  </div>
+
                 </div>
 
-                {/* Editor Container */}
+                {/* Right Column: Monaco Code Editor Pane */}
                 <div style={{ 
-                  flex: 1, 
-                  minHeight: '420px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
                   border: '1px solid var(--studio-border)', 
                   borderRadius: '8px', 
-                  overflow: 'hidden' 
+                  overflow: 'hidden',
+                  backgroundColor: 'var(--studio-surface)'
                 }}>
-                  <Editor
-                    height="100%"
-                    defaultLanguage="php"
-                    theme={isDark ? "vs-dark" : "light"}
-                    value={userCode}
-                    onChange={(val) => setUserCode(val || '')}
-                    options={{
-                      fontSize: 13,
-                      lineNumbers: 'on',
-                      minimap: { enabled: false },
-                      scrollBeyondLastLine: false,
-                      wordWrap: 'on',
-                    }}
-                  />
+                  {/* Control Bar */}
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    padding: '0.625rem 0.875rem',
+                    borderBottom: '1px solid var(--studio-border)',
+                    backgroundColor: 'var(--studio-surface)',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <FileCode size={16} color="var(--studio-primary)" />
+                      <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+                        <code>{activeDrill.targetFile}</code>
+                      </span>
+                      <Tag variant="primary" size="small">PHP 8.3 / Laravel 12</Tag>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Button 
+                        variant="default-outline" 
+                        size="small"
+                        onClick={() => setUserCode(activeDrill.initialCode)}
+                        aria-label="Reset code to original"
+                      >
+                        <RotateCcw size={12} style={{ marginRight: '4px' }} />
+                        Reset Code
+                      </Button>
+
+                      <Button 
+                        id="run-harness-btn"
+                        variant="primary-fill" 
+                        size="small"
+                        onClick={handleRunDrill}
+                        disabled={isEvaluating}
+                        aria-label="Run test harness"
+                      >
+                        <Play size={12} style={{ marginRight: '4px' }} />
+                        {isEvaluating ? "Evaluating..." : "Run Test Harness"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Editor Container with Explicit Height */}
+                  <div style={{ height: '540px', width: '100%' }}>
+                    <Editor
+                      height="540px"
+                      defaultLanguage="php"
+                      theme={isDark ? "vs-dark" : "light"}
+                      value={userCode}
+                      onChange={(val) => setUserCode(val || '')}
+                      options={{
+                        fontSize: 13,
+                        lineNumbers: 'on',
+                        minimap: { enabled: false },
+                        scrollBeyondLastLine: false,
+                        wordWrap: 'on',
+                        tabSize: 4,
+                      }}
+                    />
+                  </div>
+
+                  {/* Status Bar */}
+                  <div style={{ 
+                    padding: '0.5rem 0.875rem', 
+                    borderTop: '1px solid var(--studio-border)', 
+                    fontSize: '0.75rem', 
+                    color: 'var(--studio-text-muted)',
+                    backgroundColor: 'var(--studio-surface-subtle)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <span>Target: <code>Post::with(['author', 'comments'])-&gt;get()</code></span>
+                    <span>Click <strong>Run Test Harness</strong> when ready</span>
+                  </div>
+
                 </div>
+
               </div>
             ) : (
               /* Week 4: In-Browser SQLite Query Plan Lab */
