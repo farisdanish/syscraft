@@ -358,6 +358,11 @@ export function QueryPlanLab({
               </span>
               {optimizationStatus && (
                 <Tag variant={optimizationStatus.passed ? 'success' : 'danger'} size="small">
+                  {optimizationStatus.passed ? (
+                    <CheckCircle2 size={11} style={{ marginRight: '3px' }} />
+                  ) : (
+                    <AlertTriangle size={11} style={{ marginRight: '3px' }} />
+                  )}
                   {optimizationStatus.passed ? 'OPTIMIZED' : 'UNOPTIMIZED'}
                 </Tag>
               )}
@@ -577,6 +582,11 @@ export function QueryPlanLab({
                         <strong>{node.operation.toUpperCase()}:</strong> {node.table} {node.index ? `(Index: ${node.index})` : ''}
                       </span>
                       <Tag variant={node.operation === 'search' ? 'success' : 'danger'} size="small">
+                        {node.operation === 'search' ? (
+                          <CheckCircle2 size={10} style={{ marginRight: '3px' }} />
+                        ) : (
+                          <AlertTriangle size={10} style={{ marginRight: '3px' }} />
+                        )}
                         {node.operation}
                       </Tag>
                     </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { Button } from '@govtechmy/myds-react/button';
 import { Tag } from '@govtechmy/myds-react/tag';
 import { Callout, CalloutTitle, CalloutContent } from '@govtechmy/myds-react/callout';
@@ -59,6 +59,11 @@ function loadInitialStories(propStories?: StarStory[]): StarStory[] {
 }
 
 export function StarStoryBuilder({ onExportRfc, onOpenRubric, stories: propStories, onChangeStories }: StarStoryBuilderProps) {
+  const situationInputId = useId();
+  const taskInputId = useId();
+  const actionInputId = useId();
+  const resultInputId = useId();
+
   const [localStories, setLocalStories] = useState<StarStory[]>(() => loadInitialStories(propStories));
   const [activeStoryId, setActiveStoryId] = useState<string>('spike-defense');
   const [copied, setCopied] = useState<boolean>(false);
@@ -257,7 +262,7 @@ ${stories
         {/* Situation */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.3rem' }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+            <label htmlFor={situationInputId} style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)', cursor: 'pointer' }}>
               <span style={{ color: 'var(--studio-primary)', fontWeight: 700 }}>[S]</span> Situation (Context &amp; Incident Scale)
             </label>
             <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-faint)', fontFamily: 'var(--studio-font-mono)' }}>
@@ -265,6 +270,7 @@ ${stories
             </span>
           </div>
           <textarea
+            id={situationInputId}
             value={activeStory.situation}
             onChange={(e) => handleUpdateField('situation', e.target.value)}
             rows={2}
@@ -286,7 +292,7 @@ ${stories
         {/* Task */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.3rem' }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+            <label htmlFor={taskInputId} style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)', cursor: 'pointer' }}>
               <span style={{ color: 'var(--studio-primary)', fontWeight: 700 }}>[T]</span> Task (Engineering Objective &amp; SLA Boundary)
             </label>
             <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-faint)', fontFamily: 'var(--studio-font-mono)' }}>
@@ -294,6 +300,7 @@ ${stories
             </span>
           </div>
           <textarea
+            id={taskInputId}
             value={activeStory.task}
             onChange={(e) => handleUpdateField('task', e.target.value)}
             rows={2}
@@ -315,7 +322,7 @@ ${stories
         {/* Action */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.3rem' }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+            <label htmlFor={actionInputId} style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)', cursor: 'pointer' }}>
               <span style={{ color: 'var(--studio-primary)', fontWeight: 700 }}>[A]</span> Action (Concrete Systems Engineering Implementation)
             </label>
             <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-faint)', fontFamily: 'var(--studio-font-mono)' }}>
@@ -323,6 +330,7 @@ ${stories
             </span>
           </div>
           <textarea
+            id={actionInputId}
             value={activeStory.action}
             onChange={(e) => handleUpdateField('action', e.target.value)}
             rows={3}
@@ -344,7 +352,7 @@ ${stories
         {/* Result */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.3rem' }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+            <label htmlFor={resultInputId} style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)', cursor: 'pointer' }}>
               <span style={{ color: 'var(--studio-primary)', fontWeight: 700 }}>[R]</span> Result (Measurable Telemetry &amp; Business Impact)
             </label>
             <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-faint)', fontFamily: 'var(--studio-font-mono)' }}>
@@ -352,6 +360,7 @@ ${stories
             </span>
           </div>
           <textarea
+            id={resultInputId}
             value={activeStory.result}
             onChange={(e) => handleUpdateField('result', e.target.value)}
             rows={2}

@@ -7,7 +7,8 @@ import {
   RotateCcw, 
   CheckCircle2, 
   Flag, 
-  Award
+  Award,
+  HelpCircle
 } from 'lucide-react';
 import type { RubricDimension, OralRubricScore } from '../../types';
 import { saveOralScore, logHesitation } from '../../services/storage';
@@ -21,7 +22,46 @@ interface OralRubricDialogProps {
     dimension: RubricDimension;
     prompt: string;
   }>;
+  hintsUsed?: number;
+  solutionRevealed?: boolean;
   onCompleted?: () => void;
+}
+
+const RUBRIC_DESCRIPTORS: Record<RubricDimension, Record<number, string>> = {
+  correctness: {
+    1: 'Inaccurate runtime concepts; misses core execution flow.',
+    2: 'Syntax-level recall; omits key underlying runtime mechanics.',
+    3: 'Accurate technical explanation; clearly articulates runtime execution order.',
+    4: 'Flawless technical explanation; details low-level engine and memory interactions.',
+  },
+  tradeoff: {
+    1: 'One-sided view; unaware of architectural costs or limits.',
+    2: 'Mentions pros/cons briefly without systemic trade-off analysis.',
+    3: 'Evaluates throughput vs latency, memory, or complexity trade-offs.',
+    4: 'Quantifies multi-dimensional production trade-offs with SLA implications.',
+  },
+  failure: {
+    1: 'Assumes happy path; no mention of failure states or crashes.',
+    2: 'Identifies basic failure, lacks structured recovery strategy.',
+    3: 'Outlines circuit breakers, timeouts, retries, and dead-letter handling.',
+    4: 'Comprehensive fault-tolerance strategy including idempotency and cascading failure defense.',
+  },
+  clarity: {
+    1: 'Disorganized delivery; extensive stumbling and filler pauses.',
+    2: 'Understandable but rambling; relies on informal analogies.',
+    3: 'Structured, professional engineering delivery with precise technical vocabulary.',
+    4: 'Executive-ready, crisp, high-signal architectural presentation.',
+  },
+  challenge: {
+    1: 'Unable to defend design choices under critical questioning.',
+    2: 'Defends initial choice rigidly without adapting to edge cases.',
+    3: 'Receptive to constraints, justifies choices with reasoned technical arguments.',
+    4: 'Effortlessly counters challenges with empirical metrics, benchmarks, and fallback options.',
+  },
+};
+
+function getScoreDescriptor(dimension: RubricDimension, score: number): string {
+  return RUBRIC_DESCRIPTORS[dimension]?.[score] || 'Standard assessment criterion.';
 }
 
 export function OralRubricDialog({
@@ -30,6 +70,8 @@ export function OralRubricDialog({
   topic,
   question,
   checkpoints,
+  hintsUsed = 0,
+  solutionRevealed = false,
   onCompleted,
 }: OralRubricDialogProps) {
   const [secondsRemaining, setSecondsRemaining] = useState<number>(180); // 3 minutes
@@ -79,6 +121,20 @@ export function OralRubricDialog({
 
   const handleScoreChange = (dim: RubricDimension, val: number) => {
     setScores(prev => ({ ...prev, [dim]: val }));
+    setPoliteAnnouncement(`${dim}, ${val} of 4 selected.`);
+  };
+
+  const onKeyDownRadioGroup = (e: React.KeyboardEvent, dim: RubricDimension) => {
+    const current = scores[dim] || 3;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const nextVal = Math.min(4, current + 1);
+      handleScoreChange(dim, nextVal);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prevVal = Math.max(1, current - 1);
+      handleScoreChange(dim, prevVal);
+    }
   };
 
   const handleSaveAssessment = async () => {
@@ -194,6 +250,32 @@ export function OralRubricDialog({
         </div>
       </div>
 
+      {/* Scaffolding Telemetry Context in Dialog Header (Task 3.1c / Task 5.1) */}
+      {(hintsUsed > 0 || solutionRevealed) && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+          padding: '0.5rem 0.75rem',
+          borderRadius: '6px',
+          backgroundColor: 'var(--studio-surface-subtle)',
+          border: '1px solid var(--studio-border)',
+          fontSize: '0.75rem',
+          color: 'var(--studio-text-muted)'
+        }}>
+          <span style={{ fontWeight: 600, color: 'var(--studio-text)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <HelpCircle size={13} color="var(--studio-primary)" />
+            Learner Session Context:
+          </span>
+          {hintsUsed > 0 && <Tag variant="default" size="small">💡 {hintsUsed} hint{hintsUsed > 1 ? 's' : ''} consulted</Tag>}
+          {solutionRevealed && <Tag variant="warning" size="small">🔓 Solution consulted</Tag>}
+          <span style={{ fontSize: '0.6875rem', marginLeft: 'auto', fontStyle: 'italic' }}>
+            Contextual only; verbal defense rubric is assessed independently
+          </span>
+        </div>
+      )}
+
       {/* Oral Prompt Card */}
       <div style={{ padding: '0.875rem', borderRadius: '6px', backgroundColor: 'var(--studio-primary-glow)', borderLeft: '4px solid var(--studio-primary)' }}>
         <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-primary)', display: 'block', marginBottom: '4px' }}>
@@ -204,59 +286,119 @@ export function OralRubricDialog({
         </span>
       </div>
 
-      {/* 5-Dimension Qualitative Rubric Grid */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {/* 5-Dimension Qualitative Rubric Grid as Accessible Fieldsets */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
         <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--studio-text-muted)' }}>
-          Self-Assessment Rubric (Score 1 to 4 per dimension):
+          Self-Assessment Rubric (Use arrow keys to select score 1 to 4):
         </div>
 
-        {checkpoints.map((cp, idx) => (
-          <div key={idx} style={{ 
-            padding: '0.75rem', 
-            borderRadius: '6px', 
-            border: '1px solid var(--studio-border)',
-            backgroundColor: 'var(--studio-surface)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.5rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.8125rem', fontWeight: 600, textTransform: 'capitalize', color: 'var(--studio-text)' }}>
-                {idx + 1}. {cp.dimension} Checkpoint
-              </span>
-              
-              {/* Score Selector (1 - 4) */}
-              <div style={{ display: 'flex', gap: '0.25rem' }}>
-                {[1, 2, 3, 4].map((scoreVal) => (
-                  <button
-                    key={scoreVal}
-                    type="button"
-                    onClick={() => handleScoreChange(cp.dimension, scoreVal)}
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '4px',
-                      border: `1px solid ${scores[cp.dimension] === scoreVal ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
-                      backgroundColor: scores[cp.dimension] === scoreVal ? 'var(--studio-primary)' : 'var(--studio-surface-subtle)',
-                      color: scores[cp.dimension] === scoreVal ? 'var(--studio-primary-contrast)' : 'var(--studio-text)',
-                      fontWeight: 600,
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                    aria-label={`Score ${scoreVal} for ${cp.dimension}`}
-                  >
-                    {scoreVal}
-                  </button>
-                ))}
-              </div>
-            </div>
+        {checkpoints.map((cp, idx) => {
+          const currentScore = scores[cp.dimension] || 3;
+          return (
+            <fieldset 
+              key={idx} 
+              style={{ 
+                padding: '0.875rem', 
+                borderRadius: '8px', 
+                border: '1px solid var(--studio-border)',
+                backgroundColor: 'var(--studio-surface)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.625rem',
+                margin: 0
+              }}
+            >
+              <legend style={{ 
+                padding: '0 6px', 
+                fontSize: '0.8125rem', 
+                fontWeight: 700, 
+                textTransform: 'capitalize', 
+                color: 'var(--studio-text)' 
+              }}>
+                {idx + 1}. {cp.dimension} Dimension
+              </legend>
 
-            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--studio-text-muted)', lineHeight: 1.45 }}>
-              {cp.prompt}
-            </p>
-          </div>
-        ))}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--studio-text-muted)', lineHeight: 1.45, flex: 1, minWidth: '240px' }}>
+                  {cp.prompt}
+                </p>
+                
+                {/* Semantic Accessible Radio Group (1 - 4) with Roving TabIndex & Keyboard Support */}
+                <div 
+                  role="radiogroup" 
+                  aria-label={`${cp.dimension} dimension rating`}
+                  style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}
+                >
+                  {[1, 2, 3, 4].map((scoreVal) => {
+                    const isChecked = currentScore === scoreVal;
+                    return (
+                      <button
+                        key={scoreVal}
+                        type="button"
+                        role="radio"
+                        aria-checked={isChecked}
+                        tabIndex={isChecked ? 0 : -1}
+                        onClick={() => handleScoreChange(cp.dimension, scoreVal)}
+                        onKeyDown={(e) => onKeyDownRadioGroup(e, cp.dimension)}
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '6px',
+                          border: `1.5px solid ${isChecked ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
+                          backgroundColor: isChecked ? 'var(--studio-primary)' : 'var(--studio-surface-subtle)',
+                          color: isChecked ? 'var(--studio-primary-contrast)' : 'var(--studio-text)',
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: isChecked ? '0 0 0 1px var(--studio-primary-glow)' : 'none'
+                        }}
+                        aria-label={`${cp.dimension}, ${scoreVal} of 4, ${isChecked ? 'checked' : 'not checked'}`}
+                      >
+                        {scoreVal}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Inline Selected Descriptor */}
+              <div style={{
+                fontSize: '0.75rem',
+                color: 'var(--studio-text)',
+                backgroundColor: 'var(--studio-surface-subtle)',
+                border: '1px solid var(--studio-border)',
+                padding: '0.4rem 0.65rem',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                <span style={{ fontWeight: 700, color: 'var(--studio-primary)' }}>
+                  Level {currentScore}:
+                </span>
+                <span>{getScoreDescriptor(cp.dimension, currentScore)}</span>
+              </div>
+
+              {/* Scoring Guide Details */}
+              <details style={{ fontSize: '0.71875rem', color: 'var(--studio-text-muted)' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--studio-text-muted)' }}>
+                  Scoring Guide (Levels 1–4)
+                </summary>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '5px', paddingLeft: '8px' }}>
+                  {[1, 2, 3, 4].map((lvl) => (
+                    <div key={lvl} style={{ color: lvl === currentScore ? 'var(--studio-primary)' : 'var(--studio-text-muted)' }}>
+                      <strong>Level {lvl}:</strong> {getScoreDescriptor(cp.dimension, lvl)}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            </fieldset>
+          );
+        })}
       </div>
 
       {/* Notes Textarea */}

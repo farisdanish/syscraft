@@ -67,6 +67,8 @@ export const StepOralRubric: React.FC<StepOralRubricProps> = ({
           topic={activeDrill.title}
           question={activeDrill.oralRubric.question}
           checkpoints={activeDrill.oralRubric.checkpoints}
+          hintsUsed={hintsUsed}
+          solutionRevealed={solutionRevealed}
           onCompleted={onOralRubricCompleted}
         />
 
