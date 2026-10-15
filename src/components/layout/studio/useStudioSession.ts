@@ -60,6 +60,8 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
   const [importNotice, setImportNotice] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
   const [starStories, setStarStories] = useState<StarStory[] | undefined>(undefined);
+  const [hintsUsed, setHintsUsed] = useState<number>(0);
+  const [solutionRevealed, setSolutionRevealed] = useState<boolean>(false);
 
   // 90-minute Timed Sprint State (Week 7)
   const [sprintSeconds, setSprintSeconds] = useState<number>(5400);
@@ -141,8 +143,10 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
       completed: drillCompleted,
       oralDefenseCompleted: stepCompletions[4],
       lastActiveAt: new Date().toISOString(),
+      hintsUsed,
+      solutionRevealed,
     });
-  }, [isStepUnlocked, activeDrill.id, activeDrill.week, highestStepReached, stepCompletions, userCode, testResults, tier3Result, verificationSource, drillCompleted]);
+  }, [isStepUnlocked, activeDrill.id, activeDrill.week, highestStepReached, stepCompletions, userCode, testResults, tier3Result, verificationSource, drillCompleted, hintsUsed, solutionRevealed]);
 
   // Poll Tier 3 Bridge Health on mount and periodically
   useEffect(() => {
@@ -181,8 +185,12 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
         setVerificationSource(session.verificationSource);
         setDrillCompleted(session.completed);
         setStarStories(session.starStories);
+        setHintsUsed(session.hintsUsed || 0);
+        setSolutionRevealed(session.solutionRevealed || false);
       } else {
         setStarStories(undefined);
+        setHintsUsed(0);
+        setSolutionRevealed(false);
         // Fallback to legacy progress record if migrating
         const legacy = await getDrillProgress(activeDrill.id);
         if (legacy?.completed) {
@@ -240,11 +248,13 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
           completed: drillCompleted,
           oralDefenseCompleted: stepCompletions[4],
           lastActiveAt: new Date().toISOString(),
+          hintsUsed,
+          solutionRevealed,
         });
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [userCode, activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, testResults, tier3Result, verificationSource, drillCompleted]);
+  }, [userCode, activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, testResults, tier3Result, verificationSource, drillCompleted, hintsUsed, solutionRevealed]);
 
   // Non-Destructive Multi-Module Switching
   const handleSelectWeek = useCallback(async (week: number) => {
@@ -265,6 +275,8 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
       oralDefenseCompleted: stepCompletions[4],
       lastActiveAt: new Date().toISOString(),
       starStories: activeDrill.week === 6 ? starStories : undefined,
+      hintsUsed,
+      solutionRevealed,
     };
     await saveDrillSession(currentSession);
 
@@ -284,9 +296,13 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
       setVerificationSource(targetSession.verificationSource);
       setDrillCompleted(targetSession.completed);
       setStarStories(targetSession.starStories);
+      setHintsUsed(targetSession.hintsUsed || 0);
+      setSolutionRevealed(targetSession.solutionRevealed || false);
       setPoliteNotice(`Resumed session for ${nextDrill.title} at Step ${targetSession.currentStep}`);
     } else {
       setStarStories(undefined);
+      setHintsUsed(0);
+      setSolutionRevealed(false);
       const legacyProg = await getDrillProgress(nextDrill.id);
       if (legacyProg?.completed) {
         setUserCode(nextDrill.initialCode);
@@ -308,7 +324,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
         setDrillCompleted(false);
       }
     }
-  }, [selectedWeek, activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, userCode, testResults, tier3Result, verificationSource, drillCompleted, starStories]);
+  }, [selectedWeek, activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, userCode, testResults, tier3Result, verificationSource, drillCompleted, starStories, hintsUsed, solutionRevealed]);
 
   // Gate 1: Proceed from Step 1 (Concept Brief) to Step 2 (Focused Drill)
   const handleProceedFromConcept = async () => {
@@ -330,6 +346,8 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
       completed: drillCompleted,
       oralDefenseCompleted: updated[4],
       lastActiveAt: new Date().toISOString(),
+      hintsUsed,
+      solutionRevealed,
     });
 
     const currentTask = await getTaskState(activeDrill.id);
@@ -381,6 +399,8 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
           completed: false,
           oralDefenseCompleted: updated[4],
           lastActiveAt: new Date().toISOString(),
+          hintsUsed,
+          solutionRevealed,
         });
         setPoliteNotice('All assertions passed! Advancing to Plan Analysis.');
         setCurrentStep(3);
@@ -438,6 +458,8 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
         completed: false,
         oralDefenseCompleted: updated[4],
         lastActiveAt: new Date().toISOString(),
+        hintsUsed,
+        solutionRevealed,
       });
       setPoliteNotice(`Tier 3 Docker verification passed for ${activeDrill.title}. Advancing to Plan Analysis.`);
       setCurrentStep(3);
@@ -479,6 +501,8 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
         completed: false,
         oralDefenseCompleted: updated[4],
         lastActiveAt: new Date().toISOString(),
+        hintsUsed,
+        solutionRevealed,
       });
       setPoliteNotice('B-Tree compound index seek verified! Full table scan eliminated. Advancing to Plan Analysis.');
       setCurrentStep(3);
@@ -506,6 +530,8 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
       completed: drillCompleted,
       oralDefenseCompleted: updated[4],
       lastActiveAt: new Date().toISOString(),
+      hintsUsed,
+      solutionRevealed,
     });
     setPoliteNotice('Analysis confirmed! Step 4: Scored Oral Defense is now unlocked.');
   };
@@ -528,6 +554,8 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
       completed: drillCompleted,
       oralDefenseCompleted: true,
       lastActiveAt: new Date().toISOString(),
+      hintsUsed,
+      solutionRevealed,
     });
     refreshProgress();
     setPoliteNotice('Oral recall scored and defended! Step 5: Tracer Replay is now unlocked.');
@@ -552,6 +580,8 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
       completed: true,
       oralDefenseCompleted: true,
       lastActiveAt: new Date().toISOString(),
+      hintsUsed,
+      solutionRevealed,
     });
 
     await saveDrillProgress(
@@ -590,8 +620,60 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
       oralDefenseCompleted: stepCompletions[4],
       lastActiveAt: new Date().toISOString(),
       starStories: updatedStories,
+      hintsUsed,
+      solutionRevealed,
     });
   };
+
+  // Pedagogical Hint Handlers (Recording context without score penalty)
+  const handleRequestHint = useCallback(() => {
+    const maxHints = activeDrill.hints?.length || 0;
+    if (maxHints === 0) return;
+    setHintsUsed((prev) => {
+      const next = Math.min(prev + 1, maxHints);
+      setPoliteNotice(`Pedagogical hint ${next} of ${maxHints} unlocked. (Oral rubric score unaffected)`);
+      void saveDrillSession({
+        drillId: activeDrill.id,
+        week: activeDrill.week,
+        currentStep,
+        highestStepReached,
+        stepCompletions,
+        draftCode: userCode,
+        testResults,
+        tier3Result,
+        verificationSource,
+        completed: drillCompleted,
+        oralDefenseCompleted: stepCompletions[4],
+        lastActiveAt: new Date().toISOString(),
+        starStories: activeDrill.week === 6 ? starStories : undefined,
+        hintsUsed: next,
+        solutionRevealed,
+      });
+      return next;
+    });
+  }, [activeDrill.hints, activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, userCode, testResults, tier3Result, verificationSource, drillCompleted, starStories, solutionRevealed]);
+
+  const handleRevealSolution = useCallback(() => {
+    setSolutionRevealed(true);
+    setPoliteNotice('Reference solution revealed. (Recorded in session telemetry for oral review discussion)');
+    void saveDrillSession({
+      drillId: activeDrill.id,
+      week: activeDrill.week,
+      currentStep,
+      highestStepReached,
+      stepCompletions,
+      draftCode: userCode,
+      testResults,
+      tier3Result,
+      verificationSource,
+      completed: drillCompleted,
+      oralDefenseCompleted: stepCompletions[4],
+      lastActiveAt: new Date().toISOString(),
+      starStories: activeDrill.week === 6 ? starStories : undefined,
+      hintsUsed,
+      solutionRevealed: true,
+    });
+  }, [activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, userCode, testResults, tier3Result, verificationSource, drillCompleted, starStories, hintsUsed]);
 
   // Export Envelope Backup
   const handleExportBackup = async () => {
@@ -657,6 +739,8 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
       setTier3Result(null);
       setVerificationSource('simulation');
       setDrillCompleted(false);
+      setHintsUsed(0);
+      setSolutionRevealed(false);
       await refreshProgress();
       setImportNotice({ type: 'success', text: 'All learner progress and drill sessions have been reset.' });
     } catch (err) {
@@ -709,5 +793,9 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
     handleExportBackup,
     handleImportBackup,
     handleConfirmResetProgress,
+    hintsUsed,
+    solutionRevealed,
+    handleRequestHint,
+    handleRevealSolution,
   };
 }

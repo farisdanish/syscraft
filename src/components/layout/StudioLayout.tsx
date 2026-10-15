@@ -123,6 +123,10 @@ export function StudioLayout({
             setPoliteNotice={session.setPoliteNotice}
             onRuntimeSqlVersion={session.setRuntimeSqlVersion}
             onQueryPlanExecutionComplete={session.handleQueryPlanExecutionComplete}
+            hintsUsed={session.hintsUsed}
+            solutionRevealed={session.solutionRevealed}
+            onRequestHint={session.handleRequestHint}
+            onRevealSolution={session.handleRevealSolution}
           />
         )}
 
@@ -142,6 +146,8 @@ export function StudioLayout({
           <StepOralRubric
             activeDrill={session.activeDrill}
             isCompleted={session.stepCompletions[4]}
+            hintsUsed={session.hintsUsed}
+            solutionRevealed={session.solutionRevealed}
             onOralRubricCompleted={session.handleOralRubricCompleted}
             onBackToStep3={() => session.goToStep(3)}
             onProceedToStep5={() => session.goToStep(5)}
