@@ -22,10 +22,12 @@
   --studio-border-strong: #cbd5e1;
   --studio-border-focus: #0284c7;
 
-  /* Typography */
+  /* Typography (WCAG 2.2 AA compliant >= 4.5:1 on all surfaces)
+     #0f172a on #ffffff: 17.85:1 | #334155 on #ffffff: 10.35:1 | #475569 on #ffffff: 7.58:1
+     #475569 on #f8fafc: 7.24:1  | #475569 on #f1f5f9: 6.92:1 */
   --studio-text: #0f172a;
-  --studio-text-muted: #64748b;
-  --studio-text-faint: #94a3b8;
+  --studio-text-muted: #334155;
+  --studio-text-faint: #475569;
 
   /* Accents */
   --studio-primary: #0284c7;
@@ -57,10 +59,12 @@
   --studio-border-strong: rgba(148, 163, 184, 0.3);
   --studio-border-focus: #38bdf8;
 
-  /* Typography */
+  /* Typography (WCAG 2.2 AA compliant >= 4.5:1 on all surfaces)
+     #f8fafc on #111827: 16.96:1 | #cbd5e1 on #111827: 11.95:1 | #8b9ab0 on #111827: 6.21:1
+     #8b9ab0 on #090d16: 6.80:1  | #8b9ab0 on #1f2937: 5.14:1 */
   --studio-text: #f8fafc;
-  --studio-text-muted: #94a3b8;
-  --studio-text-faint: #64748b;
+  --studio-text-muted: #cbd5e1;
+  --studio-text-faint: #8b9ab0;
 
   /* Accents */
   --studio-primary: #38bdf8;
