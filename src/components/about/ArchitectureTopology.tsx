@@ -39,7 +39,7 @@ const TopologyNodeComponent: React.FC<NodeProps> = ({ data }) => {
         <span style={{ fontWeight: 700, color: 'var(--studio-text-bright)', fontSize: '0.78125rem' }}>
           {String(data.label || '')}
         </span>
-        {Boolean(data.badge) ? (
+        {data.badge ? (
           <span style={{ 
             fontSize: '0.625rem', 
             padding: '1px 5px', 
