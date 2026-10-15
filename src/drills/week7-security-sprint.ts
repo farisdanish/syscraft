@@ -19,6 +19,11 @@ export const WEEK_7_DRILL: DrillDefinition = {
       'Timing Attack Resistance: Password verification and token checks must use constant-time comparison (hash_equals).',
     ],
   },
+  hints: [
+    "In login(), call $request->session()->regenerate() immediately after Auth::attempt($credentials) succeeds.",
+    "In updateRecord(), call $this->authorize('update', $record); before any attribute mutations.",
+    "Place the authorization call prior to $record->update($request->validated()); to avoid bypass.",
+  ],
   initialCode: `<?php
 
 namespace App\\Http\\Controllers;

@@ -19,6 +19,11 @@ export const WEEK_1_DRILL: DrillDefinition = {
       'Solution: Eager load relations via with([\'author\', \'comments\']) to collapse queries to a fixed budget <= 3.',
     ],
   },
+  hints: [
+    "Instead of calling Post::all(), use Eloquent's eager loading method with() to specify related models.",
+    "Pass an array of relationships to with(): ['author', 'comments'].",
+    "Chain ->get() after with(['author', 'comments']) to execute the batch query: Post::with(['author', 'comments'])->get().",
+  ],
   initialCode: `<?php
 
 namespace App\\Http\\Controllers;

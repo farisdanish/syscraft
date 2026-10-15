@@ -1,7 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { z } from 'zod';
 import type { 
-  ExportEnvelopeV1, 
   ExportEnvelopeV2,
   HesitationLogItem, 
   OralRubricScore, 

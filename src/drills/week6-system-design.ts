@@ -19,6 +19,11 @@ export const WEEK_6_DRILL: DrillDefinition = {
       'Defensive Cross-Examination: Confidently explain replication lag, cold-start worker recovery, and write-ahead log (WAL) saturation under interview pressure.',
     ],
   },
+  hints: [
+    "Replace the 'TODO' in backpressureStrategy with a strategy such as 'exponential backoff with non-critical metric shedding' or 'buffer spilling to object store'.",
+    "Replace the 'TODO' in partitionKey with a composite partition key such as 'station_code_date' or '(recorded_date, station_id)'.",
+    "Ensure all STAR story fields in the architecture specification or StarStoryBuilder have concrete metrics without 'TODO'.",
+  ],
   initialCode: `{
   "system": "Weather Data Sensor Ingestion Pipeline",
   "targetThroughputRps": 100000,

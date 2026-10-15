@@ -19,6 +19,11 @@ export const WEEK_5_DRILL: DrillDefinition = {
       'At-Least-Once Delivery: Queue systems guarantee message delivery at least once; job handlers must always be architected as idempotent operations.',
     ],
   },
+  hints: [
+    "Define $tries property: public int $tries = 3; on the job class.",
+    "Implement backoff schedule: public array $backoff = [10, 60, 300]; (or via backoff() method).",
+    "In the failed(?Throwable $exception) hook, route the failed telemetry to the dead_letter_jobs table.",
+  ],
   initialCode: `<?php
 
 namespace App\\Jobs;

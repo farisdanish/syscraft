@@ -19,6 +19,11 @@ export const WEEK_2_DRILL: DrillDefinition = {
       'RFC 9457 Standard: HTTP error payloads must conform to RFC 9457 Problem Details with type, title, status, detail, and instance fields returning application/problem+json.',
     ],
   },
+  hints: [
+    "Replace OFFSET with seek conditions: check if $cursor is passed, decode base64, and filter where (recorded_at, id) < (:recorded_at, :id).",
+    "On invalid or corrupted cursor format, return response()->json([...], 400, ['Content-Type' => 'application/problem+json']) conforming to RFC 9457.",
+    "Order deterministically: ->orderBy('recorded_at', 'desc')->orderBy('id', 'desc')->limit($limit).",
+  ],
   initialCode: `<?php
 
 namespace App\\Http\\Controllers\\Api;

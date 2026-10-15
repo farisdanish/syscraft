@@ -19,6 +19,11 @@ export const WEEK_3_DRILL: DrillDefinition = {
       'Lifecycle Separation: ServiceProvider register() must strictly bind container definitions; boot() runs only after all providers are registered.',
     ],
   },
+  hints: [
+    "Inject the interface WeatherApiClientInterface into WeatherReportController's constructor instead of instantiating OpenMeteoClient with 'new'.",
+    "In WeatherServiceProvider::register(), bind the interface: $this->app->bind(WeatherApiClientInterface::class, OpenMeteoClient::class);",
+    "Ensure WeatherReportController assigns the injected interface to a private readonly property.",
+  ],
   initialCode: `<?php
 
 namespace App\\Http\\Controllers;

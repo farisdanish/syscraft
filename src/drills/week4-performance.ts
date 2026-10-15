@@ -19,6 +19,11 @@ export const WEEK_4_DRILL: DrillDefinition = {
       'Portability Warning: SQLite EXPLAIN outputs relational concepts (SCAN vs SEARCH); it does NOT predict PostgreSQL cost optimizer choices.',
     ],
   },
+  hints: [
+    "Identify the columns in the WHERE and ORDER BY clauses: station_code and recorded_at.",
+    "Leftmost prefix rule: Put the equality filter column (station_code) first, followed by the ordering column (recorded_at DESC).",
+    "Statement format: CREATE INDEX idx_station_recorded ON weather_observations (station_code, recorded_at DESC);",
+  ],
   initialCode: `-- DRILL: weather_observations table has 5,000 records.
 -- Target Query:
 -- SELECT id, station_code, temperature_c, recorded_at 
