@@ -121,7 +121,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
   const goToStep = useCallback((step: WorkflowStep) => {
     if (!isStepUnlocked(step)) {
       if (step === 2) setPoliteNotice('Step 2 is locked: Click "Proceed to Focused Drill" in Step 1 first.');
-      else if (step === 3) setPoliteNotice('Step 3 is locked: Pass drill assertions in Step 2 to unlock Plan Analysis.');
+      else if (step === 3) setPoliteNotice('Step 3 is locked: Pass drill assertions in Step 2 to unlock Analysis & Feedback.');
       else if (step === 4) setPoliteNotice('Step 4 is locked: Confirm execution analysis in Step 3 to unlock Oral Defense.');
       else if (step === 5) setPoliteNotice('Step 5 is locked: Submit 5-dimension rubric in Step 4 to unlock Tracer Replay.');
       return;
@@ -402,7 +402,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
           hintsUsed,
           solutionRevealed,
         });
-        setPoliteNotice('All assertions passed! Advancing to Plan Analysis.');
+        setPoliteNotice('All assertions passed! Advancing to Analysis & Feedback.');
         setCurrentStep(3);
         setHighestStepReached(prev => Math.max(prev, 3));
       } else {
@@ -461,7 +461,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
         hintsUsed,
         solutionRevealed,
       });
-      setPoliteNotice(`Tier 3 Docker verification passed for ${activeDrill.title}. Advancing to Plan Analysis.`);
+      setPoliteNotice(`Tier 3 Docker verification passed for ${activeDrill.title}. Advancing to Analysis & Feedback.`);
       setCurrentStep(3);
       setHighestStepReached(prev => Math.max(prev, 3));
     } else {
@@ -504,7 +504,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
         hintsUsed,
         solutionRevealed,
       });
-      setPoliteNotice('B-Tree compound index seek verified! Full table scan eliminated. Advancing to Plan Analysis.');
+      setPoliteNotice('B-Tree compound index seek verified! Full table scan eliminated. Advancing to Analysis & Feedback.');
       setCurrentStep(3);
       setHighestStepReached(prev => Math.max(prev, 3));
     }

@@ -874,9 +874,9 @@ export function StepFocusedDrill({
           size="small" 
           disabled={!canProceedToStep3}
           onClick={() => goToStep(3)}
-          title={!canProceedToStep3 ? "Pass drill assertions in Step 2 to unlock" : "Advance to Plan Analysis"}
+          title={!canProceedToStep3 ? "Pass drill assertions in Step 2 to unlock" : "Advance to Analysis & Feedback"}
         >
-          Go to Step 3: Plan Analysis
+          Go to Step 3: Analysis &amp; Feedback
           <ChevronRight size={14} style={{ marginLeft: '4px' }} />
         </Button>
       </div>

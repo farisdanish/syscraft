@@ -5,10 +5,15 @@ import type { QueryPlanNode, SemanticQueryPlanResult } from '../types';
  * Converts SQLite EXPLAIN QUERY PLAN tree details into normalized semantic nodes.
  */
 export function parseSqliteExplainPlan(
-  rows: Array<[number, number, number, string]>,
+  rowsOrExecResult: Array<[number, number, number, string]> | { values?: unknown[][] }[],
   sqliteVersion: string = '3.45.2',
   executionTimeMs?: number
 ): SemanticQueryPlanResult {
+  const rows: Array<[number, number, number, string]> = 
+    Array.isArray(rowsOrExecResult) && rowsOrExecResult.length > 0 && typeof rowsOrExecResult[0] === 'object' && rowsOrExecResult[0] !== null && 'values' in rowsOrExecResult[0]
+      ? ((rowsOrExecResult[0] as { values?: unknown[][] }).values ?? []) as unknown as Array<[number, number, number, string]>
+      : (rowsOrExecResult as Array<[number, number, number, string]>);
+
   const nodes: QueryPlanNode[] = [];
   const rawExplain: string[] = [];
   const indexesUsed: string[] = [];

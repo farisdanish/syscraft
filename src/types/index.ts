@@ -18,7 +18,7 @@ export interface StepMetadata {
 export const WORKFLOW_STEPS: StepMetadata[] = [
   { step: 1, title: "Concept Brief", description: "Architectural mental model & visual diagram" },
   { step: 2, title: "Focused Drill", description: "Hands-on code or SQL query implementation" },
-  { step: 3, title: "Plan & Assertion Analysis", description: "Semantic plan evaluation & query budgets" },
+  { step: 3, title: "Analysis & Feedback", description: "Execution breakdown, query plan telemetry & assertion diagnostics" },
   { step: 4, title: "Scored Oral Recall", description: "Unscripted verbal defense against qualitative rubric" },
   { step: 5, title: "Tracer Replay", description: "Interactive state machine and packet step-through" },
 ];

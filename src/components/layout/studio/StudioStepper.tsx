@@ -31,7 +31,7 @@ export const StudioStepper: React.FC<StudioStepperProps> = ({
             : s.step === 3 
             ? 'Step 3 locked: Satisfy all automated assertions in Step 2 first' 
             : s.step === 4 
-            ? 'Step 4 locked: Acknowledge execution plan in Step 3 first' 
+            ? 'Step 4 locked: Confirm analysis & feedback in Step 3 first' 
             : 'Step 5 locked: Submit 5-dimension oral rubric in Step 4 first';
 
           return (

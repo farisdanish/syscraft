@@ -2,7 +2,15 @@ import React from 'react';
 import { Button } from '@govtechmy/myds-react/button';
 import { Tag } from '@govtechmy/myds-react/tag';
 import { Callout, CalloutTitle, CalloutContent } from '@govtechmy/myds-react/callout';
-import { CheckCircle2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { 
+  CheckCircle2, 
+  AlertCircle, 
+  ChevronLeft, 
+  ChevronRight, 
+  BarChart3, 
+  Terminal,
+  Activity
+} from 'lucide-react';
 import type { DrillDefinition } from '../../../../types';
 import type { BridgeRunResult } from '../../../../services/bridgeClient';
 
@@ -24,9 +32,24 @@ export const StepAssertionOutput: React.FC<StepAssertionOutputProps> = ({
   return (
     <div className="studio-scrollable-step">
       <div style={{ maxWidth: '860px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <h3 style={{ margin: 0, fontSize: '1.0625rem', color: 'var(--studio-text)' }}>
-          Step 3: Verification &amp; Assertion Output
-        </h3>
+        
+        {/* Step 3 Header */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Tag variant="primary" size="small">
+              Step 3 of 5
+            </Tag>
+            <span style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)' }}>
+              Week {activeDrill.week} Diagnostic Report
+            </span>
+          </div>
+          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--studio-text)' }}>
+            Analysis &amp; Feedback • {activeDrill.title}
+          </h2>
+          <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--studio-text-muted)', lineHeight: 1.5 }}>
+            Authoritative evaluation of runtime assertions, query budgets, and execution feedback before oral defense.
+          </p>
+        </div>
 
         {/* Tier 3 Canonical Docker Runtime Output Card */}
         {tier3Result && (
@@ -39,19 +62,20 @@ export const StepAssertionOutput: React.FC<StepAssertionOutputProps> = ({
             flexDirection: 'column',
             gap: '0.75rem'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Terminal size={16} color="var(--studio-primary)" />
                 <Tag variant={tier3Result.exitCode === 0 ? "success" : "danger"} size="small">
                   {tier3Result.exitCode === 0 
-                    ? `Tier 3: [${activeDrill.week === 7 ? 'PHP 8.3 / Auth Testbed' : activeDrill.week === 3 ? 'PHP 8.3 / IoC Container' : 'PostgreSQL 16.4'} Runtime Passed]` 
-                    : "Tier 3: [Failed]"}
+                    ? `Tier 3 Container: [Passed]` 
+                    : "Tier 3 Container: [Failed]"}
                 </Tag>
-                <strong style={{ fontSize: '0.875rem', color: 'var(--studio-text)' }}>
-                  syscraft-runner:1.0.0 (Isolated Docker syscraft-testnet)
+                <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-text)' }}>
+                  syscraft-runner:1.0.0 (syscraft-testnet)
                 </strong>
               </div>
               <span style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)' }}>
-                Exit Code: {tier3Result.exitCode} • Verified: {tier3Result.executionVerified ? "Yes" : "No"}
+                Exit Code: {tier3Result.exitCode} • Verified Runtime: {tier3Result.executionVerified ? "Yes" : "No"}
               </span>
             </div>
 
@@ -86,42 +110,70 @@ export const StepAssertionOutput: React.FC<StepAssertionOutputProps> = ({
                   : (activeDrill.week === 1 ? "Query Budget Violation • Assertions Failed" : "Requirements Violation • Assertions Failed")}
               </CalloutTitle>
               <CalloutContent>
-                {testResults.simulatedLatencyMs ? `Simulated execution time: ~${testResults.simulatedLatencyMs}ms • ` : ''}
-                {testResults.queriesExecuted ? `Queries Executed: ${testResults.queriesExecuted} queries.` : testResults.message || 'Inspection complete.'}
+                {testResults.simulatedLatencyMs ? `Simulated execution latency: ~${testResults.simulatedLatencyMs}ms • ` : ''}
+                {testResults.queriesExecuted ? `Queries Executed: ${testResults.queriesExecuted} queries.` : testResults.message || 'Verification complete.'}
               </CalloutContent>
             </Callout>
 
-            {/* Assertion List Card */}
+            {/* Evaluated Assertions Checklist Card */}
             {testResults.assertionResults && (
-              <div style={{ padding: '1rem', borderRadius: '8px', border: '1px solid var(--studio-border)', backgroundColor: 'var(--studio-surface)' }}>
-                <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--studio-text)' }}>
-                  EVALUATED ASSERTIONS:
+              <div style={{ 
+                padding: '1rem', 
+                borderRadius: '8px', 
+                border: '1px solid var(--studio-border)', 
+                backgroundColor: 'var(--studio-surface)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.625rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--studio-text)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <BarChart3 size={15} color="var(--studio-primary)" />
+                    Detailed Assertion Verification
+                  </span>
+                  <Tag variant={testResults.passed ? "success" : "danger"} size="small">
+                    {testResults.assertionResults.filter((a: any) => a.passed).length} / {testResults.assertionResults.length} Passed
+                  </Tag>
                 </div>
-                {testResults.assertionResults.map((a: any, i: number) => (
-                  <div key={i} style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    padding: '0.45rem 0.75rem',
-                    borderRadius: '4px',
-                    backgroundColor: 'var(--studio-surface-subtle)',
-                    marginBottom: '0.375rem',
-                    fontSize: '0.8125rem',
-                    color: 'var(--studio-text)'
-                  }}>
-                    <span>{a.name} — <span style={{ color: 'var(--studio-text-muted)' }}>{a.message}</span></span>
-                    <Tag variant={a.passed ? "success" : "danger"} size="small">
-                      {a.passed ? "PASS" : "FAIL"}
-                    </Tag>
-                  </div>
-                ))}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                  {testResults.assertionResults.map((a: any, i: number) => (
+                    <div key={i} style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--studio-surface-subtle)',
+                      border: '1px solid var(--studio-border)',
+                      fontSize: '0.8125rem',
+                      color: 'var(--studio-text)',
+                      gap: '0.75rem'
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                        <span style={{ fontWeight: 600 }}>{a.name}</span>
+                        {a.message && (
+                          <span style={{ color: 'var(--studio-text-muted)', fontSize: '0.75rem' }}>{a.message}</span>
+                        )}
+                      </div>
+                      <Tag variant={a.passed ? "success" : "danger"} size="small">
+                        {a.passed ? "PASS" : "FAIL"}
+                      </Tag>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
         ) : !tier3Result ? (
           <Callout variant="warning">
-            <CalloutTitle>No test run recorded yet</CalloutTitle>
-            <CalloutContent>Return to Step 2 and click "Run Test Harness" or "Run in Docker" to evaluate your code.</CalloutContent>
+            <CalloutTitle style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Activity size={16} />
+              No evaluation run recorded yet
+            </CalloutTitle>
+            <CalloutContent>
+              Return to Step 2: Focused Drill and click <strong>Run Test Harness</strong> or <strong>Run in Docker</strong> to evaluate your code.
+            </CalloutContent>
           </Callout>
         ) : null}
 
