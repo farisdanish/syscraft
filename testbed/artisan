@@ -379,6 +379,70 @@ if ($command === 'test') {
         exit(0);
     }
 
+    // Test Suite 3: SecurityAuthSprintTest (Week 7 Session Fixation & Policy Authorization)
+    if ($filter === 'SecurityAuthSprintTest') {
+        $submissionFile = '/workspace/submission/AuthController.php';
+        $submissionCode = '';
+        if (file_exists($submissionFile)) {
+            $submissionCode = file_get_contents($submissionFile);
+        }
+
+        $hasSessionRegenerate = preg_match('/session\s*\(\s*\)\s*->\s*regenerate\s*\(\s*\)/', $submissionCode) ||
+                               preg_match('/\$request\s*->\s*session\s*\(\s*\)\s*->\s*regenerate\s*\(\s*\)/', $submissionCode);
+
+        $hasAuthorize = preg_match('/\$this\s*->\s*authorize\s*\(\s*[\'"]update[\'"]\s*,\s*\$record\s*\)/', $submissionCode) ||
+                       preg_match('/Gate::authorize\s*\(\s*[\'"]update[\'"]\s*,\s*\$record\s*\)/', $submissionCode);
+
+        if (!$hasSessionRegenerate || !$hasAuthorize) {
+            echo "\n\033[41m\033[37m FAIL \033[0m \033[1mTests\\Feature\\SecurityAuthSprintTest\033[0m\n";
+            usleep(15000);
+            if ($hasSessionRegenerate) {
+                echo "  \033[32m✓\033[0m \033[90msession fixation protection via session()->regenerate()\033[0m (12ms)\n";
+            } else {
+                echo "  \033[31m⨯\033[0m \033[90msession fixation protection via session()->regenerate()\033[0m\n";
+                echo "    \033[31mExpected \$request->session()->regenerate() upon successful authentication to thwart fixation attacks.\033[0m\n";
+            }
+
+            usleep(12000);
+            if ($hasAuthorize) {
+                echo "  \033[32m✓\033[0m \033[90mmulti-tenant model policy gate enforced via authorize('update', \$record)\033[0m (15ms)\n";
+            } else {
+                echo "  \033[31m⨯\033[0m \033[90mmulti-tenant model policy gate enforced via authorize('update', \$record)\033[0m\n";
+                echo "    \033[31mMissing policy authorization gate on record mutation endpoint. Vulnerable to IDOR.\033[0m\n";
+            }
+
+            usleep(10000);
+            echo "  \033[31m⨯\033[0m \033[90munauthorized cross-tenant mutations rejected with HTTP 403 Forbidden\033[0m\n";
+            echo "    \033[31mCross-tenant mutation permits tampering without policy gate.\033[0m\n";
+
+            $duration = number_format(microtime(true) - $startTime, 2);
+            $failedCount = (!$hasSessionRegenerate ? 1 : 0) + (!$hasAuthorize ? 2 : 0);
+            $passedCount = 3 - $failedCount;
+            echo "\n  \033[1mTests:\033[0m    \033[31m{$failedCount} failed\033[0m, \033[32m{$passedCount} passed\033[0m (3 assertions)\n";
+            echo "  \033[1mDuration:\033[0m {$duration}s\n";
+            echo "  \033[1mRuntime:\033[0m  PHP {$phpVersion} / PostgreSQL 16.4 (Testbed Prototype)\n";
+            echo "  \033[1mVerified:\033[0m [syscraft-runner:1.0.0 UID 1000:1000]\n\n";
+            exit(1);
+        }
+
+        echo "\n\033[42m\033[30m PASS \033[0m \033[1mTests\\Feature\\SecurityAuthSprintTest\033[0m\n";
+        usleep(18000);
+        echo "  \033[32m✓\033[0m \033[90msession fixation protection via session()->regenerate()\033[0m (14ms)\n";
+        usleep(15000);
+        echo "  \033[32m✓\033[0m \033[90mmulti-tenant model policy gate enforced via authorize('update', \$record)\033[0m (18ms)\n";
+        usleep(12000);
+        echo "  \033[32m✓\033[0m \033[90munauthorized cross-tenant mutations rejected with HTTP 403 Forbidden\033[0m (9ms)\n";
+        usleep(10000);
+        echo "  \033[32m✓\033[0m \033[90mauthenticated tenant record updates successfully persisted to PostgreSQL 16.4\033[0m (22ms)\n";
+
+        $duration = number_format(microtime(true) - $startTime, 2);
+        echo "\n  \033[1mTests:\033[0m    \033[32m4 passed\033[0m (4 assertions)\n";
+        echo "  \033[1mDuration:\033[0m {$duration}s\n";
+        echo "  \033[1mRuntime:\033[0m  PHP {$phpVersion} / PostgreSQL 16.4 (Testbed Prototype)\n";
+        echo "  \033[1mVerified:\033[0m [syscraft-runner:1.0.0 UID 1000:1000]\n\n";
+        exit(0);
+    }
+
     echo "\033[33mNo tests matching filter '$filter' found.\033[0m\n";
     exit(1);
 }

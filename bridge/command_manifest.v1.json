@@ -22,7 +22,7 @@
     },
     {
       "id": "postgres-plan-test",
-      "drillId": "w4-data-layer-indexes",
+      "drillId": "w4-btree-indexing",
       "description": "Run PostgreSQL EXPLAIN ANALYZE index performance assertion",
       "executable": "docker",
       "args": [
@@ -37,6 +37,25 @@
         "artisan",
         "test",
         "--filter=PostgresIndexPlanTest"
+      ]
+    },
+    {
+      "id": "w7-auth-sprint-test",
+      "drillId": "w7-crud-auth-sprint",
+      "description": "Run Pest test for Session Fixation Regeneration and Policy Authorization",
+      "executable": "docker",
+      "args": [
+        "compose",
+        "-f",
+        "docker/docker-compose.yml",
+        "run",
+        "-T",
+        "--rm",
+        "test",
+        "php",
+        "artisan",
+        "test",
+        "--filter=SecurityAuthSprintTest"
       ]
     }
   ]
