@@ -52,7 +52,10 @@ import {
   LARAVEL_LIFECYCLE_STEPS, 
   BTREE_INDEX_TRACER_STEPS,
   AUTH_POLICY_TRACER_STEPS,
-  SENSOR_PIPELINE_TRACER_STEPS
+  SENSOR_PIPELINE_TRACER_STEPS,
+  CURSOR_PAGINATION_TRACER_STEPS,
+  CONTAINER_DI_TRACER_STEPS,
+  QUEUE_DLQ_TRACER_STEPS
 } from '../tracer/tracerSteps';
 import { StarStoryBuilder } from '../system-design/StarStoryBuilder';
 import { CURRICULUM_TASKS } from '../../data/curriculumTasks';
@@ -1305,11 +1308,27 @@ export function StudioLayout({
                   <div className="studio-drill-sidebar" style={{ height: '100%', overflowY: 'auto' }}>
                     
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Tag variant="primary" size="small">
-                        {activeDrill.week === 7 ? "Tier 3 Security Sprint" : "Tier 2 Simulation"}
+                      <Tag variant={activeDrill.tier === 3 ? "danger" : activeDrill.tier === 1 ? "primary" : "warning"} size="small">
+                        {activeDrill.week === 7 
+                          ? "Tier 3 Security Sprint" 
+                          : activeDrill.week === 3 
+                          ? "Tier 3 Clean Architecture" 
+                          : activeDrill.week === 2
+                          ? "Tier 1 REST Engine"
+                          : activeDrill.week === 5
+                          ? "Tier 2 Async Pipeline"
+                          : "Tier 2 Simulation"}
                       </Tag>
                       <Tag variant={activeDrill.week === 7 ? "danger" : "warning"} size="small">
-                        {activeDrill.week === 7 ? "90-Min Time Cap" : "Budget: ≤ 3 Queries"}
+                        {activeDrill.week === 7 
+                          ? "90-Min Time Cap" 
+                          : activeDrill.week === 2
+                          ? "O(1) Seek • RFC 9457"
+                          : activeDrill.week === 3
+                          ? "SOLID D • IoC Container"
+                          : activeDrill.week === 5
+                          ? "Tries: 3 • Backoff: 15s"
+                          : "Budget: ≤ 3 Queries"}
                       </Tag>
                     </div>
 
@@ -1320,6 +1339,12 @@ export function StudioLayout({
                       <p style={{ margin: 0, fontSize: '0.75rem', lineHeight: 1.45, color: 'var(--studio-text-muted)' }}>
                         {activeDrill.week === 7
                           ? "Remediate critical session fixation and privilege escalation (IDOR) vulnerabilities in AuthController.php."
+                          : activeDrill.week === 2
+                          ? "Implement seek-based cursor pagination for high-volume APIs and emit RFC 9457 standard problem details."
+                          : activeDrill.week === 3
+                          ? "Refactor bloated procedural code into clean services, bind contracts in Laravel IoC, and inject dependencies."
+                          : activeDrill.week === 5
+                          ? "Construct idempotent queue consumers with exponential backoff and isolate poisonous messages in a dead-letter queue."
                           : "Refactor PostController::index() to collapse catastrophic database multiplication."}
                       </p>
                     </div>
@@ -1328,13 +1353,13 @@ export function StudioLayout({
                     <div style={{ 
                       padding: '0.625rem 0.75rem', 
                       borderRadius: '6px', 
-                      backgroundColor: 'rgba(239, 68, 68, 0.08)', 
-                      borderLeft: '4px solid var(--studio-danger)',
+                      backgroundColor: activeDrill.week === 7 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(234, 179, 8, 0.08)', 
+                      borderLeft: `4px solid ${activeDrill.week === 7 ? 'var(--studio-danger)' : 'var(--studio-warning)'}`,
                       fontSize: '0.75rem',
                       color: 'var(--studio-text)'
                     }}>
-                      <strong style={{ color: 'var(--studio-danger)', display: 'block', marginBottom: '2px' }}>
-                        {activeDrill.week === 7 ? "🚨 Security Vulnerability Analysis:" : "⚠️ The Performance Bottleneck:"}
+                      <strong style={{ color: activeDrill.week === 7 ? 'var(--studio-danger)' : 'var(--studio-warning)', display: 'block', marginBottom: '2px' }}>
+                        {activeDrill.week === 7 ? "🚨 Security Vulnerability Analysis:" : "⚠️ Bottleneck & Architecture Defect Analysis:"}
                       </strong>
                       <div style={{ lineHeight: 1.45, color: 'var(--studio-text-muted)' }}>
                         {activeDrill.week === 7 ? (
@@ -1342,6 +1367,24 @@ export function StudioLayout({
                             <strong>1. Session Fixation (login):</strong> The controller authenticates credentials but omits <code>$request-&gt;session()-&gt;regenerate()</code>, allowing an attacker to hijack the authenticated session with a pre-set cookie.
                             <br />
                             <strong>2. IDOR / Missing Policy (updateRecord):</strong> The mutation endpoint accepts any <code>Record $record</code> without checking <code>$this-&gt;authorize(&apos;update&apos;, $record)</code>, exposing tenant data to unauthorized tampering.
+                          </>
+                        ) : activeDrill.week === 2 ? (
+                          <>
+                            <strong>1. OFFSET Query Degradation:</strong> <code>OFFSET 10000</code> forces the database to scan and discard 10,000 index rows, degrading pagination to O(N) latency.
+                            <br />
+                            <strong>2. Malformed Error Responses:</strong> Invalid cursors produce non-standard 500 error responses leaking internals instead of RFC 9457 <code>application/problem+json</code> (HTTP 422).
+                          </>
+                        ) : activeDrill.week === 3 ? (
+                          <>
+                            <strong>1. Direct Instantiation Coupling:</strong> <code>OrderService</code> instantiates concrete <code>StripePaymentGateway</code> and <code>SmtpMailer</code> using the <code>new</code> keyword, violating the Dependency Inversion Principle.
+                            <br />
+                            <strong>2. Untestable God Class:</strong> Unit tests cannot mock billing or mail services without triggering external APIs or modifying production code.
+                          </>
+                        ) : activeDrill.week === 5 ? (
+                          <>
+                            <strong>1. Worker Poisoning & Infinite Loops:</strong> <code>ProcessWebhookJob</code> lacks max attempt limits and backoff delays, causing malformed payloads to spin in infinite retry storms.
+                            <br />
+                            <strong>2. Unisolated Failures:</strong> Unrecoverable payloads are dropped without archiving to a dead-letter queue (DLQ) for engineering triage.
                           </>
                         ) : (
                           <>
@@ -1362,6 +1405,24 @@ export function StudioLayout({
                             <li style={{ marginBottom: '2px' }}>In <code>login()</code>, call <code>$request-&gt;session()-&gt;regenerate()</code> upon successful credential attempt.</li>
                             <li style={{ marginBottom: '2px' }}>In <code>updateRecord()</code>, insert <code>$this-&gt;authorize(&apos;update&apos;, $record);</code> prior to model mutation.</li>
                             <li>Click <strong>Run Test Harness</strong> or <strong>Run in Docker (Tier 3)</strong> to verify both security defenses.</li>
+                          </>
+                        ) : activeDrill.week === 2 ? (
+                          <>
+                            <li style={{ marginBottom: '2px' }}>Replace <code>OFFSET</code> with seek predicate: <code>WHERE id &gt; :cursor ORDER BY id ASC LIMIT :limit</code>.</li>
+                            <li style={{ marginBottom: '2px' }}>Return RFC 9457 <code>application/problem+json</code> with <code>type</code>, <code>title</code>, and <code>status: 422</code> on invalid cursor.</li>
+                            <li>Click <strong>Run Test Harness</strong> to evaluate cursor pagination and error contracts.</li>
+                          </>
+                        ) : activeDrill.week === 3 ? (
+                          <>
+                            <li style={{ marginBottom: '2px' }}>Extract interfaces and inject <code>PaymentGatewayInterface</code> and <code>NotificationServiceInterface</code> via constructor.</li>
+                            <li style={{ marginBottom: '2px' }}>Bind contracts in the Laravel Service Container using <code>App::bind(...)</code> or <code>App::singleton(...)</code>.</li>
+                            <li>Click <strong>Run Test Harness</strong> or <strong>Run in Docker (Tier 3)</strong> to verify container resolution.</li>
+                          </>
+                        ) : activeDrill.week === 5 ? (
+                          <>
+                            <li style={{ marginBottom: '2px' }}>Configure <code>public int $tries = 3;</code> and implement <code>backoff(): array</code> with delays <code>[15, 60, 300]</code>.</li>
+                            <li style={{ marginBottom: '2px' }}>Implement <code>failed(\Throwable $e)</code> handler routing poison payloads to the dead-letter queue.</li>
+                            <li>Click <strong>Run Test Harness</strong> to evaluate retry scheduling and DLQ dispatch.</li>
                           </>
                         ) : (
                           <>
@@ -1391,6 +1452,27 @@ export function StudioLayout({
                             <li>Syntactically valid PHP 8.3 controller methods</li>
                             <li>Execution under 90-minute timed sprint constraint</li>
                           </>
+                        ) : activeDrill.week === 2 ? (
+                          <>
+                            <li>Seek predicate: <code>WHERE id &gt; :cursor</code> replaces <code>OFFSET</code></li>
+                            <li>Deterministic index traversal ordering (<code>ORDER BY id ASC</code>)</li>
+                            <li>RFC 9457 Problem Details schema on invalid cursor format</li>
+                            <li>Opaque cursor encoding for next page cursor token</li>
+                          </>
+                        ) : activeDrill.week === 3 ? (
+                          <>
+                            <li>Dependency inversion: interfaces injected via constructor</li>
+                            <li>Zero concrete <code>new StripePaymentGateway()</code> instantiations</li>
+                            <li>Service container binding: contracts bound to implementations</li>
+                            <li>Clean separation of concerns between payment and notification</li>
+                          </>
+                        ) : activeDrill.week === 5 ? (
+                          <>
+                            <li>Resilient retry limit: <code>public int $tries = 3;</code></li>
+                            <li>Exponential backoff schedule: <code>[15, 60, 300]</code> seconds</li>
+                            <li>Poison message quarantine: dead-letter queue dispatch in <code>failed()</code></li>
+                            <li>Idempotent payload handling with deduplication key</li>
+                          </>
                         ) : (
                           <>
                             <li>Query budget: ≤ 3 distinct queries for 25 records</li>
@@ -1416,6 +1498,12 @@ export function StudioLayout({
                       <span style={{ color: 'var(--studio-text-muted)', lineHeight: 1.45 }}>
                         {activeDrill.week === 7
                           ? "Defense-in-depth: OWASP A01 (Broken Access Control) requires strict policy authorization before mutating state. Session regeneration ensures stale session IDs cannot be weaponized after login elevation."
+                          : activeDrill.week === 2
+                          ? "Cursor pagination ensures O(1) seek performance regardless of depth, immune to pagination drift when new records are inserted between page requests. RFC 9457 standardizes error negotiation across distributed services."
+                          : activeDrill.week === 3
+                          ? "Inverting dependencies and programming to contracts allows painless mock substitution during automated testing and decouples high-level domain rules from third-party vendor APIs."
+                          : activeDrill.week === 5
+                          ? "Without exponential backoff and dead-letter queues, transient upstream rate limits cascade into poison-pill retry storms that exhaust Redis/database worker pools."
                           : "In high-scale production, Laravel 12's Model::preventLazyLoading() enforces strict eager loading during development, throwing exceptions before code enters staging."}
                       </span>
                     </div>
@@ -1447,7 +1535,15 @@ export function StudioLayout({
                           <code>{activeDrill.targetFile}</code>
                         </span>
                         <Tag variant="primary" size="small">
-                          {activeDrill.week === 7 ? "PHP 8.3 (Auth Security Testbed)" : "PHP 8.3 (Eloquent Testbed Prototype)"}
+                          {activeDrill.week === 7 
+                            ? "PHP 8.3 (Auth Security Testbed)" 
+                            : activeDrill.week === 3
+                            ? "PHP 8.3 (IoC Container / Docker Testbed)"
+                            : activeDrill.week === 2
+                            ? "PHP 8.3 (REST API / SQLite Engine)"
+                            : activeDrill.week === 5
+                            ? "PHP 8.3 (Queue Worker / Horizon Simulation)"
+                            : "PHP 8.3 (Eloquent Testbed Prototype)"}
                         </Tag>
                       </div>
 
@@ -1463,7 +1559,7 @@ export function StudioLayout({
                         </Button>
 
                         {/* Tier 3 Docker Verification Trigger */}
-                        {bridgeStatus.connected && (
+                        {bridgeStatus.connected && getBridgeCommandForDrill(activeDrill.week) && (
                           <Button 
                             id="run-docker-tier3-btn"
                             variant="primary-outline" 
@@ -1542,6 +1638,12 @@ export function StudioLayout({
                       <span>
                         {activeDrill.week === 7 ? (
                           <code>Target: $request-&gt;session()-&gt;regenerate() and $this-&gt;authorize(&apos;update&apos;, $record)</code>
+                        ) : activeDrill.week === 2 ? (
+                          <code>Target: WHERE id &gt; :cursor ORDER BY id ASC LIMIT :limit + RFC 9457</code>
+                        ) : activeDrill.week === 3 ? (
+                          <code>Target: Constructor injection &amp; App::bind(PaymentGatewayInterface::class, ...)</code>
+                        ) : activeDrill.week === 5 ? (
+                          <code>Target: public int $tries = 3; backoff(); failed(\Throwable $e);</code>
                         ) : (
                           <code>Target: Post::with([&apos;author&apos;, &apos;comments&apos;])-&gt;get()</code>
                         )}
@@ -1595,7 +1697,9 @@ export function StudioLayout({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <Tag variant={tier3Result.exitCode === 0 ? "success" : "danger"} size="small">
-                        {tier3Result.exitCode === 0 ? "Tier 3: [PostgreSQL Runtime Passed]" : "Tier 3: [Failed]"}
+                        {tier3Result.exitCode === 0 
+                          ? `Tier 3: [${activeDrill.week === 7 ? 'PHP 8.3 / Auth Testbed' : activeDrill.week === 3 ? 'PHP 8.3 / IoC Container' : 'PostgreSQL 16.4'} Runtime Passed]` 
+                          : "Tier 3: [Failed]"}
                       </Tag>
                       <strong style={{ fontSize: '0.875rem', color: 'var(--studio-text)' }}>
                         syscraft-runner:1.0.0 (Isolated Docker syscraft-testnet)
@@ -1632,7 +1736,9 @@ export function StudioLayout({
                   <Callout variant={testResults.passed ? "success" : "danger"}>
                     <CalloutTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       {testResults.passed ? <CheckCircle2 size={18} color="var(--studio-success)" /> : <AlertCircle size={18} color="var(--studio-danger)" />}
-                      {testResults.passed ? "All Assertions Passed • Query Budget Satisfied" : "Query Budget Violation • Assertions Failed"}
+                      {testResults.passed 
+                        ? (activeDrill.week === 1 ? "All Assertions Passed • Query Budget Satisfied" : "All Assertions Passed • Requirements Satisfied") 
+                        : (activeDrill.week === 1 ? "Query Budget Violation • Assertions Failed" : "Requirements Violation • Assertions Failed")}
                     </CalloutTitle>
                     <CalloutContent>
                       {testResults.simulatedLatencyMs ? `Simulated execution time: ~${testResults.simulatedLatencyMs}ms • ` : ''}
@@ -1745,8 +1851,14 @@ export function StudioLayout({
                 <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-text)' }}>
                   {activeDrill.week === 1 
                     ? 'Step 5: Visual HTTP Request Lifecycle Tracer' 
+                    : activeDrill.week === 2
+                    ? 'Step 5: Visual Cursor Seek & RFC 9457 Ingestion Tracer'
+                    : activeDrill.week === 3
+                    ? 'Step 5: Visual Dependency Injection & IoC Container Tracer'
                     : activeDrill.week === 4
                     ? 'Step 5: Visual B-Tree Compound Index & Query Execution Tracer'
+                    : activeDrill.week === 5
+                    ? 'Step 5: Visual Resilient Queue & Dead-Letter Pipeline Tracer'
                     : activeDrill.week === 6
                     ? 'Step 5: Visual Sensor Ingestion Pipeline & Sharded Buffer Tracer'
                     : 'Step 5: Visual Session Regeneration & Policy Authorization Gate Tracer'}
@@ -1754,21 +1866,38 @@ export function StudioLayout({
                 <span style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)', display: 'block' }}>
                   {activeDrill.week === 1
                     ? 'Interactive state machine visualizing the Laravel request journey from HTTP ingress to terminating middleware.'
+                    : activeDrill.week === 2
+                    ? 'Interactive state machine visualizing seek-based cursor traversal, indexed pointer jumps, and RFC 9457 error negotiation.'
+                    : activeDrill.week === 3
+                    ? 'Interactive state machine visualizing Laravel Service Container interface resolution, constructor reflection, and singleton caching.'
                     : activeDrill.week === 4
                     ? 'Interactive state machine visualizing the SQLite storage engine B-Tree index traversal, key seek, and early LIMIT exit.'
+                    : activeDrill.week === 5
+                    ? 'Interactive state machine visualizing Redis queue worker popping, exponential retry backoff scheduling, and DLQ quarantine isolation.'
                     : activeDrill.week === 6
                     ? 'Interactive state machine visualizing high-throughput weather observation telemetry streaming through Redis buffer shards into partitioned PostgreSQL storage.'
                     : 'Interactive state machine visualizing secure session ID rotation on login and zero-trust policy authorization gate checks on record mutation.'}
                 </span>
               </div>
               <Tag 
-                variant={activeDrill.week === 1 ? "primary" : activeDrill.week === 4 ? "success" : activeDrill.week === 6 ? "warning" : "danger"} 
+                variant={
+                  activeDrill.week === 1 || activeDrill.week === 2 ? "primary" 
+                  : activeDrill.week === 3 || activeDrill.week === 4 ? "success" 
+                  : activeDrill.week === 5 || activeDrill.week === 6 ? "warning" 
+                  : "danger"
+                } 
                 size="small"
               >
                 {activeDrill.week === 1 
                   ? "Week 1: Laravel Internals" 
+                  : activeDrill.week === 2
+                  ? "Week 2: API Architecture"
+                  : activeDrill.week === 3
+                  ? "Week 3: Clean Architecture"
                   : activeDrill.week === 4 
                   ? "Week 4: Storage Engine" 
+                  : activeDrill.week === 5
+                  ? "Week 5: Async Processing"
                   : activeDrill.week === 6 
                   ? "Week 6: Systems Design" 
                   : "Week 7: Auth & Security"}
@@ -1781,8 +1910,14 @@ export function StudioLayout({
                   steps={
                     activeDrill.week === 1 
                       ? LARAVEL_LIFECYCLE_STEPS 
+                      : activeDrill.week === 2
+                      ? CURSOR_PAGINATION_TRACER_STEPS
+                      : activeDrill.week === 3
+                      ? CONTAINER_DI_TRACER_STEPS
                       : activeDrill.week === 4 
                       ? BTREE_INDEX_TRACER_STEPS 
+                      : activeDrill.week === 5
+                      ? QUEUE_DLQ_TRACER_STEPS
                       : activeDrill.week === 6 
                       ? SENSOR_PIPELINE_TRACER_STEPS 
                       : AUTH_POLICY_TRACER_STEPS
@@ -1790,26 +1925,38 @@ export function StudioLayout({
                   engineBadge={
                     activeDrill.week === 1 
                       ? "Tier 2: Deterministic Simulation" 
+                      : activeDrill.week === 2
+                      ? "Tier 1: SQLite WASM / REST Engine"
+                      : activeDrill.week === 3
+                      ? "Tier 3: Laravel 12 IoC Container"
                       : activeDrill.week === 4 
                       ? `Tier 1: SQLite ${runtimeSqlVersion} (WASM Engine)` 
+                      : activeDrill.week === 5
+                      ? "Tier 2: Redis / Horizon Worker Sim"
                       : activeDrill.week === 6 
                       ? "Tier 1: Distributed Pipeline Flow" 
                       : "Tier 3: PostgreSQL / Session Store"
                   }
                   badgeVariant={
-                    activeDrill.week === 1 
+                    activeDrill.week === 1 || activeDrill.week === 2
                       ? "primary" 
-                      : activeDrill.week === 4 
+                      : activeDrill.week === 3 || activeDrill.week === 4 
                       ? "success" 
-                      : activeDrill.week === 6 
+                      : activeDrill.week === 5 || activeDrill.week === 6 
                       ? "warning" 
                       : "danger"
                   }
                   packetName={
                     activeDrill.week === 1 
                       ? "Active Ingress Packet" 
+                      : activeDrill.week === 2
+                      ? "Seek Cursor Request"
+                      : activeDrill.week === 3
+                      ? "Service Resolution Request"
                       : activeDrill.week === 4 
                       ? "Active Cursor Pointer" 
+                      : activeDrill.week === 5
+                      ? "Queue Job Payload"
                       : activeDrill.week === 6 
                       ? "Sensor Reading Packet" 
                       : "Auth Session Token"
@@ -1842,15 +1989,31 @@ export function StudioLayout({
       <footer className="studio-footer">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Tag 
-            variant={tier3Result && tier3Result.exitCode === 0 ? "success" : activeDrill.week === 1 ? "primary" : activeDrill.week === 4 ? "success" : activeDrill.week === 6 ? "warning" : "danger"} 
+            variant={
+              tier3Result && tier3Result.exitCode === 0 
+                ? "success" 
+                : activeDrill.week === 1 || activeDrill.week === 2 
+                ? "primary" 
+                : activeDrill.week === 3 || activeDrill.week === 4 
+                ? "success" 
+                : activeDrill.week === 5 || activeDrill.week === 6 
+                ? "warning" 
+                : "danger"
+            } 
             size="small"
           >
             {tier3Result && tier3Result.exitCode === 0 
-              ? `[Tier 3: ${activeDrill.week === 7 ? 'PHP 8.3 / Auth Testbed' : 'PostgreSQL 16.4'} Runtime Passed]`
+              ? `[Tier 3: ${activeDrill.week === 7 ? 'PHP 8.3 / Auth Testbed' : activeDrill.week === 3 ? 'PHP 8.3 / IoC Container' : 'PostgreSQL 16.4'} Runtime Passed]`
               : activeDrill.week === 1 
                 ? "[Tier 2: Deterministic Simulation]" 
+                : activeDrill.week === 2
+                ? `[Tier 1: SQLite ${runtimeSqlVersion} (WASM)]`
+                : activeDrill.week === 3
+                ? "[Tier 3: IoC Service Container]"
                 : activeDrill.week === 4 
                 ? `[Engine: SQLite ${runtimeSqlVersion} (WASM)]` 
+                : activeDrill.week === 5
+                ? "[Tier 2: Async Queue Worker Simulation]"
                 : activeDrill.week === 6 
                 ? "[Tier 1: Systems Design / STAR Validator]" 
                 : "[Tier 2: Security Policy Evaluator]"}

@@ -566,7 +566,7 @@ export function HomeHub({
                 7-Week Curriculum Roadmap
               </h3>
               <span style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)' }}>
-                Weeks 1 &amp; 4 are live interactive drills; Weeks 2, 3, 5, 6, 7 are upcoming core expansions.
+                All 7 modules are active interactive drills across SQLite WASM, Docker PostgreSQL, and Laravel Internals.
               </span>
             </div>
           </div>
@@ -628,7 +628,7 @@ export function HomeHub({
                       </span>
                       {task.prerequisites.length > 0 && (
                         <span style={{ fontSize: '0.71875rem', color: 'var(--studio-text-faint)' }}>
-                          Prereq: Week {task.prerequisites.map(p => p.startsWith('w1') ? '1' : '4').join(', ')}
+                          Prereq: Week {task.prerequisites.map(p => p.match(/^w(\d+)/)?.[1] || p).join(', ')}
                         </span>
                       )}
                     </div>
