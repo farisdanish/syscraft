@@ -208,10 +208,22 @@ ${stories
           border: '1px solid var(--studio-border)',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--studio-text-muted)', fontWeight: 600 }}>
-            {activeStory.category}
-          </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--studio-text-muted)', fontWeight: 600 }}>
+              {activeStory.category}
+            </span>
+            <Tag 
+              variant={
+                [activeStory.situation, activeStory.task, activeStory.action, activeStory.result].filter(v => v.trim().length > 0).length === 4 
+                  ? "success" 
+                  : "default"
+              } 
+              size="small"
+            >
+              {[activeStory.situation, activeStory.task, activeStory.action, activeStory.result].filter(v => v.trim().length > 0).length}/4 Dimensions Complete
+            </Tag>
+          </div>
           <span style={{ fontSize: '0.78rem', color: 'var(--studio-success)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <CheckCircle2 size={13} /> STAR Structure Aligned
           </span>
@@ -219,9 +231,14 @@ ${stories
 
         {/* Situation */}
         <div>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)', marginBottom: '0.3rem' }}>
-            <span style={{ color: 'var(--studio-primary)', fontWeight: 700 }}>[S]</span> Situation (Context & Incident Scale)
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.3rem' }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+              <span style={{ color: 'var(--studio-primary)', fontWeight: 700 }}>[S]</span> Situation (Context &amp; Incident Scale)
+            </label>
+            <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-faint)', fontFamily: 'var(--studio-font-mono)' }}>
+              {activeStory.situation.length} chars
+            </span>
+          </div>
           <textarea
             value={activeStory.situation}
             onChange={(e) => handleUpdateField('situation', e.target.value)}
@@ -243,9 +260,14 @@ ${stories
 
         {/* Task */}
         <div>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)', marginBottom: '0.3rem' }}>
-            <span style={{ color: 'var(--studio-primary)', fontWeight: 700 }}>[T]</span> Task (Engineering Objective & SLA Boundary)
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.3rem' }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+              <span style={{ color: 'var(--studio-primary)', fontWeight: 700 }}>[T]</span> Task (Engineering Objective &amp; SLA Boundary)
+            </label>
+            <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-faint)', fontFamily: 'var(--studio-font-mono)' }}>
+              {activeStory.task.length} chars
+            </span>
+          </div>
           <textarea
             value={activeStory.task}
             onChange={(e) => handleUpdateField('task', e.target.value)}
@@ -267,9 +289,14 @@ ${stories
 
         {/* Action */}
         <div>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)', marginBottom: '0.3rem' }}>
-            <span style={{ color: 'var(--studio-primary)', fontWeight: 700 }}>[A]</span> Action (Concrete Systems Engineering Implementation)
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.3rem' }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+              <span style={{ color: 'var(--studio-primary)', fontWeight: 700 }}>[A]</span> Action (Concrete Systems Engineering Implementation)
+            </label>
+            <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-faint)', fontFamily: 'var(--studio-font-mono)' }}>
+              {activeStory.action.length} chars
+            </span>
+          </div>
           <textarea
             value={activeStory.action}
             onChange={(e) => handleUpdateField('action', e.target.value)}
@@ -291,9 +318,14 @@ ${stories
 
         {/* Result */}
         <div>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)', marginBottom: '0.3rem' }}>
-            <span style={{ color: 'var(--studio-primary)', fontWeight: 700 }}>[R]</span> Result (Measurable Telemetry & Business Impact)
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.3rem' }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+              <span style={{ color: 'var(--studio-primary)', fontWeight: 700 }}>[R]</span> Result (Measurable Telemetry &amp; Business Impact)
+            </label>
+            <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-faint)', fontFamily: 'var(--studio-font-mono)' }}>
+              {activeStory.result.length} chars
+            </span>
+          </div>
           <textarea
             value={activeStory.result}
             onChange={(e) => handleUpdateField('result', e.target.value)}

@@ -39,11 +39,11 @@ import {
 } from './tracerSteps';
 
 const PHASE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  bootstrap: { bg: 'rgba(2, 132, 199, 0.12)', text: '#0284c7', border: 'rgba(2, 132, 199, 0.3)' },
-  middleware: { bg: 'rgba(245, 158, 11, 0.12)', text: '#f59e0b', border: 'rgba(245, 158, 11, 0.3)' },
-  resolution: { bg: 'rgba(124, 58, 237, 0.12)', text: '#8b5cf6', border: 'rgba(124, 58, 237, 0.3)' },
-  execution: { bg: 'rgba(16, 185, 129, 0.12)', text: '#10b981', border: 'rgba(16, 185, 129, 0.3)' },
-  termination: { bg: 'rgba(100, 116, 139, 0.12)', text: '#94a3b8', border: 'rgba(100, 116, 139, 0.3)' },
+  bootstrap: { bg: 'var(--studio-primary-glow)', text: 'var(--studio-primary)', border: 'var(--studio-border-strong)' },
+  middleware: { bg: 'rgba(245, 158, 11, 0.15)', text: 'var(--studio-warning)', border: 'var(--studio-border-strong)' },
+  resolution: { bg: 'rgba(139, 92, 246, 0.15)', text: 'var(--studio-primary)', border: 'var(--studio-border-strong)' },
+  execution: { bg: 'rgba(16, 185, 129, 0.15)', text: 'var(--studio-success)', border: 'var(--studio-border-strong)' },
+  termination: { bg: 'var(--studio-surface-subtle)', text: 'var(--studio-text-muted)', border: 'var(--studio-border)' },
 };
 
 // Planar snake pipeline handle topology (strictly non-overlapping)
@@ -124,7 +124,7 @@ function LifecycleCustomNode({ data }: NodeProps) {
             height: '20px',
             borderRadius: '50%',
             backgroundColor: isActive ? 'var(--studio-primary)' : isPast ? 'var(--studio-success)' : 'var(--studio-surface-subtle)',
-            color: isActive || isPast ? '#ffffff' : 'var(--studio-text-muted)',
+            color: isActive || isPast ? 'var(--studio-text-on-accent)' : 'var(--studio-text-muted)',
             fontSize: '11px',
             fontWeight: 700,
             display: 'flex',
@@ -160,7 +160,7 @@ function LifecycleCustomNode({ data }: NodeProps) {
 
       {/* Sublabel / Monospace Pill */}
       <div style={{
-        fontFamily: 'monospace',
+        fontFamily: 'var(--studio-font-mono)',
         fontSize: '11px',
         color: isActive ? 'var(--studio-primary)' : 'var(--studio-text-muted)',
         backgroundColor: 'var(--studio-surface-subtle)',
@@ -176,7 +176,7 @@ function LifecycleCustomNode({ data }: NodeProps) {
 
       {/* Active Glowing Packet Signal */}
       {isActive && (
-        <div style={{
+        <div className="studio-pulse" style={{
           marginTop: '8px',
           display: 'flex',
           alignItems: 'center',
@@ -390,7 +390,7 @@ export function LifecycleTracer({
           /* WCAG 2.2 Accessible Table Alternative */
           <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', backgroundColor: 'var(--studio-surface)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
-              <thead>
+              <thead style={{ position: 'sticky', top: 0, backgroundColor: 'var(--studio-surface)', zIndex: 2 }}>
                 <tr style={{ borderBottom: '2px solid var(--studio-border)', textAlign: 'left', color: 'var(--studio-text-muted)' }}>
                   <th style={{ padding: '0.625rem' }}>Step</th>
                   <th style={{ padding: '0.625rem' }}>Component</th>
@@ -412,11 +412,11 @@ export function LifecycleTracer({
                       transition: 'background-color 0.15s ease'
                     }}
                   >
-                    <td style={{ padding: '0.625rem', fontWeight: 600 }}>#{step.stepNum}</td>
+                    <td style={{ padding: '0.625rem', fontWeight: 700, fontFamily: 'var(--studio-font-mono)' }}>#{step.stepNum}</td>
                     <td style={{ padding: '0.625rem' }}>
                       <strong style={{ color: 'var(--studio-text)' }}>{step.label}</strong>
                       <br />
-                      <span style={{ color: 'var(--studio-text-muted)', fontFamily: 'monospace', fontSize: '11px' }}>{step.sublabel}</span>
+                      <span style={{ color: 'var(--studio-text-muted)', fontFamily: 'var(--studio-font-mono)', fontSize: '11px' }}>{step.sublabel}</span>
                     </td>
                     <td style={{ padding: '0.625rem' }}>
                       <Tag variant="primary" size="small">{step.phase}</Tag>
@@ -453,7 +453,7 @@ export function LifecycleTracer({
           <h4 style={{ margin: 0, fontSize: '1.0625rem', color: 'var(--studio-text)', fontWeight: 700 }}>
             {selectedNodeData.label}
           </h4>
-          <div style={{ fontSize: '0.75rem', color: 'var(--studio-primary)', fontFamily: 'monospace' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--studio-primary)', fontFamily: 'var(--studio-font-mono)' }}>
             <code>{selectedNodeData.sublabel}</code>
           </div>
 

@@ -219,7 +219,7 @@ export function HomeHub({
             height: '32px',
             borderRadius: '8px',
             backgroundColor: 'var(--studio-primary)',
-            color: '#ffffff',
+            color: 'var(--studio-primary-contrast)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -328,7 +328,7 @@ export function HomeHub({
             onClick={onToggleTheme}
             aria-label={isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
           >
-            {isDark ? <Sun size={14} color="#f59e0b" /> : <Moon size={14} color="#0284c7" />}
+            {isDark ? <Sun size={14} color="var(--studio-warning)" /> : <Moon size={14} color="var(--studio-primary)" />}
           </Button>
         </div>
       </header>

@@ -320,13 +320,54 @@ export function QueryPlanLab({
           {optimizationStatus && (
             <Callout variant={optimizationStatus.passed ? 'success' : 'warning'}>
               <CalloutTitle style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                {optimizationStatus.passed ? <CheckCircle2 size={14} color="#10b981" /> : <AlertTriangle size={14} color="#f59e0b" />}
+                {optimizationStatus.passed ? <CheckCircle2 size={14} color="var(--studio-success)" /> : <AlertTriangle size={14} color="var(--studio-warning)" />}
                 {optimizationStatus.passed ? 'Index Plan Transition Successful' : 'Sequential Scan Detected'}
               </CalloutTitle>
               <CalloutContent>
                 {optimizationStatus.message}
               </CalloutContent>
             </Callout>
+          )}
+
+          {/* Executive Performance Delta Highlight Card */}
+          {optimizationStatus?.passed && (
+            <div style={{
+              padding: '0.85rem 1rem',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(16, 185, 129, 0.08)',
+              border: '1.5px solid var(--studio-success)',
+              boxShadow: '0 0 16px rgba(16, 185, 129, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+              flexWrap: 'wrap'
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                  <Tag variant="success" size="small">
+                    <CheckCircle2 size={12} style={{ marginRight: '4px' }} />
+                    99.0% Row Scan Reduction
+                  </Tag>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--studio-success)' }}>
+                    B-Tree Compound Seek Active
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)' }}>
+                  Target relation: <code>weather_observations</code> • Index: <code>idx_station_recorded</code>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', fontFamily: 'var(--studio-font-mono)' }}>
+                <span style={{ fontSize: '0.8125rem', textDecoration: 'line-through', color: 'var(--studio-danger)' }}>
+                  5,000 rows
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)' }}>→</span>
+                <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--studio-success)' }}>
+                  50 rows
+                </span>
+              </div>
+            </div>
           )}
 
           {/* Comparison Cards: Before vs After */}

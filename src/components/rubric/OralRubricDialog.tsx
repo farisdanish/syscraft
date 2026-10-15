@@ -238,7 +238,7 @@ export function OralRubricDialog({
                       borderRadius: '4px',
                       border: `1px solid ${scores[cp.dimension] === scoreVal ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
                       backgroundColor: scores[cp.dimension] === scoreVal ? 'var(--studio-primary)' : 'var(--studio-surface-subtle)',
-                      color: scores[cp.dimension] === scoreVal ? '#ffffff' : 'var(--studio-text)',
+                      color: scores[cp.dimension] === scoreVal ? 'var(--studio-primary-contrast)' : 'var(--studio-text)',
                       fontWeight: 600,
                       fontSize: '12px',
                       cursor: 'pointer',
