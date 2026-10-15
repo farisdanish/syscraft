@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
-import initSqlJs, { type Database } from 'sql.js';
+import type { Database } from 'sql.js';
 import { Button } from '@govtechmy/myds-react/button';
 import { Tag } from '@govtechmy/myds-react/tag';
 import { Callout, CalloutTitle, CalloutContent } from '@govtechmy/myds-react/callout';
@@ -57,16 +57,19 @@ export function QueryPlanLab({
     const initAndSeed = async () => {
       setIsSeeding(true);
       try {
-        const SQL = await initSqlJs({
-          locateFile: (file) => `/${file}`,
+        const sqlModule = await import('sql.js');
+        const initSqlJsFn = (sqlModule as any).default || sqlModule;
+        const SQL = await initSqlJsFn({
+          locateFile: (file: string) => `/${file}`,
         });
 
         if (!isMounted) return;
-        localDb = new SQL.Database();
-        dbRef.current = localDb;
+        const newDb: Database = new SQL.Database();
+        localDb = newDb;
+        dbRef.current = newDb;
 
         // Detect sqlite version
-        const verRes = localDb.exec('SELECT sqlite_version() AS ver;');
+        const verRes = newDb.exec('SELECT sqlite_version() AS ver;');
         let detected = '3.45.2';
         if (verRes[0]?.values[0]?.[0]) {
           detected = String(verRes[0].values[0][0]);
@@ -77,7 +80,7 @@ export function QueryPlanLab({
         }
 
         // Create Schema
-        localDb.run(`
+        newDb.run(`
           CREATE TABLE weather_observations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             station_code TEXT NOT NULL,
@@ -88,8 +91,8 @@ export function QueryPlanLab({
         `);
 
         // Seed 5,000 deterministic rows
-        localDb.run('BEGIN TRANSACTION;');
-        const stmt = localDb.prepare(`
+        newDb.run('BEGIN TRANSACTION;');
+        const stmt = newDb.prepare(`
           INSERT INTO weather_observations (station_code, temperature_c, humidity_pct, recorded_at)
           VALUES ($station, $temp, $humidity, $recorded);
         `);
@@ -111,18 +114,18 @@ export function QueryPlanLab({
           });
         }
         stmt.free();
-        localDb.run('COMMIT;');
+        newDb.run('COMMIT;');
 
         if (!isMounted) {
-          localDb.close();
+          newDb.close();
           dbRef.current = null;
           return;
         }
 
-        setDb(localDb);
+        setDb(newDb);
 
         // Baseline EXPLAIN QUERY PLAN (Unindexed)
-        const baselineRes = localDb.exec(`
+        const baselineRes = newDb.exec(`
           EXPLAIN QUERY PLAN
           SELECT id, station_code, temperature_c, recorded_at
           FROM weather_observations
