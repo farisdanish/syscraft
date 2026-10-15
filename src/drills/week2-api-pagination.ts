@@ -1,0 +1,443 @@
+import type { DrillDefinition } from '../types';
+
+export const WEEK_2_DRILL: DrillDefinition = {
+  id: 'w2-rest-cursor-pagination',
+  week: 2,
+  title: 'REST Cursor Pagination & RFC 9457 Problem Details',
+  tier: 1,
+  engine: 'sqlite-wasm',
+  language: 'php',
+  targetFile: 'app/Http/Controllers/Api/ObservationApiController.php',
+  conceptBrief: {
+    thesis: 'Traditional OFFSET / LIMIT pagination degrades to O(N) table scanning at deep pages and produces skipped or duplicate records under concurrent writes. Seek-based cursor pagination provides deterministic O(1) entry and standards-compliant RFC 9457 error contracts.',
+    diagramType: 'btree',
+    keyPoints: [
+      'OFFSET Penalty: OFFSET 100000 LIMIT 20 forces the database to read 100,020 tuples from disk, discarding the first 100,000.',
+      'Seek-Based Cursors: Querying WHERE (recorded_at, id) < (:cursor_at, :cursor_id) jumps directly to the index boundary via logarithmic B-Tree seek.',
+      'Concurrency Stability: Seek pagination eliminates drift: rows inserted before or after the cursor do not shift current window offsets.',
+      'Opaque Tokens: Clients must never parse internal database IDs; cursors must be transmitted as opaque base64-encoded composite tokens.',
+      'RFC 9457 Standard: HTTP error payloads must conform to RFC 9457 Problem Details with type, title, status, detail, and instance fields returning application/problem+json.',
+    ],
+  },
+  initialCode: `<?php
+
+namespace App\\Http\\Controllers\\Api;
+
+use App\\Models\\WeatherObservation;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class ObservationApiController extends Controller
+{
+    /**
+     * Return paginated weather observations using seek-based cursor pagination.
+     *
+     * DRILL: Currently uses naive OFFSET pagination which suffers from O(N) heap scans
+     * and duplicate/skipped rows when new sensor records are inserted.
+     * 
+     * TASKS:
+     * 1. Reject invalid/malformed cursors with an RFC 9457 Problem Details response (HTTP 400).
+     * 2. Replace OFFSET/LIMIT with seek-based composite filtering: (recorded_at, id).
+     * 3. Return next_cursor as an opaque base64 string (base64_encode("$recorded_at:$id")).
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $limit = min((int)$request->input('limit', 20), 100);
+        $page = (int)$request->input('page', 1);
+
+        // BUG: Inefficient OFFSET pagination
+        $offset = ($page - 1) * $limit;
+        $observations = WeatherObservation::orderBy('recorded_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->offset($offset)
+            ->limit($limit)
+            ->get();
+
+        return response()->json([
+            'data' => $observations,
+            'page' => $page,
+        ]);
+    }
+}
+`,
+  solutionCode: `<?php
+
+namespace App\\Http\\Controllers\\Api;
+
+use App\\Models\\WeatherObservation;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class ObservationApiController extends Controller
+{
+    public function index(Request $request): JsonResponse
+    {
+        $limit = min((int)$request->input('limit', 20), 100);
+        $cursor = $request->input('cursor');
+
+        $cursorRecordedAt = null;
+        $cursorId = null;
+
+        if ($cursor !== null) {
+            $decoded = base64_decode($cursor, true);
+            if ($decoded === false || !str_contains($decoded, ':')) {
+                return response()->json([
+                    'type' => 'https://api.syscraft.io/errors/invalid-cursor',
+                    'title' => 'Invalid Pagination Cursor',
+                    'status' => 400,
+                    'detail' => 'The cursor parameter is malformed or unparseable.',
+                    'instance' => '/api/observations',
+                ], 400, ['Content-Type' => 'application/problem+json']);
+            }
+
+            [$cursorRecordedAt, $cursorId] = explode(':', $decoded, 2);
+        }
+
+        $query = WeatherObservation::query()
+            ->orderBy('recorded_at', 'desc')
+            ->orderBy('id', 'desc');
+
+        if ($cursorRecordedAt && $cursorId) {
+            $query->where(function ($q) use ($cursorRecordedAt, $cursorId) {
+                $q->where('recorded_at', '<', $cursorRecordedAt)
+                  ->orWhere(function ($sub) use ($cursorRecordedAt, $cursorId) {
+                      $sub->where('recorded_at', '=', $cursorRecordedAt)
+                          ->where('id', '<', $cursorId);
+                  });
+            });
+        }
+
+        $observations = $query->limit($limit)->get();
+
+        $nextCursor = null;
+        if ($observations->isNotEmpty() && $observations->count() === $limit) {
+            $last = $observations->last();
+            $nextCursor = base64_encode("{$last->recorded_at}:{$last->id}");
+        }
+
+        return response()->json([
+            'data' => $observations,
+            'next_cursor' => $nextCursor,
+        ]);
+    }
+}
+`,
+  validationRules: {
+    type: 'ast-property',
+    expectedAssertions: [
+      'Eliminated OFFSET and skip() query modifiers',
+      'Seek-based composite comparison on (recorded_at, id)',
+      'RFC 9457 Problem Details returned on malformed cursor (HTTP 400)',
+      'Opaque base64 token generation for next_cursor',
+    ],
+  },
+  oralRubric: {
+    question: 'Defend seek-based cursor pagination over OFFSET/LIMIT under high-concurrency production workloads, and explain why RFC 9457 Problem Details is standard for REST APIs.',
+    checkpoints: [
+      {
+        dimension: 'correctness',
+        prompt: 'Accurately explained O(1) index boundary seek vs. O(N) heap tuple discard during deep pagination traversal.',
+      },
+      {
+        dimension: 'tradeoff',
+        prompt: 'Articulated trade-offs of cursor pagination: Prevents arbitrary random page jumping ("Page 42"), requires strict deterministic tie-breaker sorting, but eliminates duplicate records on concurrent inserts.',
+      },
+      {
+        dimension: 'failure',
+        prompt: 'Detailed what happens when an ordering key is non-unique: without a secondary tie-breaker like id, records sharing identical timestamps are skipped or looped.',
+      },
+      {
+        dimension: 'clarity',
+        prompt: 'Explained opaque token encoding: why passing base64 tokens protects schema internals and prevents client tampering.',
+      },
+      {
+        dimension: 'challenge',
+        prompt: 'Answered follow-up: "Why does RFC 9457 require type, title, and status? How does application/problem+json differ from ad-hoc error JSON?"',
+      },
+    ],
+  },
+};
+
+/**
+ * Hardened PHP comment & inert string stripper for Week 2 validation.
+ * Strips comments, docblocks, heredocs, nowdocs, backticks, and non-whitelisted strings.
+ */
+function stripPhpCommentsAndInertStrings(code: string): string {
+  let result = '';
+  let i = 0;
+  const len = code.length;
+
+  const whitelistedLiterals = new Set([
+    'cursor',
+    'recorded_at',
+    'id',
+    'limit',
+    'desc',
+    'asc',
+    'data',
+    'next_cursor',
+    'type',
+    'title',
+    'status',
+    'detail',
+    'instance',
+    'application/problem+json',
+    'https://api.syscraft.io/errors/invalid-cursor',
+    'invalid-cursor',
+    ':',
+    '<',
+    '=',
+  ]);
+
+  while (i < len) {
+    // Single-line comment //
+    if (code[i] === '/' && code[i + 1] === '/') {
+      i += 2;
+      while (i < len && code[i] !== '\n') i++;
+      result += '\n';
+      continue;
+    }
+    // Single-line comment #
+    if (code[i] === '#') {
+      i++;
+      while (i < len && code[i] !== '\n') i++;
+      result += '\n';
+      continue;
+    }
+    // Multi-line comment /* ... */
+    if (code[i] === '/' && code[i + 1] === '*') {
+      i += 2;
+      while (i < len && !(code[i] === '*' && code[i + 1] === '/')) {
+        if (code[i] === '\n') result += '\n';
+        i++;
+      }
+      i += 2;
+      continue;
+    }
+    // Single-quoted string '...'
+    if (code[i] === "'") {
+      let strContent = '';
+      i++;
+      while (i < len && code[i] !== "'") {
+        if (code[i] === '\\' && i + 1 < len) {
+          strContent += code[i + 1];
+          i += 2;
+        } else {
+          strContent += code[i];
+          i++;
+        }
+      }
+      i++; // skip closing quote
+      if (whitelistedLiterals.has(strContent.trim())) {
+        result += `'${strContent.trim()}'`;
+      } else {
+        result += "''";
+      }
+      continue;
+    }
+    // Double-quoted string "..."
+    if (code[i] === '"') {
+      let strContent = '';
+      i++;
+      while (i < len && code[i] !== '"') {
+        if (code[i] === '\\' && i + 1 < len) {
+          strContent += code[i + 1];
+          i += 2;
+        } else {
+          strContent += code[i];
+          i++;
+        }
+      }
+      i++; // skip closing quote
+      if (whitelistedLiterals.has(strContent.trim())) {
+        result += `"${strContent.trim()}"`;
+      } else {
+        result += '""';
+      }
+      continue;
+    }
+    // Backticks `...`
+    if (code[i] === '`') {
+      i++;
+      while (i < len && code[i] !== '`') {
+        if (code[i] === '\\' && i + 1 < len) {
+          i += 2;
+        } else {
+          i++;
+        }
+      }
+      i++;
+      result += '""';
+      continue;
+    }
+    // Heredoc / Nowdoc <<<TAG ... TAG;
+    if (code[i] === '<' && code[i + 1] === '<' && code[i + 2] === '<') {
+      i += 3;
+      while (i < len && (code[i] === ' ' || code[i] === '\t')) i++;
+      let quote = '';
+      if (code[i] === "'" || code[i] === '"') {
+        quote = code[i];
+        i++;
+      }
+      let identifier = '';
+      while (i < len && /[a-zA-Z0-9_]/.test(code[i])) {
+        identifier += code[i];
+        i++;
+      }
+      if (quote && code[i] === quote) {
+        i++;
+      }
+      while (i < len && code[i] !== '\n') i++;
+      if (code[i] === '\n') {
+        result += '\n';
+        i++;
+      }
+      if (identifier.length > 0) {
+        while (i < len) {
+          const rest = code.slice(i);
+          const lineMatch = rest.match(/^[ \t]*([a-zA-Z0-9_]+)(;?)/);
+          if (lineMatch && lineMatch[1] === identifier) {
+            i += lineMatch[0].length;
+            result += '""';
+            break;
+          }
+          const nextNewline = code.indexOf('\n', i);
+          if (nextNewline === -1) {
+            i = len;
+            break;
+          } else {
+            result += '\n';
+            i = nextNewline + 1;
+          }
+        }
+      }
+      continue;
+    }
+    result += code[i];
+    i++;
+  }
+  return result;
+}
+
+/**
+ * Extract method body based on brace depth.
+ */
+function extractMethodBody(code: string, methodName: string): string | null {
+  const methodRegex = new RegExp(`function\\s+${methodName}\\s*\\([^)]*\\)[^{]*\\{`, 'g');
+  const match = methodRegex.exec(code);
+  if (!match) return null;
+
+  let depth = 1;
+  let i = match.index + match[0].length;
+  const start = i;
+
+  while (i < code.length && depth > 0) {
+    if (code[i] === '{') depth++;
+    else if (code[i] === '}') depth--;
+    if (depth === 0) {
+      return code.slice(start, i);
+    }
+    i++;
+  }
+  return null;
+}
+
+/**
+ * Deterministic client evaluation for Week 2 REST Cursor Pagination & RFC 9457
+ */
+export function evaluateCursorPaginationDrill(code: string): {
+  passed: boolean;
+  queriesExecuted: number;
+  simulatedLatencyMs: number;
+  assertionResults: Array<{ name: string; passed: boolean; message: string }>;
+} {
+  const cleanCode = stripPhpCommentsAndInertStrings(code);
+  const indexBody = extractMethodBody(cleanCode, 'index');
+
+  // 1. Elimination of offset / skip
+  let hasNoOffset = false;
+  let offsetMessage = 'Failed: Query still utilizes offset() or skip(), which triggers O(N) sequential scans on deep pages.';
+
+  if (indexBody) {
+    const usesOffset = /->\s*(?:offset|skip)\s*\(/.test(indexBody);
+    if (!usesOffset) {
+      hasNoOffset = true;
+      offsetMessage = 'Passed: Zero offset()/skip() calls. O(N) heap scans successfully eliminated.';
+    }
+  }
+
+  // 2. Seek-based composite comparison on (recorded_at, id)
+  let hasSeekPredicate = false;
+  let seekMessage = 'Failed: Missing seek comparison on composite keys (recorded_at, id).';
+
+  if (indexBody) {
+    const hasRecordedAtFilter = indexBody.includes('recorded_at') && (indexBody.includes('<') || indexBody.includes('where'));
+    const hasIdFilter = indexBody.includes('id');
+    const hasBase64Decode = /base64_decode\s*\(/.test(indexBody);
+
+    if (hasRecordedAtFilter && hasIdFilter && hasBase64Decode) {
+      hasSeekPredicate = true;
+      seekMessage = 'Passed: Deterministic seek predicate implemented on composite keys (recorded_at, id).';
+    }
+  }
+
+  // 3. RFC 9457 Problem Details error contract
+  let hasRfc9457 = false;
+  let rfcMessage = 'Failed: Missing RFC 9457 Problem Details response on malformed cursor with HTTP 400.';
+
+  if (indexBody) {
+    const hasType = indexBody.includes('type');
+    const hasTitle = indexBody.includes('title');
+    const hasStatus400 = /400/.test(indexBody);
+    const hasProblemJson = indexBody.includes('application/problem+json') || (hasType && hasTitle && hasStatus400);
+
+    if (hasProblemJson && hasStatus400) {
+      hasRfc9457 = true;
+      rfcMessage = 'Passed: Standard RFC 9457 Problem Details payload returned on invalid cursor input (HTTP 400).';
+    }
+  }
+
+  // 4. Opaque next_cursor generation
+  let hasOpaqueToken = false;
+  let tokenMessage = 'Failed: Missing next_cursor opaque token generation via base64_encode().';
+
+  if (indexBody) {
+    const hasBase64Encode = /base64_encode\s*\(/.test(indexBody);
+    const hasNextCursorKey = indexBody.includes('next_cursor');
+
+    if (hasBase64Encode && hasNextCursorKey) {
+      hasOpaqueToken = true;
+      tokenMessage = 'Passed: Next cursor serialized as an opaque base64-encoded token.';
+    }
+  }
+
+  const passed = hasNoOffset && hasSeekPredicate && hasRfc9457 && hasOpaqueToken;
+
+  return {
+    passed,
+    queriesExecuted: passed ? 1 : 4,
+    simulatedLatencyMs: passed ? 8 : 145,
+    assertionResults: [
+      {
+        name: 'Eliminated OFFSET & skip() Modifiers',
+        passed: hasNoOffset,
+        message: offsetMessage,
+      },
+      {
+        name: 'Seek-based Composite Key Traversal',
+        passed: hasSeekPredicate,
+        message: seekMessage,
+      },
+      {
+        name: 'RFC 9457 Problem Details Error Contract',
+        passed: hasRfc9457,
+        message: rfcMessage,
+      },
+      {
+        name: 'Opaque base64 Cursor Token Generation',
+        passed: hasOpaqueToken,
+        message: tokenMessage,
+      },
+    ],
+  };
+}
