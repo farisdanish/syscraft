@@ -21,6 +21,25 @@
       ]
     },
     {
+      "id": "class-refactoring-di-test",
+      "drillId": "w3-class-refactoring-di",
+      "description": "Run Pest test for Class Refactoring, Service Container & Dependency Injection",
+      "executable": "docker",
+      "args": [
+        "compose",
+        "-f",
+        "docker/docker-compose.yml",
+        "run",
+        "-T",
+        "--rm",
+        "test",
+        "php",
+        "artisan",
+        "test",
+        "--filter=ClassRefactoringDiTest"
+      ]
+    },
+    {
       "id": "postgres-plan-test",
       "drillId": "w4-btree-indexing",
       "description": "Run PostgreSQL EXPLAIN ANALYZE index performance assertion",

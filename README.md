@@ -112,11 +112,11 @@ flowchart LR
 * [X] **Week 6 System Design & STAR Defense:** High-throughput Weather Data Ingestion Pipeline (100k req/s), interactive `StarStoryBuilder` with 2 structured production incident scenarios (Buffer backpressure saturation & replication lag), Markdown RFC engineering document generator, and automated systems schema evaluator.
 * [X] **Baseline Normalization & Multi-Module Registry:** Resolved legacy Week 4 ID inconsistencies (`w4-data-layer-indexes` → `w4-btree-indexing`) with backward-compatible IndexedDB session aliasing, and established a generalized `DRILL_REGISTRY` supporting non-destructive state persistence across Weeks 1, 4, 6, and 7.
 
-### Phase 3: Enrichment Modules (Weeks 2, 3, 5)
+### Phase 3: Enrichment Modules (Weeks 2, 3, 5) (Completed & Hardened)
 
-* [ ] **Week 2:** REST API cursor pagination with concurrency contracts & RFC 9457 Problem Details error formats.
-* [ ] **Week 3:** Refactoring diff studio with dependency injection and Pest 3.0.4 test harness.
-* [ ] **Week 5:** Resilient multi-queue ingestion pipeline and failure-mode matrix.
+* [X] **Week 2:** REST API cursor pagination with concurrency contracts & RFC 9457 Problem Details error formats.
+* [X] **Week 3:** Refactoring diff studio with dependency injection, IoC container bindings, and Docker test harness.
+* [X] **Week 5:** Resilient multi-queue ingestion pipeline, exponential backoff, and dead-letter queue isolation.
 
 ---
 

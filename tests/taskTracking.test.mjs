@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { 
   CURRICULUM_TASKS, 
   resolveTaskStatus, 
@@ -591,5 +594,50 @@ EOT;
     }
   });
 });
+
+test('Bridge Command Manifest Parity & Tier 3 Invariants', async (t) => {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const manifestPath = path.resolve(__dirname, '../bridge/command_manifest.v1.json');
+  assert.ok(fs.existsSync(manifestPath), 'command_manifest.v1.json must exist');
+
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert.ok(Array.isArray(manifest.allowedCommands), 'allowedCommands must be an array');
+
+  const EXPECTED_BRIDGE_COMMANDS = {
+    1: { id: 'laravel-n1-test', drillId: 'w1-laravel-internals-n1', filter: 'PostNPlusOneTest' },
+    3: { id: 'class-refactoring-di-test', drillId: 'w3-class-refactoring-di', filter: 'ClassRefactoringDiTest' },
+    4: { id: 'postgres-plan-test', drillId: 'w4-btree-indexing', filter: 'PostgresIndexPlanTest' },
+    7: { id: 'w7-auth-sprint-test', drillId: 'w7-crud-auth-sprint', filter: 'SecurityAuthSprintTest' },
+  };
+
+  await t.test('All active weeks with bridge commands exist in command manifest with matching drillId', () => {
+    for (const [weekStr, expected] of Object.entries(EXPECTED_BRIDGE_COMMANDS)) {
+      const week = Number(weekStr);
+      const cmdEntry = manifest.allowedCommands.find((c) => c.id === expected.id);
+      assert.ok(cmdEntry, `Command ID "${expected.id}" for Week ${week} must exist in allowedCommands`);
+      
+      const task = CURRICULUM_TASKS.find((ct) => ct.week === week);
+      assert.ok(task, `Task for Week ${week} must exist in curriculum tasks`);
+      assert.strictEqual(cmdEntry.drillId, task.id, `Command "${expected.id}" drillId must match ${task.id}`);
+      assert.strictEqual(cmdEntry.executable, 'docker', `Command "${expected.id}" executable must be docker`);
+      assert.ok(cmdEntry.args.includes('test'), `Command "${expected.id}" must include test service`);
+      assert.ok(cmdEntry.args.some((a) => a.includes(`--filter=${expected.filter}`)), `Command "${expected.id}" must target --filter=${expected.filter}`);
+    }
+  });
+
+  await t.test('Week 3 class-refactoring-di-test manifest command is valid and targets ClassRefactoringDiTest', () => {
+    const cmd = manifest.allowedCommands.find((c) => c.id === 'class-refactoring-di-test');
+    assert.ok(cmd, 'class-refactoring-di-test must exist in manifest');
+    assert.strictEqual(cmd.drillId, 'w3-class-refactoring-di');
+    assert.ok(cmd.args.some((a) => a.includes('--filter=ClassRefactoringDiTest')), 'Command must target ClassRefactoringDiTest filter');
+  });
+
+  await t.test('Command IDs in manifest are unique', () => {
+    const ids = manifest.allowedCommands.map((c) => c.id);
+    const uniqueIds = new Set(ids);
+    assert.strictEqual(ids.length, uniqueIds.size, 'All manifest command IDs must be unique');
+  });
+});
+
 
 
