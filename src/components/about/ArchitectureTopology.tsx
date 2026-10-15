@@ -12,6 +12,14 @@ import {
   type NodeProps
 } from '@xyflow/react';
 import { Button } from '@govtechmy/myds-react/button';
+import { 
+  Table, 
+  TableHeader, 
+  TableBody, 
+  TableRow, 
+  TableHead, 
+  TableCell 
+} from '@govtechmy/myds-react/table';
 import { Table as TableIcon, Network, Shield } from 'lucide-react';
 
 interface ArchitectureTopologyProps {
@@ -278,76 +286,70 @@ export const ArchitectureTopology: React.FC<ArchitectureTopologyProps> = ({
       {/* Viewport: Diagram or Accessible Semantic Table */}
       {showTableView ? (
         <div style={{ padding: '1rem', overflowX: 'auto' }}>
-          <table style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            fontSize: '0.75rem',
-            color: 'var(--studio-text)',
-            textAlign: 'left',
-          }} aria-label="Execution Topology Overview">
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--studio-border)', backgroundColor: 'var(--studio-surface-subtle)' }}>
-                <th style={{ padding: '8px 10px', fontWeight: 700 }}>Component</th>
-                <th style={{ padding: '8px 10px', fontWeight: 700 }}>Tier / Layer</th>
-                <th style={{ padding: '8px 10px', fontWeight: 700 }}>Runtime Environment</th>
-                <th style={{ padding: '8px 10px', fontWeight: 700 }}>Network Boundary</th>
-                <th style={{ padding: '8px 10px', fontWeight: 700 }}>Security Controls</th>
-                <th style={{ padding: '8px 10px', fontWeight: 700 }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ borderBottom: '1px solid var(--studio-border)' }}>
-                <td style={{ padding: '8px 10px', fontWeight: 600 }}>Browser Client (React 19)</td>
-                <td style={{ padding: '8px 10px' }}>UI / Presentation</td>
-                <td style={{ padding: '8px 10px' }}>Standard Browser WebAPI</td>
-                <td style={{ padding: '8px 10px' }}>Host / Browser Sandbox</td>
-                <td style={{ padding: '8px 10px' }}>Client-side memory sandbox</td>
-                <td style={{ padding: '8px 10px', color: 'var(--studio-success)', fontWeight: 600 }}>Active</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid var(--studio-border)' }}>
-                <td style={{ padding: '8px 10px', fontWeight: 600 }}>Tier 1: Browser WASM</td>
-                <td style={{ padding: '8px 10px' }}>Tier 1 (Client Execution)</td>
-                <td style={{ padding: '8px 10px' }}>sql.js (SQLite 3.45.2)</td>
-                <td style={{ padding: '8px 10px' }}>Client-side WebAssembly</td>
-                <td style={{ padding: '8px 10px' }}>No network egress required</td>
-                <td style={{ padding: '8px 10px', color: 'var(--studio-success)', fontWeight: 600 }}>Online</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid var(--studio-border)' }}>
-                <td style={{ padding: '8px 10px', fontWeight: 600 }}>Tier 2: Deterministic Sim</td>
-                <td style={{ padding: '8px 10px' }}>Tier 2 (Simulation)</td>
-                <td style={{ padding: '8px 10px' }}>TypeScript 9-Step FSM</td>
-                <td style={{ padding: '8px 10px' }}>In-Memory Javascript Engine</td>
-                <td style={{ padding: '8px 10px' }}>Pure algorithmic invariants</td>
-                <td style={{ padding: '8px 10px', color: 'var(--studio-success)', fontWeight: 600 }}>Online</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid var(--studio-border)' }}>
-                <td style={{ padding: '8px 10px', fontWeight: 600 }}>Tier 3: Local Bridge</td>
-                <td style={{ padding: '8px 10px' }}>Tier 3 (Host Daemon)</td>
-                <td style={{ padding: '8px 10px' }}>Node.js loopback daemon</td>
-                <td style={{ padding: '8px 10px' }}>127.0.0.1:49152 (Host only)</td>
-                <td style={{ padding: '8px 10px' }}>Strict loopback binding, PGID cleanup</td>
-                <td style={{ padding: '8px 10px', color: bridgeConnected ? 'var(--studio-success)' : 'var(--studio-warning)', fontWeight: 600 }}>
+          <Table aria-label="Execution Topology Overview">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Component</TableHead>
+                <TableHead>Tier / Layer</TableHead>
+                <TableHead>Runtime Environment</TableHead>
+                <TableHead>Network Boundary</TableHead>
+                <TableHead>Security Controls</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell style={{ fontWeight: 600 }}>Browser Client (React 19)</TableCell>
+                <TableCell>UI / Presentation</TableCell>
+                <TableCell>Standard Browser WebAPI</TableCell>
+                <TableCell>Host / Browser Sandbox</TableCell>
+                <TableCell>Client-side memory sandbox</TableCell>
+                <TableCell style={{ color: 'var(--studio-success)', fontWeight: 600 }}>Active</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell style={{ fontWeight: 600 }}>Tier 1: Browser WASM</TableCell>
+                <TableCell>Tier 1 (Client Execution)</TableCell>
+                <TableCell>sql.js (SQLite 3.45.2)</TableCell>
+                <TableCell>Client-side WebAssembly</TableCell>
+                <TableCell>No network egress required</TableCell>
+                <TableCell style={{ color: 'var(--studio-success)', fontWeight: 600 }}>Online</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell style={{ fontWeight: 600 }}>Tier 2: Deterministic Sim</TableCell>
+                <TableCell>Tier 2 (Simulation)</TableCell>
+                <TableCell>TypeScript 9-Step FSM</TableCell>
+                <TableCell>In-Memory Javascript Engine</TableCell>
+                <TableCell>Pure algorithmic invariants</TableCell>
+                <TableCell style={{ color: 'var(--studio-success)', fontWeight: 600 }}>Online</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell style={{ fontWeight: 600 }}>Tier 3: Local Bridge</TableCell>
+                <TableCell>Tier 3 (Host Daemon)</TableCell>
+                <TableCell>Node.js loopback daemon</TableCell>
+                <TableCell>127.0.0.1:49152 (Host only)</TableCell>
+                <TableCell>Strict loopback binding, PGID cleanup</TableCell>
+                <TableCell style={{ color: bridgeConnected ? 'var(--studio-success)' : 'var(--studio-warning)', fontWeight: 600 }}>
                   {bridgeConnected ? 'Connected' : 'Offline'}
-                </td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid var(--studio-border)' }}>
-                <td style={{ padding: '8px 10px', fontWeight: 600 }}>Testbed Runner Container</td>
-                <td style={{ padding: '8px 10px' }}>Tier 3 (Isolated Runner)</td>
-                <td style={{ padding: '8px 10px' }}>syscraft/php-runner:8.3</td>
-                <td style={{ padding: '8px 10px' }}>syscraft-testnet (internal: true)</td>
-                <td style={{ padding: '8px 10px' }}>Read-only mount, unprivileged user (UID 1000)</td>
-                <td style={{ padding: '8px 10px' }}>{bridgeConnected ? 'Available' : 'Standby'}</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '8px 10px', fontWeight: 600 }}>PostgreSQL 16.4 Container</td>
-                <td style={{ padding: '8px 10px' }}>Tier 3 (Isolated Database)</td>
-                <td style={{ padding: '8px 10px' }}>postgres:16.4-alpine</td>
-                <td style={{ padding: '8px 10px' }}>syscraft-testnet (zero egress)</td>
-                <td style={{ padding: '8px 10px' }}>Zero WAN routing, internal network only</td>
-                <td style={{ padding: '8px 10px' }}>{bridgeConnected ? 'Healthy' : 'Standby'}</td>
-              </tr>
-            </tbody>
-          </table>
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell style={{ fontWeight: 600 }}>Testbed Runner Container</TableCell>
+                <TableCell>Tier 3 (Isolated Runner)</TableCell>
+                <TableCell>syscraft/php-runner:8.3</TableCell>
+                <TableCell>syscraft-testnet (internal: true)</TableCell>
+                <TableCell>Read-only mount, unprivileged user (UID 1000)</TableCell>
+                <TableCell>{bridgeConnected ? 'Available' : 'Standby'}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell style={{ fontWeight: 600 }}>PostgreSQL 16.4 Container</TableCell>
+                <TableCell>Tier 3 (Isolated Database)</TableCell>
+                <TableCell>postgres:16.4-alpine</TableCell>
+                <TableCell>syscraft-testnet (zero egress)</TableCell>
+                <TableCell>Zero WAN routing, internal network only</TableCell>
+                <TableCell>{bridgeConnected ? 'Healthy' : 'Standby'}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </div>
       ) : (
         <div style={{ height: '480px', width: '100%', position: 'relative' }}>

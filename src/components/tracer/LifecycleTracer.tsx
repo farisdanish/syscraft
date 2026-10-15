@@ -14,6 +14,14 @@ import {
 import { Button } from '@govtechmy/myds-react/button';
 import { Tag } from '@govtechmy/myds-react/tag';
 import { 
+  Table, 
+  TableHeader, 
+  TableBody, 
+  TableRow, 
+  TableHead, 
+  TableCell 
+} from '@govtechmy/myds-react/table';
+import { 
   Play, 
   Pause, 
   RotateCcw, 
@@ -410,43 +418,42 @@ export function LifecycleTracer({
         ) : (
           /* WCAG 2.2 Accessible Table Alternative */
           <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', backgroundColor: 'var(--studio-surface)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
-              <thead style={{ position: 'sticky', top: 0, backgroundColor: 'var(--studio-surface)', zIndex: 2 }}>
-                <tr style={{ borderBottom: '2px solid var(--studio-border)', textAlign: 'left', color: 'var(--studio-text-muted)' }}>
-                  <th style={{ padding: '0.625rem' }}>Step</th>
-                  <th style={{ padding: '0.625rem' }}>Component</th>
-                  <th style={{ padding: '0.625rem' }}>Phase</th>
-                  <th style={{ padding: '0.625rem' }}>Explanation</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table style={{ width: '100%', fontSize: '0.8125rem' }}>
+              <TableHeader style={{ position: 'sticky', top: 0, backgroundColor: 'var(--studio-surface)', zIndex: 2 }}>
+                <TableRow style={{ textAlign: 'left', color: 'var(--studio-text-muted)' }}>
+                  <TableHead>Step</TableHead>
+                  <TableHead>Component</TableHead>
+                  <TableHead>Phase</TableHead>
+                  <TableHead>Explanation</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {currentSteps.map((step) => (
-                  <tr 
+                  <TableRow 
                     key={step.id} 
                     onClick={() => {
                       setActiveStep(step.stepNum);
                     }}
                     style={{ 
-                      borderBottom: '1px solid var(--studio-border)',
                       backgroundColor: step.stepNum === activeStep ? 'var(--studio-primary-glow)' : 'transparent',
                       cursor: 'pointer',
                       transition: 'background-color 0.15s ease'
                     }}
                   >
-                    <td style={{ padding: '0.625rem', fontWeight: 700, fontFamily: 'var(--studio-font-mono)' }}>#{step.stepNum}</td>
-                    <td style={{ padding: '0.625rem' }}>
+                    <TableCell style={{ fontWeight: 700, fontFamily: 'var(--studio-font-mono)' }}>#{step.stepNum}</TableCell>
+                    <TableCell>
                       <strong style={{ color: 'var(--studio-text)' }}>{step.label}</strong>
                       <br />
                       <span style={{ color: 'var(--studio-text-muted)', fontFamily: 'var(--studio-font-mono)', fontSize: '11px' }}>{step.sublabel}</span>
-                    </td>
-                    <td style={{ padding: '0.625rem' }}>
+                    </TableCell>
+                    <TableCell>
                       <Tag variant="primary" size="small">{step.phase}</Tag>
-                    </td>
-                    <td style={{ padding: '0.625rem', color: 'var(--studio-text)' }}>{step.explanation}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell style={{ color: 'var(--studio-text)' }}>{step.explanation}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
 
