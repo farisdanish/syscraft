@@ -1,0 +1,277 @@
+import React from 'react';
+import { Button } from '@govtechmy/myds-react/button';
+import { Tag } from '@govtechmy/myds-react/tag';
+import { 
+  Sun, 
+  Moon, 
+  Download, 
+  Upload, 
+  Flag,
+  Trash2,
+  LayoutDashboard,
+  Layers,
+  Clock,
+  X
+} from 'lucide-react';
+import { type DrillDefinition } from '../../../types';
+import { ACTIVE_WEEKS } from '../../../drills/registry';
+import { CURRICULUM_TASKS } from '../../../data/curriculumTasks';
+import { type BridgeHealth } from '../../../services/bridgeClient';
+
+export interface StudioHeaderProps {
+  selectedWeek: number;
+  activeDrill: DrillDefinition;
+  onSelectWeek: (week: number) => void;
+  onNavigateHome?: () => void;
+  onNavigateArchitecture?: () => void;
+  isDark: boolean;
+  onToggleTheme: () => void;
+  bridgeStatus: BridgeHealth;
+  sundayCount: number;
+  sprintSeconds: number;
+  sprintActive: boolean;
+  onToggleSprintActive: () => void;
+  onExportBackup: () => void;
+  onImportBackup: () => void;
+  onOpenResetModal: () => void;
+  clearTriggerBtnRef: React.RefObject<HTMLButtonElement | null>;
+  importNotice: { type: 'success' | 'danger'; text: string } | null;
+  onDismissImportNotice: () => void;
+}
+
+function formatSprintTime(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+export function StudioHeader({
+  selectedWeek,
+  activeDrill,
+  onSelectWeek,
+  onNavigateHome,
+  onNavigateArchitecture,
+  isDark,
+  onToggleTheme,
+  bridgeStatus,
+  sundayCount,
+  sprintSeconds,
+  sprintActive,
+  onToggleSprintActive,
+  onExportBackup,
+  onImportBackup,
+  onOpenResetModal,
+  clearTriggerBtnRef,
+  importNotice,
+  onDismissImportNotice,
+}: StudioHeaderProps) {
+  return (
+    <>
+      <header className="studio-header">
+        {/* Zone 1: Identity & Module Selector */}
+        <div className="studio-header-zone-left">
+          {onNavigateHome && (
+            <Button
+              id="back-to-hub-btn"
+              variant="default-outline"
+              size="small"
+              onClick={onNavigateHome}
+              aria-label="Return to Curriculum Hub"
+              style={{ padding: '3px 8px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+            >
+              <LayoutDashboard size={13} style={{ marginRight: '5px' }} />
+              Curriculum
+            </Button>
+          )}
+
+          {onNavigateArchitecture && (
+            <Button
+              id="studio-to-architecture-btn"
+              variant="default-outline"
+              size="small"
+              onClick={onNavigateArchitecture}
+              aria-label="View Technical Architecture & How It Works"
+              style={{ padding: '3px 8px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+            >
+              <Layers size={13} style={{ marginRight: '5px' }} />
+              How It Works
+            </Button>
+          )}
+
+          <div style={{ 
+            width: '26px', 
+            height: '26px', 
+            borderRadius: '6px', 
+            backgroundColor: 'var(--studio-primary)', 
+            color: 'var(--studio-primary-contrast)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            fontWeight: 700, 
+            fontSize: '0.75rem',
+            flexShrink: 0
+          }}>
+            SC
+          </div>
+
+          <div style={{ display: 'inline-flex', padding: '2px', backgroundColor: 'var(--studio-surface-subtle)', borderRadius: '6px', border: '1px solid var(--studio-border)', flexShrink: 0 }}>
+            {ACTIVE_WEEKS.map((wk) => {
+              const isSelected = selectedWeek === wk;
+              const task = CURRICULUM_TASKS.find(t => t.week === wk);
+              return (
+                <button
+                  key={wk}
+                  id={`select-week-${wk}-btn`}
+                  type="button"
+                  onClick={() => onSelectWeek(wk)}
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    fontWeight: isSelected ? 700 : 500,
+                    border: 'none',
+                    backgroundColor: isSelected ? 'var(--studio-primary)' : 'transparent',
+                    color: isSelected ? 'var(--studio-primary-contrast)' : 'var(--studio-text-muted)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    fontFamily: 'var(--studio-font-mono)'
+                  }}
+                  aria-current={isSelected ? 'true' : undefined}
+                  title={`Week ${wk}: ${task ? task.module : ''}`}
+                >
+                  W{wk}
+                </button>
+              );
+            })}
+          </div>
+
+          <span style={{ 
+            fontSize: '0.75rem', 
+            fontWeight: 600, 
+            color: 'var(--studio-text)',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            backgroundColor: 'var(--studio-surface-subtle)',
+            border: '1px solid var(--studio-border)',
+            maxWidth: '260px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }} title={activeDrill.title}>
+            Week {activeDrill.week}: {activeDrill.title.split('(')[0].trim()}
+          </span>
+        </div>
+
+        {/* Zone 2: Context, Tier & Sprint Timer */}
+        <div className="studio-header-zone-center">
+          <Tag variant={activeDrill.tier === 3 ? "warning" : "primary"} size="small">
+            Tier {activeDrill.tier}: {activeDrill.engine === 'postgresql-docker' ? 'Docker PostgreSQL' : activeDrill.engine === 'sqlite-wasm' ? 'WASM SQLite' : 'Simulation'}
+          </Tag>
+
+          {/* Week 7 Sprint Timer Badge (if active) */}
+          {activeDrill.week === 7 && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '2px 8px',
+              borderRadius: '6px',
+              backgroundColor: sprintSeconds <= 300 ? 'var(--studio-danger-subtle)' : 'var(--studio-surface-subtle)',
+              border: `1px solid ${sprintSeconds <= 300 ? 'var(--studio-danger)' : 'var(--studio-border)'}`,
+              fontSize: '0.75rem',
+              color: sprintSeconds <= 300 ? 'var(--studio-danger)' : 'var(--studio-text)',
+              fontWeight: 600,
+              fontFamily: 'var(--studio-font-mono)'
+            }}>
+              <Clock size={12} color={sprintSeconds <= 300 ? 'var(--studio-danger)' : 'var(--studio-primary)'} />
+              <span>Sprint: {formatSprintTime(sprintSeconds)}</span>
+              <button
+                type="button"
+                onClick={onToggleSprintActive}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'inherit',
+                  cursor: 'pointer',
+                  padding: '0 2px',
+                  fontWeight: 700,
+                  fontSize: '0.75rem'
+                }}
+                aria-label={sprintActive ? "Pause Sprint Timer" : "Start Sprint Timer"}
+              >
+                {sprintActive ? "⏸" : "▶"}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Zone 3: Diagnostics, Telemetry & Studio Controls */}
+        <div className="studio-header-zone-right">
+          <Tag variant={bridgeStatus.connected ? "success" : "default"} size="small">
+            <span className={bridgeStatus.connected ? "studio-pulse" : ""} style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              backgroundColor: bridgeStatus.connected ? 'var(--studio-success)' : 'var(--studio-text-faint)',
+              marginRight: '5px',
+              display: 'inline-block'
+            }} />
+            {bridgeStatus.connected ? "Bridge Active" : "Bridge Offline"}
+          </Tag>
+
+          <Tag variant={sundayCount > 0 ? "warning" : "default"} size="small">
+            <Flag size={11} style={{ marginRight: '4px' }} />
+            Review ({sundayCount})
+          </Tag>
+
+          <Button 
+            id="theme-toggle-btn"
+            variant="default-outline" 
+            size="small" 
+            onClick={onToggleTheme}
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            style={{ padding: '3px 8px' }}
+          >
+            {isDark ? <Sun size={13} color="var(--studio-warning)" /> : <Moon size={13} color="var(--studio-primary)" />}
+          </Button>
+
+          {/* Grouped Actions: Export / Import / Reset */}
+          <div style={{ display: 'inline-flex', borderRadius: '6px', border: '1px solid var(--studio-border)', overflow: 'hidden' }}>
+            <Button variant="default-outline" size="small" onClick={onExportBackup} aria-label="Export backup JSON" title="Export backup JSON" style={{ border: 'none', borderRadius: 0, padding: '3px 7px' }}>
+              <Download size={13} />
+            </Button>
+            <Button variant="default-outline" size="small" onClick={onImportBackup} aria-label="Import backup JSON" title="Import backup JSON" style={{ border: 'none', borderLeft: '1px solid var(--studio-border)', borderRadius: 0, padding: '3px 7px' }}>
+              <Upload size={13} />
+            </Button>
+            <Button 
+              ref={clearTriggerBtnRef}
+              id="clear-progress-btn"
+              variant="default-outline" 
+              size="small" 
+              onClick={onOpenResetModal} 
+              aria-label="Clear learner progress" 
+              title="Clear learner progress"
+              style={{ border: 'none', borderLeft: '1px solid var(--studio-border)', borderRadius: 0, padding: '3px 7px' }}
+            >
+              <Trash2 size={13} color="var(--studio-danger)" />
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Dismissible Backup Import / Restore Notice */}
+      {importNotice && (
+        <div style={{ padding: '0.5rem 1.25rem', backgroundColor: 'var(--studio-surface-subtle)', borderBottom: '1px solid var(--studio-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: '1200px', margin: '0 auto' }}>
+            <span style={{ fontSize: '0.8125rem', color: importNotice.type === 'success' ? 'var(--studio-success)' : 'var(--studio-danger)' }}>
+              {importNotice.text}
+            </span>
+            <Button variant="default-outline" size="small" onClick={onDismissImportNotice} aria-label="Dismiss notice">
+              <X size={12} />
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
