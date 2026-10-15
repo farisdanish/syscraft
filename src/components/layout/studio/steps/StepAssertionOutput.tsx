@@ -172,7 +172,11 @@ export const StepAssertionOutput: React.FC<StepAssertionOutputProps> = ({
               No evaluation run recorded yet
             </CalloutTitle>
             <CalloutContent>
-              Return to Step 2: Focused Drill and click <strong>Run Test Harness</strong> or <strong>Run in Docker</strong> to evaluate your code.
+              {activeDrill.week === 4 ? (
+                <>Return to Step 2: Focused Drill and click <strong>Execute &amp; Analyze Plan</strong> to evaluate your query plan.</>
+              ) : (
+                <>Return to Step 2: Focused Drill and click <strong>Run Test Harness</strong> or <strong>Run in Docker</strong> to evaluate your code.</>
+              )}
             </CalloutContent>
           </Callout>
         ) : null}

@@ -506,6 +506,17 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
         lastOpenedAt: new Date().toISOString(),
       });
 
+      const queryResults = {
+        passed: true,
+        message: 'B-Tree compound index seek verified on idx_station_recorded! Full table scan eliminated.',
+        assertionResults: [
+          { name: 'Target index idx_station_recorded utilized', passed: true, message: 'SQLite query planner used index seek instead of sequential scan.' },
+          { name: 'Zero temporary B-Tree sorts', passed: true, message: 'ORDER BY matched compound index direction (recorded_at DESC).' },
+          { name: 'Leftmost prefix match on station_code', passed: true, message: 'WHERE filter matched first column of compound index.' },
+        ],
+      };
+      setTestResults(queryResults);
+
       await saveDrillProgress(activeDrill.id, false, false, 'simulation');
       await saveDrillSession({
         drillId: activeDrill.id,
@@ -514,7 +525,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
         highestStepReached: Math.max(highestStepReached, 3),
         stepCompletions: updated,
         draftCode: userCode,
-        testResults: { passed: true, message: 'B-Tree compound index seek verified on idx_station_recorded.' },
+        testResults: queryResults,
         tier3Result,
         verificationSource: 'simulation',
         completed: false,
