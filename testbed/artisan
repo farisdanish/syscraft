@@ -387,17 +387,58 @@ if ($command === 'test') {
             $submissionCode = file_get_contents($submissionFile);
         }
 
-        // Parse PHP tokens to strip comments and docblocks
+        // Parse PHP tokens to strip comments, docblocks, and inert strings
         $tokens = token_get_all($submissionCode);
         $nonCommentTokens = [];
+        $inHeredoc = false;
+        $inBacktick = false;
+        $inDoubleQuote = false;
+
         foreach ($tokens as $t) {
-            if (is_array($t)) {
-                if ($t[0] !== T_COMMENT && $t[0] !== T_DOC_COMMENT) {
-                    $nonCommentTokens[] = $t;
+            if (!is_array($t)) {
+                if ($t === '`') {
+                    $inBacktick = !$inBacktick;
+                    continue;
                 }
-            } else {
+                if ($t === '"') {
+                    $inDoubleQuote = !$inDoubleQuote;
+                    continue;
+                }
+                if ($inHeredoc || $inBacktick || $inDoubleQuote) {
+                    continue;
+                }
                 $nonCommentTokens[] = $t;
+                continue;
             }
+
+            if ($t[0] === T_COMMENT || $t[0] === T_DOC_COMMENT) {
+                continue;
+            }
+
+            if ($t[0] === T_START_HEREDOC) {
+                $inHeredoc = true;
+                continue;
+            }
+            if ($t[0] === T_END_HEREDOC) {
+                $inHeredoc = false;
+                continue;
+            }
+
+            if ($inHeredoc || $inBacktick || $inDoubleQuote) {
+                continue;
+            }
+
+            if ($t[0] === T_CONSTANT_ENCAPSED_STRING) {
+                $unquoted = trim($t[1], "'\"");
+                if ($unquoted === 'update') {
+                    $nonCommentTokens[] = [T_CONSTANT_ENCAPSED_STRING, "'update'"];
+                } else {
+                    $nonCommentTokens[] = [T_CONSTANT_ENCAPSED_STRING, "''"];
+                }
+                continue;
+            }
+
+            $nonCommentTokens[] = $t;
         }
 
         // Method-scoped AST inspection

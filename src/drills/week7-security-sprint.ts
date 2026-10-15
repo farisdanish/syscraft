@@ -255,6 +255,63 @@ function stripPhpCommentsAndInertStrings(code: string): string {
       }
       continue;
     }
+    // Backtick execution expression `...`
+    if (code[i] === '`') {
+      i++;
+      while (i < len && code[i] !== '`') {
+        if (code[i] === '\\' && i + 1 < len) {
+          i += 2;
+        } else {
+          i++;
+        }
+      }
+      i++; // skip closing backtick
+      result += '""';
+      continue;
+    }
+    // Heredoc / Nowdoc <<<TAG ... TAG;
+    if (code[i] === '<' && code[i + 1] === '<' && code[i + 2] === '<') {
+      i += 3;
+      while (i < len && (code[i] === ' ' || code[i] === '\t')) i++;
+      let quote = '';
+      if (code[i] === "'" || code[i] === '"') {
+        quote = code[i];
+        i++;
+      }
+      let identifier = '';
+      while (i < len && /[a-zA-Z0-9_]/.test(code[i])) {
+        identifier += code[i];
+        i++;
+      }
+      if (quote && code[i] === quote) {
+        i++;
+      }
+      while (i < len && code[i] !== '\n') i++;
+      if (code[i] === '\n') {
+        result += '\n';
+        i++;
+      }
+      if (identifier.length > 0) {
+        while (i < len) {
+          const rest = code.slice(i);
+          const lineMatch = rest.match(/^[ \t]*([a-zA-Z0-9_]+)(;?)/);
+          if (lineMatch && lineMatch[1] === identifier) {
+            i += lineMatch[0].length;
+            result += '""';
+            break;
+          }
+          const nextNewline = code.indexOf('\n', i);
+          if (nextNewline === -1) {
+            i = len;
+            break;
+          } else {
+            result += '\n';
+            i = nextNewline + 1;
+          }
+        }
+      }
+      continue;
+    }
     result += code[i];
     i++;
   }

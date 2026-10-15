@@ -241,6 +241,28 @@ test('Envelope Depth Guard Protection', () => {
     l1: { l2: { l3: { l4: { l5: { l6: { l7: { l8: 'exploit' } } } } } } }
   };
   assert.strictEqual(checkDepth(maliciousDeepPayload), false, 'Deeply nested payload > 6 must be rejected');
+
+  // Drill session with StarStories payload (depth 4)
+  const sessionWithStarStories = {
+    drillSessions: {
+      'w6-system-design-foundation': {
+        drillId: 'w6-system-design-foundation',
+        week: 6,
+        starStories: [
+          {
+            id: 'spike-defense',
+            title: 'Custom Title',
+            category: 'Category',
+            situation: 'Custom Situation',
+            task: 'Custom Task',
+            action: 'Custom Action',
+            result: 'Custom Result',
+          }
+        ]
+      }
+    }
+  };
+  assert.strictEqual(checkDepth(sessionWithStarStories), true, 'Drill session with StarStories must satisfy depth <= 6');
 });
 
 test('Week 7 Security Sprint Evaluator & Anti-Bypass Invariants', async (t) => {
@@ -293,6 +315,50 @@ class AuthController extends Controller {
 }`;
     const res = evaluateSecuritySprintDrill(stringExploit);
     assert.strictEqual(res.passed, false, 'String-only submissions must never pass');
+  });
+
+  await t.test('Heredoc and nowdoc security calls are rejected', () => {
+    const heredocExploit = `<?php
+namespace App\\Http\\Controllers;
+class AuthController extends Controller {
+    public function login(Request $request) {
+        $msg = <<<EOT
+$request->session()->regenerate();
+EOT;
+        return response()->json([]);
+    }
+    public function updateRecord(Request $request, Record $record) {
+        $msg = <<<'NOWDOC'
+$this->authorize('update', $record);
+NOWDOC;
+        $record->update($validated);
+        return response()->json([]);
+    }
+}`;
+    const res = evaluateSecuritySprintDrill(heredocExploit);
+    assert.strictEqual(res.passed, false, 'Heredoc/nowdoc submissions must never pass');
+    const sessionAssertion = res.assertionResults.find((a) => a.name === 'Session Fixation Defense');
+    const policyAssertion = res.assertionResults.find((a) => a.name === 'Model Policy Gate Enforcement');
+    assert.strictEqual(sessionAssertion.passed, false);
+    assert.strictEqual(policyAssertion.passed, false);
+  });
+
+  await t.test('Backtick execution security calls are rejected', () => {
+    const backtickExploit = `<?php
+namespace App\\Http\\Controllers;
+class AuthController extends Controller {
+    public function login(Request $request) {
+        $cmd = \`$request->session()->regenerate();\`;
+        return response()->json([]);
+    }
+    public function updateRecord(Request $request, Record $record) {
+        $cmd = \`$this->authorize('update', $record);\`;
+        $record->update($validated);
+        return response()->json([]);
+    }
+}`;
+    const res = evaluateSecuritySprintDrill(backtickExploit);
+    assert.strictEqual(res.passed, false, 'Backtick execution submissions must never pass');
   });
 
   await t.test('Authorization executed after mutation is rejected', () => {
