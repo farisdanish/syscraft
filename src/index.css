@@ -219,8 +219,8 @@ html, body {
    ========================================================================== */
 
 .studio-shell {
-  height: 100vh;
-  max-height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -374,8 +374,8 @@ html, body {
   gap: 1rem;
 }
 
-/* Responsive breakpoint for tablets/phones and ultra-short viewports */
-@media (max-width: 900px), (max-height: 550px) {
+/* Responsive breakpoint for tablets/phones and zoom reflow (WCAG 1.4.10) */
+@media (max-width: 900px), (max-height: 640px) {
   .studio-shell {
     height: auto;
     min-height: 100vh;
