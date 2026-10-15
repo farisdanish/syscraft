@@ -24,7 +24,8 @@ import {
   Trash2,
   Award,
   LayoutDashboard,
-  Layers
+  Layers,
+  Clock
 } from 'lucide-react';
 import { 
   WORKFLOW_STEPS, 
@@ -34,8 +35,12 @@ import {
   type DrillSessionState,
   type TaskStatus
 } from '../../types';
-import { WEEK_1_DRILL, evaluateLaravelDrill } from '../../drills/week1-internals';
-import { WEEK_4_DRILL } from '../../drills/week4-performance';
+import { 
+  ACTIVE_WEEKS,
+  getDrillByWeek, 
+  getBridgeCommandForDrill, 
+  evaluateDrillSimulation 
+} from '../../drills/registry';
 import { 
   checkBridgeHealth, 
   runBridgeCommand, 
@@ -44,8 +49,12 @@ import {
 } from '../../services/bridgeClient';
 import { 
   LARAVEL_LIFECYCLE_STEPS, 
-  BTREE_INDEX_TRACER_STEPS 
+  BTREE_INDEX_TRACER_STEPS,
+  AUTH_POLICY_TRACER_STEPS,
+  SENSOR_PIPELINE_TRACER_STEPS
 } from '../tracer/tracerSteps';
+import { StarStoryBuilder } from '../system-design/StarStoryBuilder';
+import { CURRICULUM_TASKS } from '../../data/curriculumTasks';
 import { OralRubricDialog } from '../rubric/OralRubricDialog';
 import { 
   saveDrillProgress, 
@@ -114,7 +123,7 @@ export function StudioLayout({
   const [runtimeSqlVersion, setRuntimeSqlVersion] = useState<string>('3.45.2');
 
   // Drill State
-  const activeDrill: DrillDefinition = selectedWeek === 1 ? WEEK_1_DRILL : WEEK_4_DRILL;
+  const activeDrill: DrillDefinition = getDrillByWeek(selectedWeek);
   const [userCode, setUserCode] = useState<string>(activeDrill.initialCode);
   const [testResults, setTestResults] = useState<any>(null);
   const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
@@ -123,6 +132,48 @@ export function StudioLayout({
   const [politeNotice, setPoliteNotice] = useState<string>('');
   const [importNotice, setImportNotice] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
+
+  // 90-minute Timed Sprint State (Week 7)
+  const [sprintSeconds, setSprintSeconds] = useState<number>(5400);
+  const [sprintActive, setSprintActive] = useState<boolean>(false);
+  const [sprintAnnouncedMilestones, setSprintAnnouncedMilestones] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    if (!sprintActive || sprintSeconds <= 0) return;
+
+    const timer = setInterval(() => {
+      setSprintSeconds((prev) => {
+        const next = Math.max(0, prev - 1);
+
+        if (next === 2700 && !sprintAnnouncedMilestones.has(2700)) {
+          setPoliteNotice('Sprint milestone: 45 minutes remaining in CRUD & Auth timed sprint.');
+          setSprintAnnouncedMilestones((s) => new Set(s).add(2700));
+        } else if (next === 900 && !sprintAnnouncedMilestones.has(900)) {
+          setPoliteNotice('Sprint milestone: 15 minutes remaining.');
+          setSprintAnnouncedMilestones((s) => new Set(s).add(900));
+        } else if (next === 300 && !sprintAnnouncedMilestones.has(300)) {
+          setPoliteNotice('Sprint warning: 5 minutes remaining. Prepare to submit oral defense.');
+          setSprintAnnouncedMilestones((s) => new Set(s).add(300));
+        } else if (next === 60 && !sprintAnnouncedMilestones.has(60)) {
+          setPoliteNotice('Sprint warning: 1 minute remaining.');
+          setSprintAnnouncedMilestones((s) => new Set(s).add(60));
+        } else if (next === 0 && !sprintAnnouncedMilestones.has(0)) {
+          setPoliteNotice('Sprint time expired! Conclude implementation and proceed to oral recall.');
+          setSprintAnnouncedMilestones((s) => new Set(s).add(0));
+        }
+
+        return next;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [sprintActive, sprintSeconds, sprintAnnouncedMilestones]);
+
+  const formatSprintTime = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
   const cancelResetBtnRef = useRef<HTMLButtonElement | null>(null);
   const confirmResetBtnRef = useRef<HTMLButtonElement | null>(null);
   const clearTriggerBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -329,7 +380,7 @@ export function StudioLayout({
   }, [userCode, activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, testResults, tier3Result, verificationSource, drillCompleted]);
 
   // Non-Destructive Multi-Module Switching
-  const handleSelectWeek = async (week: number) => {
+  const handleSelectWeek = useCallback(async (week: number) => {
     if (week === selectedWeek) return;
 
     // 1. Snapshot and save CURRENT drill's session
@@ -351,7 +402,7 @@ export function StudioLayout({
 
     // 2. Switch active definition
     setSelectedWeek(week);
-    const nextDrill = week === 4 ? WEEK_4_DRILL : WEEK_1_DRILL;
+    const nextDrill = getDrillByWeek(week);
 
     // 3. Load target drill's stored session from IndexedDB
     const targetSession = await getDrillSession(nextDrill.id);
@@ -387,7 +438,7 @@ export function StudioLayout({
         setDrillCompleted(false);
       }
     }
-  };
+  }, [selectedWeek, activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, userCode, testResults, tier3Result, verificationSource, drillCompleted]);
 
   // Gate 1: Proceed from Step 1 (Concept Brief) to Step 2 (Focused Drill)
   const handleProceedFromConcept = async () => {
@@ -427,10 +478,10 @@ export function StudioLayout({
   // Gate 2: Evaluate Drill Code (Tier 1/2 In-Browser Simulation)
   const handleRunDrill = async () => {
     setIsEvaluating(true);
-    setPoliteNotice('Evaluating drill assertions via Tier 2 simulation...');
+    setPoliteNotice(`Evaluating drill assertions for Week ${activeDrill.week}...`);
 
-    if (activeDrill.week === 1) {
-      const evalResult = evaluateLaravelDrill(userCode);
+    const evalResult = evaluateDrillSimulation(activeDrill.week, userCode);
+    if (evalResult) {
       setTestResults(evalResult);
       if (evalResult.passed) {
         const updated: DrillStepCompletions = { ...stepCompletions, 1: true, 2: true };
@@ -462,11 +513,11 @@ export function StudioLayout({
           oralDefenseCompleted: updated[4],
           lastActiveAt: new Date().toISOString(),
         });
-        setPoliteNotice('All assertions passed! Query budget satisfied with zero per-row queries. Advancing to Plan Analysis.');
+        setPoliteNotice('All assertions passed! Advancing to Plan Analysis.');
         setCurrentStep(3);
         setHighestStepReached(prev => Math.max(prev, 3));
       } else {
-        setPoliteNotice('Assertion failure: N+1 query loop detected. Inspect required budget.');
+        setPoliteNotice('Assertion failure: Check required specifications in the editor.');
       }
     }
 
@@ -476,9 +527,13 @@ export function StudioLayout({
 
   // Gate 2: Run Tier 3 Canonical Test via Docker Bridge
   const handleRunTier3Docker = async () => {
+    const commandId = getBridgeCommandForDrill(activeDrill.week);
+    if (!commandId) {
+      setPoliteNotice('No Tier 3 bridge command configured for this drill.');
+      return;
+    }
     setIsRunningDocker(true);
-    const commandId = activeDrill.week === 1 ? 'laravel-n1-test' : 'postgres-plan-test';
-    const filename = activeDrill.week === 1 ? 'PostController.php' : 'weather_observations_idx.sql';
+    const filename = activeDrill.targetFile.split('/').pop() || 'submission.php';
     setPoliteNotice(`Dispatching to Tier 3 Docker Runner (${commandId})...`);
 
     const result = await runBridgeCommand(commandId, userCode, filename);
@@ -740,50 +795,72 @@ export function StudioLayout({
             </span>
           </div>
 
-          <div style={{ marginLeft: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+          <div style={{ marginLeft: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--studio-text-muted)' }}>Module:</span>
             
-            <button
-              id="select-week-1-btn"
-              type="button"
-              onClick={() => handleSelectWeek(1)}
-              style={{
-                padding: '3px 8px',
-                borderRadius: '4px',
-                fontSize: '0.75rem',
-                fontWeight: selectedWeek === 1 ? 600 : 400,
-                border: `1px solid ${selectedWeek === 1 ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
-                backgroundColor: selectedWeek === 1 ? 'var(--studio-primary-glow)' : 'transparent',
-                color: selectedWeek === 1 ? 'var(--studio-primary)' : 'var(--studio-text)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-              }}
-            >
-              Week 1: Laravel Internals
-            </button>
+            {ACTIVE_WEEKS.map((wk) => {
+              const task = CURRICULUM_TASKS.find(t => t.week === wk);
+              const isSelected = selectedWeek === wk;
+              return (
+                <button
+                  key={wk}
+                  id={`select-week-${wk}-btn`}
+                  type="button"
+                  onClick={() => handleSelectWeek(wk)}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    fontWeight: isSelected ? 600 : 400,
+                    border: `1px solid ${isSelected ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
+                    backgroundColor: isSelected ? 'var(--studio-primary-glow)' : 'transparent',
+                    color: isSelected ? 'var(--studio-primary)' : 'var(--studio-text)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                  }}
+                >
+                  Week {wk}: {task ? task.module : `Week ${wk}`}
+                </button>
+              );
+            })}
 
-            <button
-              id="select-week-4-btn"
-              type="button"
-              onClick={() => handleSelectWeek(4)}
-              style={{
-                padding: '3px 8px',
-                borderRadius: '4px',
-                fontSize: '0.75rem',
-                fontWeight: selectedWeek === 4 ? 600 : 400,
-                border: `1px solid ${selectedWeek === 4 ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
-                backgroundColor: selectedWeek === 4 ? 'var(--studio-primary-glow)' : 'transparent',
-                color: selectedWeek === 4 ? 'var(--studio-primary)' : 'var(--studio-text)',
-                cursor: 'pointer',
+            {/* Week 7 Sprint Timer Badge (if active) */}
+            {activeDrill.week === 7 && (
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.25rem',
-              }}
-            >
-              Week 4: Database &amp; EXPLAIN Lab
-            </button>
+                gap: '0.35rem',
+                marginLeft: '0.5rem',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                backgroundColor: sprintSeconds <= 300 ? 'rgba(239, 68, 68, 0.15)' : 'var(--studio-surface-subtle)',
+                border: `1px solid ${sprintSeconds <= 300 ? 'var(--studio-danger)' : 'var(--studio-border)'}`,
+                fontSize: '0.75rem',
+                color: sprintSeconds <= 300 ? 'var(--studio-danger)' : 'var(--studio-text)',
+                fontWeight: 600,
+              }}>
+                <Clock size={12} color={sprintSeconds <= 300 ? 'var(--studio-danger)' : 'var(--studio-primary)'} />
+                <span>Sprint: {formatSprintTime(sprintSeconds)}</span>
+                <button
+                  type="button"
+                  onClick={() => setSprintActive(p => !p)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'inherit',
+                    cursor: 'pointer',
+                    padding: '0 2px',
+                    fontWeight: 700,
+                    fontSize: '0.75rem'
+                  }}
+                  aria-label={sprintActive ? "Pause Sprint Timer" : "Start Sprint Timer"}
+                >
+                  {sprintActive ? "⏸ Pause" : "▶ Start"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -957,201 +1034,7 @@ export function StudioLayout({
         {/* STEP 2: Focused Code Drill (Monaco Editor & Run Controls) */}
         {currentStep === 2 && (
           <div className="studio-drill-container">
-                     {activeDrill.week === 1 ? (
-              <Group orientation="horizontal" style={{ flex: 1, minHeight: 0, width: '100%' }}>
-                
-                {/* Left Panel: Problem Context & Objective */}
-                <Panel defaultSize="38%" minSize="25%" maxSize="55%" style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-                  <div className="studio-drill-sidebar" style={{ height: '100%', overflowY: 'auto' }}>
-                    
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Tag variant="primary" size="small">Tier 2 Simulation</Tag>
-                      <Tag variant="warning" size="small">Budget: ≤ 3 Queries</Tag>
-                    </div>
-
-                    <div>
-                      <h2 style={{ margin: '0 0 0.35rem 0', fontSize: '1rem', fontWeight: 600, color: 'var(--studio-text)' }}>
-                        Eliminate Eloquent N+1 Loop
-                      </h2>
-                      <p style={{ margin: 0, fontSize: '0.75rem', lineHeight: 1.45, color: 'var(--studio-text-muted)' }}>
-                        Refactor <code>PostController::index()</code> to collapse catastrophic database multiplication.
-                      </p>
-                    </div>
-
-                    {/* Bug Diagnosis Box */}
-                    <div style={{ 
-                      padding: '0.625rem 0.75rem', 
-                      borderRadius: '6px', 
-                      backgroundColor: 'rgba(239, 68, 68, 0.08)', 
-                      borderLeft: '4px solid var(--studio-danger)',
-                      fontSize: '0.75rem',
-                      color: 'var(--studio-text)'
-                    }}>
-                      <strong style={{ color: 'var(--studio-danger)', display: 'block', marginBottom: '2px' }}>
-                        ⚠️ The Performance Bottleneck:
-                      </strong>
-                      <div style={{ lineHeight: 1.45, color: 'var(--studio-text-muted)' }}>
-                        <code>Post::all()</code> fetches 25 records. Inside the <code>map()</code> loop, accessing <code>$post-&gt;author-&gt;name</code> and <code>$post-&gt;comments-&gt;count()</code> executes 2 queries per row.
-                        <br />
-                        <strong>Total: 1 + 25 + 25 = 51 database roundtrips!</strong>
-                      </div>
-                    </div>
-
-                    {/* Task Instructions */}
-                    <div style={{ fontSize: '0.75rem', color: 'var(--studio-text)' }}>
-                      <strong style={{ display: 'block', marginBottom: '4px' }}>Your Objective:</strong>
-                      <ol style={{ margin: 0, paddingLeft: '1.125rem', lineHeight: 1.5, color: 'var(--studio-text-muted)', fontSize: '0.75rem' }}>
-                        <li style={{ marginBottom: '2px' }}>Replace <code>Post::all()</code> with eager loading: <code>Post::with([...])-&gt;get()</code>.</li>
-                        <li style={{ marginBottom: '2px' }}>Pre-load both <code>author</code> and <code>comments</code> relationships in a single batch.</li>
-                        <li>Click <strong>Run Test Harness</strong> to evaluate against query budget &amp; heuristic simulation.</li>
-                      </ol>
-                    </div>
-
-                    {/* Required Assertions Checklist */}
-                    <div style={{ 
-                      padding: '0.625rem 0.75rem', 
-                      borderRadius: '6px', 
-                      backgroundColor: 'var(--studio-surface-subtle)', 
-                      border: '1px solid var(--studio-border)' 
-                    }}>
-                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--studio-text-muted)', display: 'block', marginBottom: '4px' }}>
-                        Automated Assertions Evaluated:
-                      </span>
-                      <ul style={{ margin: 0, paddingLeft: '1.125rem', fontSize: '0.75rem', lineHeight: 1.45, color: 'var(--studio-text)' }}>
-                        <li>Query budget: ≤ 3 distinct queries for 25 records</li>
-                        <li>Zero per-row queries during <code>map()</code> iteration</li>
-                        <li><code>author</code> relationship eager loaded</li>
-                        <li><code>comments</code> relationship eager loaded</li>
-                      </ul>
-                    </div>
-
-                    {/* Senior Defense Tip */}
-                    <div style={{ 
-                      padding: '0.625rem 0.75rem', 
-                      borderRadius: '6px', 
-                      backgroundColor: 'var(--studio-surface)', 
-                      border: '1px solid var(--studio-border)',
-                      fontSize: '0.75rem'
-                    }}>
-                      <strong style={{ display: 'block', marginBottom: '2px', color: 'var(--studio-primary)' }}>
-                        Interview Defense Note:
-                      </strong>
-                      <span style={{ color: 'var(--studio-text-muted)', lineHeight: 1.45 }}>
-                        In high-scale production, Laravel 12's <code>Model::preventLazyLoading()</code> enforces strict eager loading during development, throwing exceptions before code enters staging.
-                      </span>
-                    </div>
-
-                  </div>
-                </Panel>
-
-                <Separator style={{ width: '6px', cursor: 'col-resize', backgroundColor: 'var(--studio-border)' }} />
-
-                {/* Right Panel: Monaco Editor & Run Controls */}
-                <Panel defaultSize="62%" minSize="45%" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                  <div className="studio-drill-editor-pane" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    
-                    {/* Editor Header Bar */}
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'space-between',
-                      padding: '0.45rem 0.75rem',
-                      borderBottom: '1px solid var(--studio-border)',
-                      backgroundColor: 'var(--studio-surface)',
-                      flexWrap: 'wrap',
-                      gap: '0.5rem',
-                      flexShrink: 0
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <FileCode size={14} color="var(--studio-primary)" />
-                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--studio-text)' }}>
-                          <code>{activeDrill.targetFile}</code>
-                        </span>
-                        <Tag variant="primary" size="small">PHP 8.3 (Eloquent Testbed Prototype)</Tag>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Button 
-                          variant="default-outline" 
-                          size="small" 
-                          onClick={() => setUserCode(activeDrill.initialCode)}
-                          aria-label="Reset Code to Template"
-                        >
-                          <RotateCcw size={12} style={{ marginRight: '4px' }} />
-                          Reset Code
-                        </Button>
-
-                        {/* Tier 3 Docker Verification Trigger */}
-                        {bridgeStatus.connected && (
-                          <Button 
-                            id="run-docker-tier3-btn"
-                            variant="primary-outline" 
-                            size="small"
-                            onClick={handleRunTier3Docker}
-                            disabled={isRunningDocker}
-                            aria-label="Run in Docker (Tier 3)"
-                          >
-                            <Server size={12} style={{ marginRight: '4px' }} />
-                            {isRunningDocker ? "Running Container..." : "Run in Docker (Tier 3)"}
-                          </Button>
-                        )}
-
-                        {/* Tier 2 Simulation Evaluation Trigger */}
-                        <Button 
-                          id="run-simulation-btn"
-                          variant="primary-fill" 
-                          size="small" 
-                          onClick={handleRunDrill}
-                          disabled={isEvaluating}
-                          aria-label="Run Test Harness (Tier 2)"
-                        >
-                          <Play size={12} style={{ marginRight: '4px' }} />
-                          {isEvaluating ? "Evaluating..." : "Run Test Harness"}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Monaco Editor Canvas */}
-                    <div className="studio-drill-editor-wrapper">
-                      <Editor
-                        height="100%"
-                        language={activeDrill.language}
-                        value={userCode}
-                        onChange={(value) => setUserCode(value || '')}
-                        theme={isDark ? "vs-dark" : "light"}
-                        options={{
-                          minimap: { enabled: false },
-                          fontSize: 13,
-                          lineNumbers: 'on',
-                          scrollBeyondLastLine: false,
-                          automaticLayout: true,
-                          tabSize: 4,
-                          renderLineHighlight: 'all',
-                          wordWrap: 'on',
-                        }}
-                      />
-                    </div>
-
-                    {/* Editor Footer Target Hint */}
-                    <div style={{ 
-                      padding: '0.35rem 0.75rem', 
-                      backgroundColor: 'var(--studio-surface-subtle)', 
-                      borderTop: '1px solid var(--studio-border)',
-                      fontSize: '0.6875rem',
-                      color: 'var(--studio-text-muted)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexShrink: 0
-                    }}>
-                      <span>Target: <code>Post::with(['author', 'comments'])-&gt;get()</code></span>
-                      <span>Click <strong>Run Test Harness</strong> or <strong>Run in Docker</strong></span>
-                    </div>
-
-                  </div>
-                </Panel>
-              </Group>
-            ) : (
+            {activeDrill.week === 4 ? (
               /* Week 4 Database & EXPLAIN Lab */
               <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 {bridgeStatus.connected && (
@@ -1227,6 +1110,356 @@ export function StudioLayout({
                   </Suspense>
                 </div>
               </div>
+            ) : activeDrill.week === 6 ? (
+              /* Week 6 System Design Architecture & STAR Story Builder */
+              <Group orientation="horizontal" style={{ flex: 1, minHeight: 0, width: '100%' }}>
+                {/* Left Panel: StarStoryBuilder */}
+                <Panel defaultSize="46%" minSize="30%" maxSize="60%" style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                  <div style={{ height: '100%', overflowY: 'auto', padding: '0.75rem' }}>
+                    <StarStoryBuilder 
+                      isDark={isDark}
+                      onExportRfc={() => {
+                        setPoliteNotice('Exported Architecture RFC to clipboard & download.');
+                      }}
+                      onOpenRubric={() => {
+                        goToStep(4);
+                      }}
+                    />
+                  </div>
+                </Panel>
+
+                <Separator style={{ width: '6px', cursor: 'col-resize', backgroundColor: 'var(--studio-border)' }} />
+
+                {/* Right Panel: Architecture Specification JSON Editor */}
+                <Panel defaultSize="54%" minSize="40%" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <div className="studio-drill-editor-pane" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    
+                    {/* Editor Header Bar */}
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      padding: '0.45rem 0.75rem',
+                      borderBottom: '1px solid var(--studio-border)',
+                      backgroundColor: 'var(--studio-surface)',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
+                      flexShrink: 0
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <FileCode size={14} color="var(--studio-primary)" />
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+                          <code>{activeDrill.targetFile}</code>
+                        </span>
+                        <Tag variant="warning" size="small">JSON / System Architecture Topology</Tag>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Button 
+                          variant="default-outline" 
+                          size="small" 
+                          onClick={() => setUserCode(activeDrill.initialCode)}
+                          aria-label="Reset Architecture Spec"
+                        >
+                          <RotateCcw size={12} style={{ marginRight: '4px' }} />
+                          Reset Spec
+                        </Button>
+
+                        <Button 
+                          id="run-simulation-btn"
+                          variant="primary-fill" 
+                          size="small" 
+                          onClick={handleRunDrill}
+                          disabled={isEvaluating}
+                          aria-label="Evaluate Architecture Spec"
+                        >
+                          <Play size={12} style={{ marginRight: '4px' }} />
+                          {isEvaluating ? "Evaluating..." : "Run Systems Evaluator"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Monaco Editor Canvas */}
+                    <div className="studio-drill-editor-wrapper">
+                      <Editor
+                        height="100%"
+                        language={activeDrill.language}
+                        value={userCode}
+                        onChange={(value) => setUserCode(value || '')}
+                        theme={isDark ? "vs-dark" : "light"}
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 13,
+                          lineNumbers: 'on',
+                          scrollBeyondLastLine: false,
+                          automaticLayout: true,
+                          tabSize: 2,
+                          renderLineHighlight: 'all',
+                          wordWrap: 'on',
+                        }}
+                      />
+                    </div>
+
+                    {/* Editor Footer Target Hint */}
+                    <div style={{ 
+                      padding: '0.35rem 0.75rem', 
+                      backgroundColor: 'var(--studio-surface-subtle)', 
+                      borderTop: '1px solid var(--studio-border)',
+                      fontSize: '0.6875rem',
+                      color: 'var(--studio-text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexShrink: 0
+                    }}>
+                      <span>Target: Complete buffer backpressure strategy, partition key, and STAR story fields without &quot;TODO&quot;</span>
+                      <span>Click <strong>Run Systems Evaluator</strong> to verify schema</span>
+                    </div>
+
+                  </div>
+                </Panel>
+              </Group>
+            ) : (
+              /* Week 1 & Week 7 PHP Code Drills */
+              <Group orientation="horizontal" style={{ flex: 1, minHeight: 0, width: '100%' }}>
+                {/* Left Panel: Problem Context & Objective */}
+                <Panel defaultSize="38%" minSize="25%" maxSize="55%" style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                  <div className="studio-drill-sidebar" style={{ height: '100%', overflowY: 'auto' }}>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Tag variant="primary" size="small">
+                        {activeDrill.week === 7 ? "Tier 3 Security Sprint" : "Tier 2 Simulation"}
+                      </Tag>
+                      <Tag variant={activeDrill.week === 7 ? "danger" : "warning"} size="small">
+                        {activeDrill.week === 7 ? "90-Min Time Cap" : "Budget: ≤ 3 Queries"}
+                      </Tag>
+                    </div>
+
+                    <div>
+                      <h2 style={{ margin: '0 0 0.35rem 0', fontSize: '1rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+                        {activeDrill.title}
+                      </h2>
+                      <p style={{ margin: 0, fontSize: '0.75rem', lineHeight: 1.45, color: 'var(--studio-text-muted)' }}>
+                        {activeDrill.week === 7
+                          ? "Remediate critical session fixation and privilege escalation (IDOR) vulnerabilities in AuthController.php."
+                          : "Refactor PostController::index() to collapse catastrophic database multiplication."}
+                      </p>
+                    </div>
+
+                    {/* Bug Diagnosis Box */}
+                    <div style={{ 
+                      padding: '0.625rem 0.75rem', 
+                      borderRadius: '6px', 
+                      backgroundColor: 'rgba(239, 68, 68, 0.08)', 
+                      borderLeft: '4px solid var(--studio-danger)',
+                      fontSize: '0.75rem',
+                      color: 'var(--studio-text)'
+                    }}>
+                      <strong style={{ color: 'var(--studio-danger)', display: 'block', marginBottom: '2px' }}>
+                        {activeDrill.week === 7 ? "🚨 Security Vulnerability Analysis:" : "⚠️ The Performance Bottleneck:"}
+                      </strong>
+                      <div style={{ lineHeight: 1.45, color: 'var(--studio-text-muted)' }}>
+                        {activeDrill.week === 7 ? (
+                          <>
+                            <strong>1. Session Fixation (login):</strong> The controller authenticates credentials but omits <code>$request-&gt;session()-&gt;regenerate()</code>, allowing an attacker to hijack the authenticated session with a pre-set cookie.
+                            <br />
+                            <strong>2. IDOR / Missing Policy (updateRecord):</strong> The mutation endpoint accepts any <code>Record $record</code> without checking <code>$this-&gt;authorize(&apos;update&apos;, $record)</code>, exposing tenant data to unauthorized tampering.
+                          </>
+                        ) : (
+                          <>
+                            <code>Post::all()</code> fetches 25 records. Inside the <code>map()</code> loop, accessing <code>$post-&gt;author-&gt;name</code> and <code>$post-&gt;comments-&gt;count()</code> executes 2 queries per row.
+                            <br />
+                            <strong>Total: 1 + 25 + 25 = 51 database roundtrips!</strong>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Task Instructions */}
+                    <div style={{ fontSize: '0.75rem', color: 'var(--studio-text)' }}>
+                      <strong style={{ display: 'block', marginBottom: '4px' }}>Your Objective:</strong>
+                      <ol style={{ margin: 0, paddingLeft: '1.125rem', lineHeight: 1.5, color: 'var(--studio-text-muted)', fontSize: '0.75rem' }}>
+                        {activeDrill.week === 7 ? (
+                          <>
+                            <li style={{ marginBottom: '2px' }}>In <code>login()</code>, call <code>$request-&gt;session()-&gt;regenerate()</code> upon successful credential attempt.</li>
+                            <li style={{ marginBottom: '2px' }}>In <code>updateRecord()</code>, insert <code>$this-&gt;authorize(&apos;update&apos;, $record);</code> prior to model mutation.</li>
+                            <li>Click <strong>Run Test Harness</strong> or <strong>Run in Docker (Tier 3)</strong> to verify both security defenses.</li>
+                          </>
+                        ) : (
+                          <>
+                            <li style={{ marginBottom: '2px' }}>Replace <code>Post::all()</code> with eager loading: <code>Post::with([...])-&gt;get()</code>.</li>
+                            <li style={{ marginBottom: '2px' }}>Pre-load both <code>author</code> and <code>comments</code> relationships in a single batch.</li>
+                            <li>Click <strong>Run Test Harness</strong> to evaluate against query budget &amp; heuristic simulation.</li>
+                          </>
+                        )}
+                      </ol>
+                    </div>
+
+                    {/* Required Assertions Checklist */}
+                    <div style={{ 
+                      padding: '0.625rem 0.75rem', 
+                      borderRadius: '6px', 
+                      backgroundColor: 'var(--studio-surface-subtle)', 
+                      border: '1px solid var(--studio-border)' 
+                    }}>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--studio-text-muted)', display: 'block', marginBottom: '4px' }}>
+                        Automated Assertions Evaluated:
+                      </span>
+                      <ul style={{ margin: 0, paddingLeft: '1.125rem', fontSize: '0.75rem', lineHeight: 1.45, color: 'var(--studio-text)' }}>
+                        {activeDrill.week === 7 ? (
+                          <>
+                            <li>Session fixation defense: <code>$request-&gt;session()-&gt;regenerate()</code> called</li>
+                            <li>Tenant authorization gate: <code>$this-&gt;authorize(&apos;update&apos;, $record)</code> enforced</li>
+                            <li>Syntactically valid PHP 8.3 controller methods</li>
+                            <li>Execution under 90-minute timed sprint constraint</li>
+                          </>
+                        ) : (
+                          <>
+                            <li>Query budget: ≤ 3 distinct queries for 25 records</li>
+                            <li>Zero per-row queries during <code>map()</code> iteration</li>
+                            <li><code>author</code> relationship eager loaded</li>
+                            <li><code>comments</code> relationship eager loaded</li>
+                          </>
+                        )}
+                      </ul>
+                    </div>
+
+                    {/* Senior Defense Tip */}
+                    <div style={{ 
+                      padding: '0.625rem 0.75rem', 
+                      borderRadius: '6px', 
+                      backgroundColor: 'var(--studio-surface)', 
+                      border: '1px solid var(--studio-border)',
+                      fontSize: '0.75rem'
+                    }}>
+                      <strong style={{ display: 'block', marginBottom: '2px', color: 'var(--studio-primary)' }}>
+                        Interview Defense Note:
+                      </strong>
+                      <span style={{ color: 'var(--studio-text-muted)', lineHeight: 1.45 }}>
+                        {activeDrill.week === 7
+                          ? "Defense-in-depth: OWASP A01 (Broken Access Control) requires strict policy authorization before mutating state. Session regeneration ensures stale session IDs cannot be weaponized after login elevation."
+                          : "In high-scale production, Laravel 12's Model::preventLazyLoading() enforces strict eager loading during development, throwing exceptions before code enters staging."}
+                      </span>
+                    </div>
+
+                  </div>
+                </Panel>
+
+                <Separator style={{ width: '6px', cursor: 'col-resize', backgroundColor: 'var(--studio-border)' }} />
+
+                {/* Right Panel: Monaco Editor & Run Controls */}
+                <Panel defaultSize="62%" minSize="45%" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <div className="studio-drill-editor-pane" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    
+                    {/* Editor Header Bar */}
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      padding: '0.45rem 0.75rem',
+                      borderBottom: '1px solid var(--studio-border)',
+                      backgroundColor: 'var(--studio-surface)',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
+                      flexShrink: 0
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <FileCode size={14} color="var(--studio-primary)" />
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+                          <code>{activeDrill.targetFile}</code>
+                        </span>
+                        <Tag variant="primary" size="small">
+                          {activeDrill.week === 7 ? "PHP 8.3 (Auth Security Testbed)" : "PHP 8.3 (Eloquent Testbed Prototype)"}
+                        </Tag>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Button 
+                          variant="default-outline" 
+                          size="small" 
+                          onClick={() => setUserCode(activeDrill.initialCode)}
+                          aria-label="Reset Code to Template"
+                        >
+                          <RotateCcw size={12} style={{ marginRight: '4px' }} />
+                          Reset Code
+                        </Button>
+
+                        {/* Tier 3 Docker Verification Trigger */}
+                        {bridgeStatus.connected && (
+                          <Button 
+                            id="run-docker-tier3-btn"
+                            variant="primary-outline" 
+                            size="small"
+                            onClick={handleRunTier3Docker}
+                            disabled={isRunningDocker}
+                            aria-label="Run in Docker (Tier 3)"
+                          >
+                            <Server size={12} style={{ marginRight: '4px' }} />
+                            {isRunningDocker ? "Running Container..." : "Run in Docker (Tier 3)"}
+                          </Button>
+                        )}
+
+                        {/* Tier 2 Simulation Evaluation Trigger */}
+                        <Button 
+                          id="run-simulation-btn"
+                          variant="primary-fill" 
+                          size="small" 
+                          onClick={handleRunDrill}
+                          disabled={isEvaluating}
+                          aria-label="Run Test Harness"
+                        >
+                          <Play size={12} style={{ marginRight: '4px' }} />
+                          {isEvaluating ? "Evaluating..." : "Run Test Harness"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Monaco Editor Canvas */}
+                    <div className="studio-drill-editor-wrapper">
+                      <Editor
+                        height="100%"
+                        language={activeDrill.language}
+                        value={userCode}
+                        onChange={(value) => setUserCode(value || '')}
+                        theme={isDark ? "vs-dark" : "light"}
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 13,
+                          lineNumbers: 'on',
+                          scrollBeyondLastLine: false,
+                          automaticLayout: true,
+                          tabSize: 4,
+                          renderLineHighlight: 'all',
+                          wordWrap: 'on',
+                        }}
+                      />
+                    </div>
+
+                    {/* Editor Footer Target Hint */}
+                    <div style={{ 
+                      padding: '0.35rem 0.75rem', 
+                      backgroundColor: 'var(--studio-surface-subtle)', 
+                      borderTop: '1px solid var(--studio-border)',
+                      fontSize: '0.6875rem',
+                      color: 'var(--studio-text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexShrink: 0
+                    }}>
+                      <span>
+                        {activeDrill.week === 7 ? (
+                          <code>Target: $request-&gt;session()-&gt;regenerate() and $this-&gt;authorize(&apos;update&apos;, $record)</code>
+                        ) : (
+                          <code>Target: Post::with([&apos;author&apos;, &apos;comments&apos;])-&gt;get()</code>
+                        )}
+                      </span>
+                      <span>Click <strong>Run Test Harness</strong> or <strong>Run in Docker</strong></span>
+                    </div>
+
+                  </div>
+                </Panel>
+              </Group>
             )}
 
             <div className="studio-step-actions">
@@ -1420,26 +1653,75 @@ export function StudioLayout({
                 <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-text)' }}>
                   {activeDrill.week === 1 
                     ? 'Step 5: Visual HTTP Request Lifecycle Tracer' 
-                    : 'Step 5: Visual B-Tree Compound Index & Query Execution Tracer'}
+                    : activeDrill.week === 4
+                    ? 'Step 5: Visual B-Tree Compound Index & Query Execution Tracer'
+                    : activeDrill.week === 6
+                    ? 'Step 5: Visual Sensor Ingestion Pipeline & Sharded Buffer Tracer'
+                    : 'Step 5: Visual Session Regeneration & Policy Authorization Gate Tracer'}
                 </strong>
                 <span style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)', display: 'block' }}>
                   {activeDrill.week === 1
                     ? 'Interactive state machine visualizing the Laravel request journey from HTTP ingress to terminating middleware.'
-                    : 'Interactive state machine visualizing the SQLite storage engine B-Tree index traversal, key seek, and early LIMIT exit.'}
+                    : activeDrill.week === 4
+                    ? 'Interactive state machine visualizing the SQLite storage engine B-Tree index traversal, key seek, and early LIMIT exit.'
+                    : activeDrill.week === 6
+                    ? 'Interactive state machine visualizing high-throughput weather observation telemetry streaming through Redis buffer shards into partitioned PostgreSQL storage.'
+                    : 'Interactive state machine visualizing secure session ID rotation on login and zero-trust policy authorization gate checks on record mutation.'}
                 </span>
               </div>
-              <Tag variant={activeDrill.week === 1 ? "primary" : "success"} size="small">
-                {activeDrill.week === 1 ? "Week 1: Laravel Internals" : "Week 4: Storage Engine"}
+              <Tag 
+                variant={activeDrill.week === 1 ? "primary" : activeDrill.week === 4 ? "success" : activeDrill.week === 6 ? "warning" : "danger"} 
+                size="small"
+              >
+                {activeDrill.week === 1 
+                  ? "Week 1: Laravel Internals" 
+                  : activeDrill.week === 4 
+                  ? "Week 4: Storage Engine" 
+                  : activeDrill.week === 6 
+                  ? "Week 6: Systems Design" 
+                  : "Week 7: Auth & Security"}
               </Tag>
             </div>
 
             <div style={{ flex: 1, minHeight: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--studio-border)' }}>
               <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--studio-text-muted)' }}>Loading Lifecycle Tracer...</div>}>
                 <LifecycleTracer 
-                  steps={activeDrill.week === 1 ? LARAVEL_LIFECYCLE_STEPS : BTREE_INDEX_TRACER_STEPS}
-                  engineBadge={activeDrill.week === 1 ? "Tier 2: Deterministic Simulation" : `Tier 1: SQLite ${runtimeSqlVersion} (WASM Engine)`}
-                  badgeVariant={activeDrill.week === 1 ? "primary" : "success"}
-                  packetName={activeDrill.week === 1 ? "Active Ingress Packet" : "Active Cursor Pointer"}
+                  steps={
+                    activeDrill.week === 1 
+                      ? LARAVEL_LIFECYCLE_STEPS 
+                      : activeDrill.week === 4 
+                      ? BTREE_INDEX_TRACER_STEPS 
+                      : activeDrill.week === 6 
+                      ? SENSOR_PIPELINE_TRACER_STEPS 
+                      : AUTH_POLICY_TRACER_STEPS
+                  }
+                  engineBadge={
+                    activeDrill.week === 1 
+                      ? "Tier 2: Deterministic Simulation" 
+                      : activeDrill.week === 4 
+                      ? `Tier 1: SQLite ${runtimeSqlVersion} (WASM Engine)` 
+                      : activeDrill.week === 6 
+                      ? "Tier 1: Distributed Pipeline Flow" 
+                      : "Tier 3: PostgreSQL / Session Store"
+                  }
+                  badgeVariant={
+                    activeDrill.week === 1 
+                      ? "primary" 
+                      : activeDrill.week === 4 
+                      ? "success" 
+                      : activeDrill.week === 6 
+                      ? "warning" 
+                      : "danger"
+                  }
+                  packetName={
+                    activeDrill.week === 1 
+                      ? "Active Ingress Packet" 
+                      : activeDrill.week === 4 
+                      ? "Active Cursor Pointer" 
+                      : activeDrill.week === 6 
+                      ? "Sensor Reading Packet" 
+                      : "Auth Session Token"
+                  }
                 />
               </Suspense>
             </div>
@@ -1467,16 +1749,23 @@ export function StudioLayout({
       {/* Bottom Status Footer with Engine Badges & Invariants */}
       <footer className="studio-footer">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Tag variant={tier3Result && tier3Result.exitCode === 0 ? "success" : activeDrill.week === 1 ? "primary" : "success"} size="small">
+          <Tag 
+            variant={tier3Result && tier3Result.exitCode === 0 ? "success" : activeDrill.week === 1 ? "primary" : activeDrill.week === 4 ? "success" : activeDrill.week === 6 ? "warning" : "danger"} 
+            size="small"
+          >
             {tier3Result && tier3Result.exitCode === 0 
-              ? "[Tier 3: PostgreSQL 16.4 Runtime Passed]"
+              ? `[Tier 3: ${activeDrill.week === 7 ? 'PHP 8.3 / Auth Testbed' : 'PostgreSQL 16.4'} Runtime Passed]`
               : activeDrill.week === 1 
                 ? "[Tier 2: Deterministic Simulation]" 
-                : `[Engine: SQLite ${runtimeSqlVersion} (WASM)]`}
+                : activeDrill.week === 4 
+                ? `[Engine: SQLite ${runtimeSqlVersion} (WASM)]` 
+                : activeDrill.week === 6 
+                ? "[Tier 1: Systems Design / STAR Validator]" 
+                : "[Tier 2: Security Policy Evaluator]"}
           </Tag>
           <Tag variant={drillCompleted ? "success" : "default"} size="small">
             {drillCompleted 
-              ? (verificationSource === 'local-runtime' ? "PostgreSQL Runtime Passed" : "Simulation Passed") 
+              ? (verificationSource === 'local-runtime' ? "Runtime Passed" : "Simulation Passed") 
               : "In Progress"}
           </Tag>
           <Tag variant={bridgeStatus.connected ? "success" : "default"} size="small">

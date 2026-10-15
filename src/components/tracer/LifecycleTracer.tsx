@@ -28,7 +28,9 @@ import {
 export { 
   type LifecycleStepData, 
   LARAVEL_LIFECYCLE_STEPS, 
-  BTREE_INDEX_TRACER_STEPS, 
+  BTREE_INDEX_TRACER_STEPS,
+  AUTH_POLICY_TRACER_STEPS,
+  SENSOR_PIPELINE_TRACER_STEPS,
   LIFECYCLE_STEPS 
 } from './tracerSteps';
 import { 
@@ -60,7 +62,7 @@ const HANDLE_CONFIGS: Record<number, { target?: Position; source?: Position }> =
 export interface LifecycleTracerProps {
   steps?: LifecycleStepData[];
   engineBadge?: string;
-  badgeVariant?: 'primary' | 'success' | 'warning' | 'default';
+  badgeVariant?: 'primary' | 'success' | 'warning' | 'danger' | 'default';
   packetName?: string;
 }
 
