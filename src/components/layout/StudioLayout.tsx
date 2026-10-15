@@ -105,6 +105,7 @@ export function StudioLayout({
         {/* STEP 2: Focused Code Drill */}
         {session.currentStep === 2 && (
           <StepFocusedDrill
+            key={session.activeDrill.id}
             activeDrill={session.activeDrill}
             userCode={session.userCode}
             setUserCode={session.setUserCode}

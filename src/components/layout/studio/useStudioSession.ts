@@ -62,6 +62,8 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
   const [starStories, setStarStories] = useState<StarStory[] | undefined>(undefined);
   const [hintsUsed, setHintsUsed] = useState<number>(0);
   const [solutionRevealed, setSolutionRevealed] = useState<boolean>(false);
+  const [isLoadingSession, setIsLoadingSession] = useState<boolean>(false);
+  const loadedDrillIdRef = useRef<string>('');
 
   // 90-minute Timed Sprint State (Week 7)
   const [sprintSeconds, setSprintSeconds] = useState<number>(5400);
@@ -172,6 +174,10 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
   // Initial Load & Session Rehydration for active drill
   useEffect(() => {
     let isMounted = true;
+    if (loadedDrillIdRef.current === activeDrill.id) {
+      return;
+    }
+    loadedDrillIdRef.current = activeDrill.id;
     const loadSession = async () => {
       const session = await getDrillSession(activeDrill.id);
       if (!isMounted) return;
@@ -224,7 +230,9 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
 
   // Auto-Save User Draft Code (Debounced 500ms)
   useEffect(() => {
+    if (isLoadingSession) return;
     const timer = setTimeout(async () => {
+      if (isLoadingSession) return;
       const existing = await getDrillSession(activeDrill.id);
       if (existing) {
         if (existing.draftCode !== userCode) {
@@ -254,77 +262,86 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [userCode, activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, testResults, tier3Result, verificationSource, drillCompleted, hintsUsed, solutionRevealed]);
+  }, [isLoadingSession, userCode, activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, testResults, tier3Result, verificationSource, drillCompleted, hintsUsed, solutionRevealed]);
 
   // Non-Destructive Multi-Module Switching
   const handleSelectWeek = useCallback(async (week: number) => {
     if (week === selectedWeek) return;
+    setIsLoadingSession(true);
 
-    // 1. Snapshot and save CURRENT drill's session
-    const currentSession: DrillSessionState = {
-      drillId: activeDrill.id,
-      week: activeDrill.week,
-      currentStep,
-      highestStepReached,
-      stepCompletions,
-      draftCode: userCode,
-      testResults,
-      tier3Result,
-      verificationSource,
-      completed: drillCompleted,
-      oralDefenseCompleted: stepCompletions[4],
-      lastActiveAt: new Date().toISOString(),
-      starStories: activeDrill.week === 6 ? starStories : undefined,
-      hintsUsed,
-      solutionRevealed,
-    };
-    await saveDrillSession(currentSession);
+    try {
+      // 1. Snapshot and save CURRENT drill's session
+      const currentSession: DrillSessionState = {
+        drillId: activeDrill.id,
+        week: activeDrill.week,
+        currentStep,
+        highestStepReached,
+        stepCompletions,
+        draftCode: userCode,
+        testResults,
+        tier3Result,
+        verificationSource,
+        completed: drillCompleted,
+        oralDefenseCompleted: stepCompletions[4],
+        lastActiveAt: new Date().toISOString(),
+        starStories: activeDrill.week === 6 ? starStories : undefined,
+        hintsUsed,
+        solutionRevealed,
+      };
+      await saveDrillSession(currentSession);
 
-    // 2. Switch active definition
-    setSelectedWeek(week);
-    const nextDrill = getDrillByWeek(week);
+      // 2. Fetch target drill session BEFORE changing active definition
+      const nextDrill = getDrillByWeek(week);
+      const targetSession = await getDrillSession(nextDrill.id);
 
-    // 3. Load target drill's stored session from IndexedDB
-    const targetSession = await getDrillSession(nextDrill.id);
-    if (targetSession) {
-      setUserCode(targetSession.draftCode);
-      setCurrentStep(targetSession.currentStep);
-      setHighestStepReached(targetSession.highestStepReached);
-      setStepCompletions(targetSession.stepCompletions);
-      setTestResults(targetSession.testResults);
-      setTier3Result(targetSession.tier3Result as BridgeRunResult | null);
-      setVerificationSource(targetSession.verificationSource);
-      setDrillCompleted(targetSession.completed);
-      setStarStories(targetSession.starStories);
-      setHintsUsed(targetSession.hintsUsed || 0);
-      setSolutionRevealed(targetSession.solutionRevealed || false);
-      setPoliteNotice(`Switched to Week ${nextDrill.week}: ${nextDrill.title.split('(')[0].trim()}, resumed at Step ${targetSession.currentStep}.`);
-    } else {
-      setStarStories(undefined);
-      setHintsUsed(0);
-      setSolutionRevealed(false);
-      const legacyProg = await getDrillProgress(nextDrill.id);
-      if (legacyProg?.completed) {
-        setUserCode(nextDrill.initialCode);
-        setCurrentStep(1);
-        setHighestStepReached(3);
-        setStepCompletions({ 1: true, 2: true, 3: true, 4: false, 5: false });
-        setTestResults(null);
-        setTier3Result(null);
-        setVerificationSource(legacyProg.verificationSource || 'simulation');
-        setDrillCompleted(true);
-        setPoliteNotice(`Switched to Week ${nextDrill.week}: ${nextDrill.title.split('(')[0].trim()}, resumed at Step 1.`);
+      // 3. Mark the drill as loaded in ref to avoid redundant effect re-run
+      loadedDrillIdRef.current = nextDrill.id;
+
+      // 4. Update drill definition & target session state synchronously in batch
+      setSelectedWeek(week);
+
+      if (targetSession) {
+        setUserCode(targetSession.draftCode);
+        setCurrentStep(targetSession.currentStep);
+        setHighestStepReached(targetSession.highestStepReached);
+        setStepCompletions(targetSession.stepCompletions);
+        setTestResults(targetSession.testResults);
+        setTier3Result(targetSession.tier3Result as BridgeRunResult | null);
+        setVerificationSource(targetSession.verificationSource);
+        setDrillCompleted(targetSession.completed);
+        setStarStories(targetSession.starStories);
+        setHintsUsed(targetSession.hintsUsed || 0);
+        setSolutionRevealed(targetSession.solutionRevealed || false);
+        setPoliteNotice(`Switched to Week ${nextDrill.week}: ${nextDrill.title.split('(')[0].trim()}, resumed at Step ${targetSession.currentStep}.`);
       } else {
-        setUserCode(nextDrill.initialCode);
-        setCurrentStep(1);
-        setHighestStepReached(1);
-        setStepCompletions({ 1: false, 2: false, 3: false, 4: false, 5: false });
-        setTestResults(null);
-        setTier3Result(null);
-        setVerificationSource('simulation');
-        setDrillCompleted(false);
-        setPoliteNotice(`Switched to Week ${nextDrill.week}: ${nextDrill.title.split('(')[0].trim()}, resumed at Step 1.`);
+        setStarStories(undefined);
+        setHintsUsed(0);
+        setSolutionRevealed(false);
+        const legacyProg = await getDrillProgress(nextDrill.id);
+        if (legacyProg?.completed) {
+          setUserCode(nextDrill.initialCode);
+          setCurrentStep(1);
+          setHighestStepReached(3);
+          setStepCompletions({ 1: true, 2: true, 3: true, 4: false, 5: false });
+          setTestResults(null);
+          setTier3Result(null);
+          setVerificationSource(legacyProg.verificationSource || 'simulation');
+          setDrillCompleted(true);
+          setPoliteNotice(`Switched to Week ${nextDrill.week}: ${nextDrill.title.split('(')[0].trim()}, resumed at Step 1.`);
+        } else {
+          setUserCode(nextDrill.initialCode);
+          setCurrentStep(1);
+          setHighestStepReached(1);
+          setStepCompletions({ 1: false, 2: false, 3: false, 4: false, 5: false });
+          setTestResults(null);
+          setTier3Result(null);
+          setVerificationSource('simulation');
+          setDrillCompleted(false);
+          setPoliteNotice(`Switched to Week ${nextDrill.week}: ${nextDrill.title.split('(')[0].trim()}, resumed at Step 1.`);
+        }
       }
+    } finally {
+      setIsLoadingSession(false);
     }
   }, [selectedWeek, activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, userCode, testResults, tier3Result, verificationSource, drillCompleted, starStories, hintsUsed, solutionRevealed]);
 
