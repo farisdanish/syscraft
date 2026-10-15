@@ -555,6 +555,133 @@ if ($command === 'test') {
         exit(0);
     }
 
+    // Test Suite 4: ClassRefactoringDiTest (Week 3 Dependency Inversion & IoC Container)
+    if ($filter === 'ClassRefactoringDiTest') {
+        $submissionFile = '/workspace/submission/WeatherReportService.php';
+        $submissionCode = '';
+        if (file_exists($submissionFile)) {
+            $submissionCode = file_get_contents($submissionFile);
+        }
+
+        $tokens = token_get_all($submissionCode);
+        $cleanTokens = [];
+        $inHeredoc = false;
+        $inBacktick = false;
+        $inDoubleQuote = false;
+
+        foreach ($tokens as $t) {
+            if (!is_array($t)) {
+                if ($t === '`') {
+                    $inBacktick = !$inBacktick;
+                    continue;
+                }
+                if ($t === '"') {
+                    $inDoubleQuote = !$inDoubleQuote;
+                    continue;
+                }
+                if ($inHeredoc || $inBacktick || $inDoubleQuote) {
+                    continue;
+                }
+                $cleanTokens[] = $t;
+                continue;
+            }
+
+            if ($t[0] === T_COMMENT || $t[0] === T_DOC_COMMENT) {
+                continue;
+            }
+
+            if ($t[0] === T_START_HEREDOC) {
+                $inHeredoc = true;
+                continue;
+            }
+            if ($t[0] === T_END_HEREDOC) {
+                $inHeredoc = false;
+                continue;
+            }
+
+            if ($inHeredoc || $inBacktick || $inDoubleQuote) {
+                continue;
+            }
+
+            $cleanTokens[] = $t;
+        }
+
+        $cleanCode = '';
+        foreach ($cleanTokens as $t) {
+            $cleanCode .= is_array($t) ? $t[1] : $t;
+        }
+
+        $hasNoDirectNew = !preg_match('/new\s+OpenMeteoClient\b/', $cleanCode);
+        $hasConstructorDi = (bool)preg_match('/function\s+__construct\s*\([^)]*SensorClientInterface\s+\$\w+[^)]*\)/', $cleanCode) ||
+            (bool)preg_match('/public\s+function\s+__construct\s*\([^)]*protected\s+SensorClientInterface\s+\$\w+[^)]*\)/', $cleanCode) ||
+            (str_contains($cleanCode, '__construct') && str_contains($cleanCode, 'SensorClientInterface'));
+        $hasContainerBinding = (bool)preg_match('/\$this\s*->\s*app\s*->\s*(?:bind|singleton)\s*\(/', $cleanCode) &&
+            str_contains($cleanCode, 'SensorClientInterface') &&
+            str_contains($cleanCode, 'OpenMeteoClient');
+        $implementsInterface = (bool)preg_match('/class\s+WeatherReportService\b[^{]*implements\b[^{]*WeatherReportServiceInterface/', $cleanCode);
+
+        if (!$hasNoDirectNew || !$hasConstructorDi || !$hasContainerBinding || !$implementsInterface) {
+            echo "\n\033[41m\033[37m FAIL \033[0m \033[1mTests\\Unit\\ClassRefactoringDiTest\033[0m\n";
+            usleep(15000);
+            if ($hasNoDirectNew) {
+                echo "  \033[32m✓\033[0m \033[90meliminated direct concrete instantiation (zero 'new OpenMeteoClient')\033[0m (10ms)\n";
+            } else {
+                echo "  \033[31m⨯\033[0m \033[90meliminated direct concrete instantiation (zero 'new OpenMeteoClient')\033[0m\n";
+                echo "    \033[31mDirect instantiation 'new OpenMeteoClient' detected. Invert dependency via constructor injection.\033[0m\n";
+            }
+
+            usleep(12000);
+            if ($hasConstructorDi) {
+                echo "  \033[32m✓\033[0m \033[90mconstructor injection of SensorClientInterface abstraction (DIP)\033[0m (14ms)\n";
+            } else {
+                echo "  \033[31m⨯\033[0m \033[90mconstructor injection of SensorClientInterface abstraction (DIP)\033[0m\n";
+                echo "    \033[31mWeatherReportService constructor must type-hint SensorClientInterface interface.\033[0m\n";
+            }
+
+            usleep(10000);
+            if ($hasContainerBinding) {
+                echo "  \033[32m✓\033[0m \033[90mIoC Container binding registered in ServiceProvider register()\033[0m (12ms)\n";
+            } else {
+                echo "  \033[31m⨯\033[0m \033[90mIoC Container binding registered in ServiceProvider register()\033[0m\n";
+                echo "    \033[31mMissing \$this->app->bind(SensorClientInterface::class, OpenMeteoClient::class).\033[0m\n";
+            }
+
+            usleep(10000);
+            if ($implementsInterface) {
+                echo "  \033[32m✓\033[0m \033[90mWeatherReportService implements WeatherReportServiceInterface\033[0m (8ms)\n";
+            } else {
+                echo "  \033[31m⨯\033[0m \033[90mWeatherReportService implements WeatherReportServiceInterface\033[0m\n";
+                echo "    \033[31mWeatherReportService must implement WeatherReportServiceInterface contract.\033[0m\n";
+            }
+
+            $duration = number_format(microtime(true) - $startTime, 2);
+            $failedCount = (!$hasNoDirectNew ? 1 : 0) + (!$hasConstructorDi ? 1 : 0) + (!$hasContainerBinding ? 1 : 0) + (!$implementsInterface ? 1 : 0);
+            $passedCount = 4 - $failedCount;
+            echo "\n  \033[1mTests:\033[0m    \033[31m{$failedCount} failed\033[0m, \033[32m{$passedCount} passed\033[0m (4 assertions)\n";
+            echo "  \033[1mDuration:\033[0m {$duration}s\n";
+            echo "  \033[1mRuntime:\033[0m  PHP {$phpVersion} (Clean Architecture Testbed)\n";
+            echo "  \033[1mVerified:\033[0m [syscraft-runner:1.0.0 UID 1000:1000]\n\n";
+            exit(1);
+        }
+
+        echo "\n\033[42m\033[30m PASS \033[0m \033[1mTests\\Unit\\ClassRefactoringDiTest\033[0m\n";
+        usleep(18000);
+        echo "  \033[32m✓\033[0m \033[90meliminated direct concrete instantiation (zero 'new OpenMeteoClient')\033[0m (12ms)\n";
+        usleep(15000);
+        echo "  \033[32m✓\033[0m \033[90mconstructor injection of SensorClientInterface abstraction (DIP)\033[0m (16ms)\n";
+        usleep(12000);
+        echo "  \033[32m✓\033[0m \033[90mIoC Container binding registered in ServiceProvider register()\033[0m (11ms)\n";
+        usleep(10000);
+        echo "  \033[32m✓\033[0m \033[90mWeatherReportService implements WeatherReportServiceInterface\033[0m (9ms)\n";
+
+        $duration = number_format(microtime(true) - $startTime, 2);
+        echo "\n  \033[1mTests:\033[0m    \033[32m4 passed\033[0m (4 assertions)\n";
+        echo "  \033[1mDuration:\033[0m {$duration}s\n";
+        echo "  \033[1mRuntime:\033[0m  PHP {$phpVersion} (Clean Architecture Testbed)\n";
+        echo "  \033[1mVerified:\033[0m [syscraft-runner:1.0.0 UID 1000:1000]\n\n";
+        exit(0);
+    }
+
     echo "\033[33mNo tests matching filter '$filter' found.\033[0m\n";
     exit(1);
 }
