@@ -387,11 +387,82 @@ if ($command === 'test') {
             $submissionCode = file_get_contents($submissionFile);
         }
 
-        $hasSessionRegenerate = preg_match('/session\s*\(\s*\)\s*->\s*regenerate\s*\(\s*\)/', $submissionCode) ||
-                               preg_match('/\$request\s*->\s*session\s*\(\s*\)\s*->\s*regenerate\s*\(\s*\)/', $submissionCode);
+        // Parse PHP tokens to strip comments and docblocks
+        $tokens = token_get_all($submissionCode);
+        $nonCommentTokens = [];
+        foreach ($tokens as $t) {
+            if (is_array($t)) {
+                if ($t[0] !== T_COMMENT && $t[0] !== T_DOC_COMMENT) {
+                    $nonCommentTokens[] = $t;
+                }
+            } else {
+                $nonCommentTokens[] = $t;
+            }
+        }
 
-        $hasAuthorize = preg_match('/\$this\s*->\s*authorize\s*\(\s*[\'"]update[\'"]\s*,\s*\$record\s*\)/', $submissionCode) ||
-                       preg_match('/Gate::authorize\s*\(\s*[\'"]update[\'"]\s*,\s*\$record\s*\)/', $submissionCode);
+        // Method-scoped AST inspection
+        $inFunction = null;
+        $braceDepth = 0;
+        $loginTokens = [];
+        $updateTokens = [];
+
+        for ($idx = 0; $idx < count($nonCommentTokens); $idx++) {
+            $t = $nonCommentTokens[$idx];
+
+            if (is_array($t) && $t[0] === T_FUNCTION && $inFunction === null) {
+                for ($f = $idx + 1; $f < count($nonCommentTokens); $f++) {
+                    if (is_array($nonCommentTokens[$f]) && $nonCommentTokens[$f][0] === T_STRING) {
+                        $fnName = $nonCommentTokens[$f][1];
+                        if ($fnName === 'login' || $fnName === 'updateRecord') {
+                            $inFunction = $fnName;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if ($inFunction !== null) {
+                if ($t === '{') {
+                    $braceDepth++;
+                } elseif ($t === '}') {
+                    $braceDepth--;
+                    if ($braceDepth === 0) {
+                        $inFunction = null;
+                    }
+                }
+
+                if ($braceDepth > 0) {
+                    if ($inFunction === 'login') {
+                        $loginTokens[] = $t;
+                    } elseif ($inFunction === 'updateRecord') {
+                        $updateTokens[] = $t;
+                    }
+                }
+            }
+        }
+
+        $loginCode = '';
+        foreach ($loginTokens as $t) {
+            $loginCode .= is_array($t) ? $t[1] : $t;
+        }
+
+        $updateCode = '';
+        foreach ($updateTokens as $t) {
+            $updateCode .= is_array($t) ? $t[1] : $t;
+        }
+
+        // 1. Session Fixation Defense:
+        $hasSessionRegenerate = (bool)preg_match('/(?:\$request\s*->\s*session\s*\(\s*\)|session\s*\(\s*\))\s*->\s*regenerate\s*\(\s*\)\s*;/', $loginCode);
+
+        // 2. Model Policy Gate:
+        $hasAuthorize = false;
+        if (preg_match('/(?:\$this\s*->\s*authorize|Gate::authorize)\s*\(\s*[\'"]update[\'"]\s*,\s*\$record\s*\)\s*;/', $updateCode)) {
+            $authPos = strpos($updateCode, 'authorize');
+            $recordUpdatePos = strpos($updateCode, '$record->update(');
+            if ($recordUpdatePos === false || $authPos < $recordUpdatePos) {
+                $hasAuthorize = true;
+            }
+        }
 
         if (!$hasSessionRegenerate || !$hasAuthorize) {
             echo "\n\033[41m\033[37m FAIL \033[0m \033[1mTests\\Feature\\SecurityAuthSprintTest\033[0m\n";
