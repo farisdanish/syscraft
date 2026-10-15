@@ -53,12 +53,12 @@ import {
 } from '../tracer/tracerSteps';
 import { StarStoryBuilder } from '../system-design/StarStoryBuilder';
 import { CURRICULUM_TASKS } from '../../data/curriculumTasks';
-import { OralRubricDialog } from '../rubric/OralRubricDialog';
 import { ResetProgressModal } from './studio/ResetProgressModal';
 import { StudioFooter } from './studio/StudioFooter';
 import { StudioStepper } from './studio/StudioStepper';
 import { StepConceptBrief } from './studio/steps/StepConceptBrief';
 import { StepAssertionOutput } from './studio/steps/StepAssertionOutput';
+import { StepOralRubric } from './studio/steps/StepOralRubric';
 import { 
   saveDrillProgress, 
   getDrillProgress, 
@@ -1530,36 +1530,13 @@ export function StudioLayout({
 
         {/* STEP 4: Scored Oral Recall Rubric */}
         {currentStep === 4 && (
-          <div className="studio-scrollable-step">
-            <div style={{ maxWidth: '860px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-              <OralRubricDialog
-                drillId={activeDrill.id}
-                week={activeDrill.week}
-                topic={activeDrill.title}
-                question={activeDrill.oralRubric.question}
-                checkpoints={activeDrill.oralRubric.checkpoints}
-                onCompleted={handleOralRubricCompleted}
-              />
-
-              <div className="studio-step-actions">
-                <Button variant="default-outline" size="small" onClick={() => goToStep(3)}>
-                  <ChevronLeft size={14} style={{ marginRight: '4px' }} />
-                  Back to Assertions
-                </Button>
-                <Button 
-                  id="proceed-to-tracer-btn"
-                  variant="primary-fill" 
-                  size="small" 
-                  disabled={!stepCompletions[4]}
-                  onClick={() => goToStep(5)}
-                  title={!stepCompletions[4] ? "Submit your oral rubric score above to unlock Tracer Replay" : "Advance to Tracer Replay"}
-                >
-                  {stepCompletions[4] ? "Proceed to Step 5: Tracer Replay" : "Submit Rubric to Unlock Tracer Replay"}
-                  <ChevronRight size={14} style={{ marginLeft: '4px' }} />
-                </Button>
-              </div>
-            </div>
-          </div>
+          <StepOralRubric
+            activeDrill={activeDrill}
+            isCompleted={stepCompletions[4]}
+            onOralRubricCompleted={handleOralRubricCompleted}
+            onBackToStep3={() => goToStep(3)}
+            onProceedToStep5={() => goToStep(5)}
+          />
         )}
 
         {/* STEP 5: Visual Tracer Replay */}
