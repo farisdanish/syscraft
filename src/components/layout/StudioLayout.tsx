@@ -60,6 +60,7 @@ import {
 import { StarStoryBuilder } from '../system-design/StarStoryBuilder';
 import { CURRICULUM_TASKS } from '../../data/curriculumTasks';
 import { OralRubricDialog } from '../rubric/OralRubricDialog';
+import { ResetProgressModal } from './studio/ResetProgressModal';
 import { 
   saveDrillProgress, 
   getDrillProgress, 
@@ -179,51 +180,7 @@ export function StudioLayout({
     const s = sec % 60;
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
-  const cancelResetBtnRef = useRef<HTMLButtonElement | null>(null);
-  const confirmResetBtnRef = useRef<HTMLButtonElement | null>(null);
   const clearTriggerBtnRef = useRef<HTMLButtonElement | null>(null);
-
-  // Accessible Modal Keyboard Trap & Escape-to-Close
-  useEffect(() => {
-    if (!showResetModal) return;
-
-    // Auto-focus Cancel button when modal opens
-    const timer = setTimeout(() => {
-      cancelResetBtnRef.current?.focus();
-    }, 40);
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setShowResetModal(false);
-        clearTriggerBtnRef.current?.focus();
-        return;
-      }
-      if (e.key === 'Tab') {
-        const cancelBtn = cancelResetBtnRef.current;
-        const confirmBtn = confirmResetBtnRef.current;
-        if (!cancelBtn || !confirmBtn) return;
-
-        if (e.shiftKey) {
-          if (document.activeElement === cancelBtn) {
-            e.preventDefault();
-            confirmBtn.focus();
-          }
-        } else {
-          if (document.activeElement === confirmBtn) {
-            e.preventDefault();
-            cancelBtn.focus();
-          }
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [showResetModal]);
 
   // Tier 3 Bridge Daemon State
   const [bridgeStatus, setBridgeStatus] = useState<BridgeHealth>({ connected: false });
@@ -2047,96 +2004,14 @@ export function StudioLayout({
       </footer>
 
       {/* Modal: Confirm Clear Learner Progress */}
-      {showResetModal && (
-        <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'var(--studio-overlay)',
-            backdropFilter: 'var(--studio-glass-blur)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
-          }}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="reset-modal-title"
-        >
-          <div style={{
-            maxWidth: '460px',
-            width: '100%',
-            backgroundColor: 'var(--studio-surface)',
-            border: '1px solid var(--studio-border)',
-            borderRadius: '10px',
-            boxShadow: 'var(--studio-shadow-float)',
-            padding: '1.25rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ 
-                width: '36px', 
-                height: '36px', 
-                borderRadius: '50%', 
-                backgroundColor: 'var(--studio-danger-subtle)', 
-                color: 'var(--studio-danger)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                <AlertCircle size={20} />
-              </div>
-              <div>
-                <h3 id="reset-modal-title" style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--studio-text)' }}>
-                  Clear All Learner Progress?
-                </h3>
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--studio-text-muted)', lineHeight: 1.45 }}>
-                  This will reset your drill completions, sessions, oral scores, and hesitation records.
-                </p>
-              </div>
-            </div>
-
-            <div style={{ 
-              padding: '0.625rem 0.75rem', 
-              borderRadius: '6px', 
-              backgroundColor: 'var(--studio-surface-subtle)', 
-              fontSize: '0.75rem', 
-              color: 'var(--studio-text-muted)',
-              border: '1px solid var(--studio-border)'
-            }}>
-              Application preferences (such as light/dark theme) will be preserved.
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.25rem' }}>
-              <Button 
-                ref={cancelResetBtnRef}
-                id="cancel-reset-btn"
-                variant="default-outline" 
-                size="small" 
-                onClick={() => {
-                  setShowResetModal(false);
-                  clearTriggerBtnRef.current?.focus();
-                }}
-              >
-                Cancel
-              </Button>
-              <Button 
-                ref={confirmResetBtnRef}
-                id="confirm-reset-btn"
-                variant="danger-fill" 
-                size="small" 
-                onClick={handleConfirmResetProgress}
-              >
-                Yes, Reset All Progress
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ResetProgressModal
+        isOpen={showResetModal}
+        onClose={() => {
+          setShowResetModal(false);
+          clearTriggerBtnRef.current?.focus();
+        }}
+        onConfirm={handleConfirmResetProgress}
+      />
     </div>
   );
 }

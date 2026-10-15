@@ -18,7 +18,6 @@ import {
   Clock,
   ShieldCheck,
   X,
-  Trash2,
   Layers,
   Code2,
   Database,
@@ -26,6 +25,7 @@ import {
   Shield
 } from 'lucide-react';
 import { CURRICULUM_TASKS, resolveTaskStatus, resolveTaskAvailability } from '../../data/curriculumTasks';
+import { ResetProgressModal } from '../layout/studio/ResetProgressModal';
 import type { TaskState, HesitationLogItem } from '../../types';
 import { 
   getAllTaskStates, 
@@ -54,8 +54,6 @@ export function HomeHub({
   
   // Modal State & Accessibility Refs
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
-  const cancelResetBtnRef = useRef<HTMLButtonElement | null>(null);
-  const confirmResetBtnRef = useRef<HTMLButtonElement | null>(null);
   const clearTriggerBtnRef = useRef<HTMLButtonElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -102,47 +100,7 @@ export function HomeHub({
     };
   }, []);
 
-  // Modal Keyboard Trap & Escape Key Handler
-  useEffect(() => {
-    if (!showResetModal) return;
 
-    const timer = setTimeout(() => {
-      cancelResetBtnRef.current?.focus();
-    }, 40);
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setShowResetModal(false);
-        clearTriggerBtnRef.current?.focus();
-        return;
-      }
-
-      if (e.key === 'Tab') {
-        const cancelBtn = cancelResetBtnRef.current;
-        const confirmBtn = confirmResetBtnRef.current;
-        if (!cancelBtn || !confirmBtn) return;
-
-        if (e.shiftKey) {
-          if (document.activeElement === cancelBtn) {
-            e.preventDefault();
-            confirmBtn.focus();
-          }
-        } else {
-          if (document.activeElement === confirmBtn) {
-            e.preventDefault();
-            cancelBtn.focus();
-          }
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [showResetModal]);
 
   // Telemetry Metrics
   const activeTasks = CURRICULUM_TASKS.filter(t => t.statusActiveInMvp);
@@ -781,73 +739,16 @@ export function HomeHub({
       </footer>
 
       {/* Accessible WCAG 2.2 AA Reset Confirmation Modal */}
-      {showResetModal && (
-        <div 
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="reset-modal-title"
-          aria-describedby="reset-modal-desc"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'var(--studio-overlay)',
-            backdropFilter: 'var(--studio-glass-blur)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
-          }}
-        >
-          <div style={{
-            backgroundColor: 'var(--studio-surface)',
-            border: '1px solid var(--studio-border)',
-            borderRadius: '10px',
-            maxWidth: '460px',
-            width: '100%',
-            padding: '1.25rem',
-            boxShadow: 'var(--studio-shadow-float)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--studio-danger)' }}>
-              <AlertCircle size={20} />
-              <h3 id="reset-modal-title" style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
-                Reset All Learner Progress?
-              </h3>
-            </div>
-
-            <p id="reset-modal-desc" style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--studio-text-muted)', lineHeight: 1.5 }}>
-              This will clear all saved draft code, drill sessions, oral rubric defense scores, and Sunday review hesitations across all weeks in IndexedDB. This action cannot be undone.
-            </p>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', paddingTop: '0.5rem' }}>
-              <Button
-                ref={cancelResetBtnRef}
-                variant="default-outline"
-                size="small"
-                onClick={() => {
-                  setShowResetModal(false);
-                  clearTriggerBtnRef.current?.focus();
-                }}
-              >
-                Cancel
-              </Button>
-
-              <Button
-                ref={confirmResetBtnRef}
-                variant="danger-fill"
-                size="small"
-                onClick={handleConfirmReset}
-              >
-                <Trash2 size={13} style={{ marginRight: '4px' }} />
-                Reset Everything
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ResetProgressModal
+        isOpen={showResetModal}
+        onClose={() => {
+          setShowResetModal(false);
+          clearTriggerBtnRef.current?.focus();
+        }}
+        onConfirm={handleConfirmReset}
+        title="Reset All Learner Progress?"
+        description="This will clear all saved draft code, drill sessions, oral rubric defense scores, and Sunday review hesitations across all weeks in IndexedDB. This action cannot be undone."
+      />
     </div>
   );
 }
