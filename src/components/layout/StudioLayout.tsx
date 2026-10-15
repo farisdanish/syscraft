@@ -862,7 +862,7 @@ export function StudioLayout({
               gap: '0.35rem',
               padding: '2px 8px',
               borderRadius: '6px',
-              backgroundColor: sprintSeconds <= 300 ? 'rgba(244, 63, 94, 0.15)' : 'var(--studio-surface-subtle)',
+              backgroundColor: sprintSeconds <= 300 ? 'var(--studio-danger-subtle)' : 'var(--studio-surface-subtle)',
               border: `1px solid ${sprintSeconds <= 300 ? 'var(--studio-danger)' : 'var(--studio-border)'}`,
               fontSize: '0.75rem',
               color: sprintSeconds <= 300 ? 'var(--studio-danger)' : 'var(--studio-text)',
@@ -996,7 +996,7 @@ export function StudioLayout({
                     padding: '4px 11px',
                     borderRadius: '20px',
                     border: `1.5px solid ${isActive ? 'var(--studio-primary)' : isCompleted ? 'var(--studio-success)' : 'var(--studio-border)'}`,
-                    backgroundColor: isActive ? 'var(--studio-primary)' : isCompleted ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                    backgroundColor: isActive ? 'var(--studio-primary)' : isCompleted ? 'var(--studio-success-subtle)' : 'transparent',
                     color: isActive ? 'var(--studio-primary-contrast)' : isCompleted ? 'var(--studio-success)' : isLocked ? 'var(--studio-text-faint)' : 'var(--studio-text)',
                     fontSize: '0.75rem',
                     fontWeight: 600,
@@ -1036,7 +1036,7 @@ export function StudioLayout({
                       maxWidth: '48px',
                       margin: '0 6px',
                       backgroundColor: isCompleted ? 'var(--studio-success)' : isUnlocked ? 'var(--studio-border-strong)' : 'var(--studio-border)',
-                      boxShadow: isCompleted ? '0 0 6px rgba(16, 185, 129, 0.35)' : 'none',
+                      boxShadow: isCompleted ? 'var(--studio-success-glow)' : 'none',
                       transition: 'all 0.25s ease'
                     }}
                     aria-hidden="true"
@@ -1353,7 +1353,7 @@ export function StudioLayout({
                     <div style={{ 
                       padding: '0.625rem 0.75rem', 
                       borderRadius: '6px', 
-                      backgroundColor: activeDrill.week === 7 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(234, 179, 8, 0.08)', 
+                      backgroundColor: activeDrill.week === 7 ? 'var(--studio-danger-subtle)' : 'var(--studio-warning-subtle)', 
                       borderLeft: `4px solid ${activeDrill.week === 7 ? 'var(--studio-danger)' : 'var(--studio-warning)'}`,
                       fontSize: '0.75rem',
                       color: 'var(--studio-text)'
@@ -2052,8 +2052,8 @@ export function StudioLayout({
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
-            backdropFilter: 'blur(3px)',
+            backgroundColor: 'var(--studio-overlay)',
+            backdropFilter: 'var(--studio-glass-blur)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -2070,7 +2070,7 @@ export function StudioLayout({
             backgroundColor: 'var(--studio-surface)',
             border: '1px solid var(--studio-border)',
             borderRadius: '10px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
+            boxShadow: 'var(--studio-shadow-float)',
             padding: '1.25rem',
             display: 'flex',
             flexDirection: 'column',
@@ -2081,7 +2081,7 @@ export function StudioLayout({
                 width: '36px', 
                 height: '36px', 
                 borderRadius: '50%', 
-                backgroundColor: 'rgba(239, 68, 68, 0.12)', 
+                backgroundColor: 'var(--studio-danger-subtle)', 
                 color: 'var(--studio-danger)',
                 display: 'flex',
                 alignItems: 'center',

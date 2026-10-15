@@ -790,7 +790,8 @@ export function HomeHub({
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backgroundColor: 'var(--studio-overlay)',
+            backdropFilter: 'var(--studio-glass-blur)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -805,7 +806,7 @@ export function HomeHub({
             maxWidth: '460px',
             width: '100%',
             padding: '1.25rem',
-            boxShadow: 'var(--studio-shadow-md)',
+            boxShadow: 'var(--studio-shadow-float)',
             display: 'flex',
             flexDirection: 'column',
             gap: '1rem',

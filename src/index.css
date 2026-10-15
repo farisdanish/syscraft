@@ -37,10 +37,29 @@
   --studio-success: #059669;
   --studio-warning: #d97706;
   --studio-danger: #dc2626;
+
+  /* Subtle Status Backgrounds & Highlights */
+  --studio-success-subtle: rgba(5, 150, 105, 0.1);
+  --studio-warning-subtle: rgba(217, 119, 6, 0.1);
+  --studio-danger-subtle: rgba(220, 38, 38, 0.1);
+  --studio-info-subtle: rgba(2, 132, 199, 0.1);
+  --studio-accent-violet-subtle: rgba(124, 58, 237, 0.1);
+
+  /* Status Borders & Halos */
+  --studio-success-border: rgba(5, 150, 105, 0.25);
+  --studio-danger-border: rgba(220, 38, 38, 0.25);
+  --studio-success-glow: 0 0 12px rgba(5, 150, 105, 0.25);
+
+  /* Glassmorphism & Overlays */
+  --studio-glass-bg: rgba(255, 255, 255, 0.85);
+  --studio-glass-border: rgba(226, 232, 240, 0.8);
+  --studio-glass-blur: blur(12px);
+  --studio-overlay: rgba(15, 23, 42, 0.6);
   
   /* Shadows */
   --studio-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --studio-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
+  --studio-shadow-float: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --studio-shadow-glow: 0 0 16px rgba(2, 132, 199, 0.35);
 
   font-family: var(--studio-font-sans);
@@ -74,10 +93,29 @@
   --studio-success: #10b981;
   --studio-warning: #f59e0b;
   --studio-danger: #f43f5e;
+
+  /* Subtle Status Backgrounds & Highlights */
+  --studio-success-subtle: rgba(16, 185, 129, 0.12);
+  --studio-warning-subtle: rgba(245, 158, 11, 0.12);
+  --studio-danger-subtle: rgba(244, 63, 94, 0.12);
+  --studio-info-subtle: rgba(56, 189, 248, 0.12);
+  --studio-accent-violet-subtle: rgba(167, 139, 250, 0.15);
+
+  /* Status Borders & Halos */
+  --studio-success-border: rgba(16, 185, 129, 0.35);
+  --studio-danger-border: rgba(244, 63, 94, 0.35);
+  --studio-success-glow: 0 0 16px rgba(16, 185, 129, 0.3);
+
+  /* Glassmorphism & Overlays */
+  --studio-glass-bg: rgba(17, 24, 39, 0.85);
+  --studio-glass-border: rgba(148, 163, 184, 0.18);
+  --studio-glass-blur: blur(12px);
+  --studio-overlay: rgba(0, 0, 0, 0.7);
   
   /* Shadows */
   --studio-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
   --studio-shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.55);
+  --studio-shadow-float: 0 20px 25px -5px rgba(0, 0, 0, 0.45), 0 10px 10px -5px rgba(0, 0, 0, 0.25);
   --studio-shadow-glow: 0 0 20px rgba(56, 189, 248, 0.4);
 
   color-scheme: dark;

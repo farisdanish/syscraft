@@ -40,9 +40,9 @@ import {
 
 const PHASE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   bootstrap: { bg: 'var(--studio-primary-glow)', text: 'var(--studio-primary)', border: 'var(--studio-border-strong)' },
-  middleware: { bg: 'rgba(245, 158, 11, 0.15)', text: 'var(--studio-warning)', border: 'var(--studio-border-strong)' },
-  resolution: { bg: 'rgba(139, 92, 246, 0.15)', text: 'var(--studio-primary)', border: 'var(--studio-border-strong)' },
-  execution: { bg: 'rgba(16, 185, 129, 0.15)', text: 'var(--studio-success)', border: 'var(--studio-border-strong)' },
+  middleware: { bg: 'var(--studio-warning-subtle)', text: 'var(--studio-warning)', border: 'var(--studio-border-strong)' },
+  resolution: { bg: 'var(--studio-accent-violet-subtle)', text: 'var(--studio-primary)', border: 'var(--studio-border-strong)' },
+  execution: { bg: 'var(--studio-success-subtle)', text: 'var(--studio-success)', border: 'var(--studio-border-strong)' },
   termination: { bg: 'var(--studio-surface-subtle)', text: 'var(--studio-text-muted)', border: 'var(--studio-border)' },
 };
 

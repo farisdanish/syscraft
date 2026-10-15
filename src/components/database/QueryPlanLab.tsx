@@ -334,9 +334,9 @@ export function QueryPlanLab({
             <div style={{
               padding: '0.85rem 1rem',
               borderRadius: '8px',
-              backgroundColor: 'rgba(16, 185, 129, 0.08)',
+              backgroundColor: 'var(--studio-success-subtle)',
               border: '1.5px solid var(--studio-success)',
-              boxShadow: '0 0 16px rgba(16, 185, 129, 0.2)',
+              boxShadow: 'var(--studio-success-glow)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -377,8 +377,8 @@ export function QueryPlanLab({
             <div style={{ 
               padding: '0.75rem', 
               borderRadius: '8px', 
-              backgroundColor: 'rgba(239, 68, 68, 0.08)', 
-              border: '1px solid rgba(239, 68, 68, 0.25)',
+              backgroundColor: 'var(--studio-danger-subtle)', 
+              border: '1px solid var(--studio-danger-border)',
               fontSize: '0.75rem'
             }}>
               <div style={{ fontWeight: 700, color: 'var(--studio-danger)', marginBottom: '4px' }}>1. Baseline (Unindexed):</div>
@@ -390,8 +390,8 @@ export function QueryPlanLab({
             <div style={{ 
               padding: '0.75rem', 
               borderRadius: '8px', 
-              backgroundColor: currentPlan?.usesFullTableScan ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)', 
-              border: `1px solid ${currentPlan?.usesFullTableScan ? 'rgba(239, 68, 68, 0.25)' : 'rgba(16, 185, 129, 0.35)'}`,
+              backgroundColor: currentPlan?.usesFullTableScan ? 'var(--studio-danger-subtle)' : 'var(--studio-success-subtle)', 
+              border: `1px solid ${currentPlan?.usesFullTableScan ? 'var(--studio-danger-border)' : 'var(--studio-success-border)'}`,
               fontSize: '0.75rem'
             }}>
               <div style={{ fontWeight: 700, color: currentPlan?.usesFullTableScan ? 'var(--studio-danger)' : 'var(--studio-success)', marginBottom: '4px' }}>
