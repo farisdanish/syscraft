@@ -298,7 +298,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
       setStarStories(targetSession.starStories);
       setHintsUsed(targetSession.hintsUsed || 0);
       setSolutionRevealed(targetSession.solutionRevealed || false);
-      setPoliteNotice(`Resumed session for ${nextDrill.title} at Step ${targetSession.currentStep}`);
+      setPoliteNotice(`Switched to Week ${nextDrill.week}: ${nextDrill.title.split('(')[0].trim()}, resumed at Step ${targetSession.currentStep}.`);
     } else {
       setStarStories(undefined);
       setHintsUsed(0);
@@ -313,6 +313,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
         setTier3Result(null);
         setVerificationSource(legacyProg.verificationSource || 'simulation');
         setDrillCompleted(true);
+        setPoliteNotice(`Switched to Week ${nextDrill.week}: ${nextDrill.title.split('(')[0].trim()}, resumed at Step 1.`);
       } else {
         setUserCode(nextDrill.initialCode);
         setCurrentStep(1);
@@ -322,6 +323,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
         setTier3Result(null);
         setVerificationSource('simulation');
         setDrillCompleted(false);
+        setPoliteNotice(`Switched to Week ${nextDrill.week}: ${nextDrill.title.split('(')[0].trim()}, resumed at Step 1.`);
       }
     }
   }, [selectedWeek, activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, userCode, testResults, tier3Result, verificationSource, drillCompleted, starStories, hintsUsed, solutionRevealed]);

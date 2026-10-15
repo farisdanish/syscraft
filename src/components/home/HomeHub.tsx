@@ -6,9 +6,6 @@ import {
   Sun,
   Moon,
   Play,
-  RotateCcw,
-  Download,
-  Upload,
   CheckCircle2,
   AlertCircle,
   Flag,
@@ -26,6 +23,7 @@ import {
 } from 'lucide-react';
 import { CURRICULUM_TASKS, resolveTaskStatus, resolveTaskAvailability } from '../../data/curriculumTasks';
 import { ResetProgressModal } from '../layout/studio/ResetProgressModal';
+import { UtilitiesMenu } from '../common/UtilitiesMenu';
 import type { TaskState, HesitationLogItem } from '../../types';
 import { 
   getAllTaskStates, 
@@ -196,12 +194,14 @@ export function HomeHub({
             </span>
           </div>
 
-          {/* Navigation Tabs */}
-          <div style={{ marginLeft: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          {/* Navigation Tabs - Segmented Control */}
+          <div style={{ marginLeft: '1.25rem', display: 'inline-flex', alignItems: 'center', backgroundColor: 'var(--studio-surface-subtle)', padding: '2px', borderRadius: '6px', border: '1px solid var(--studio-border)' }}>
             <Button
-              variant="primary-fill"
+              id="nav-curriculum-btn"
+              variant="default-outline"
               size="small"
-              style={{ fontWeight: 600, padding: '3px 10px' }}
+              onClick={() => {}}
+              style={{ backgroundColor: 'var(--studio-surface-hover)', borderColor: 'var(--studio-border)', padding: '3px 10px', fontWeight: 600 }}
               aria-current="page"
             >
               Curriculum
@@ -211,7 +211,7 @@ export function HomeHub({
               variant="default-outline"
               size="small"
               onClick={onNavigateArchitecture}
-              style={{ padding: '3px 10px' }}
+              style={{ border: 'none', backgroundColor: 'transparent', padding: '3px 10px' }}
               aria-label="View Technical Architecture & How It Works"
             >
               <Layers size={13} style={{ marginRight: '4px' }} />
@@ -221,41 +221,26 @@ export function HomeHub({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {/* Quick Direct Launch */}
+          {/* Quick Direct Launch - Sole primary-fill button in header */}
           <Button
             id="hub-launch-workbench-btn"
             variant="primary-fill"
             size="small"
-            onClick={() => onLaunchWorkbench(1)}
+            onClick={() => onLaunchWorkbench(inProgressCount > 0 ? inProgressWeek : 1)}
             aria-label="Open Studio Workbench"
           >
             <Play size={13} style={{ marginRight: '5px' }} />
             Open Workbench
           </Button>
 
-          {/* Envelope Export */}
-          <Button
-            id="hub-export-btn"
-            variant="default-outline"
-            size="small"
-            onClick={handleExportEnvelope}
-            aria-label="Export Envelope JSON"
-          >
-            <Download size={13} style={{ marginRight: '5px' }} />
-            Export
-          </Button>
-
-          {/* Envelope Import */}
-          <Button
-            id="hub-import-btn"
-            variant="default-outline"
-            size="small"
-            onClick={() => fileInputRef.current?.click()}
-            aria-label="Import Envelope JSON"
-          >
-            <Upload size={13} style={{ marginRight: '5px' }} />
-            Import
-          </Button>
+          {/* Shared Utilities Menu */}
+          <UtilitiesMenu
+            idPrefix="hub"
+            onExportBackup={handleExportEnvelope}
+            onImportBackup={() => fileInputRef.current?.click()}
+            onOpenResetModal={() => setShowResetModal(true)}
+            clearTriggerBtnRef={clearTriggerBtnRef}
+          />
           <input
             ref={fileInputRef}
             type="file"
@@ -264,19 +249,6 @@ export function HomeHub({
             onChange={handleImportFileChange}
             aria-hidden="true"
           />
-
-          {/* Reset Progress */}
-          <Button
-            ref={clearTriggerBtnRef}
-            id="hub-reset-progress-btn"
-            variant="default-outline"
-            size="small"
-            onClick={() => setShowResetModal(true)}
-            aria-label="Reset Learner Progress"
-          >
-            <RotateCcw size={13} style={{ marginRight: '5px' }} />
-            Reset
-          </Button>
 
           {/* Theme Toggle */}
           <Button
@@ -329,6 +301,25 @@ export function HomeHub({
             <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--studio-text-muted)', lineHeight: 1.55 }}>
               Interactive code challenges, database query plan labs, and structured architectural defense to prepare you for senior backend interviews and high-scale production systems.
             </p>
+            {/* Disciplines Row as Compact Pills */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.65rem' }}>
+              <span className="home-topic-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Code2 size={12} color="var(--studio-primary)" />
+                <strong>Framework Internals:</strong> Lifecycle &amp; N+1 budgets
+              </span>
+              <span className="home-topic-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Database size={12} color="var(--studio-primary)" />
+                <strong>Database Engineering:</strong> B-Tree seeks &amp; EXPLAIN
+              </span>
+              <span className="home-topic-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Cpu size={12} color="var(--studio-primary)" />
+                <strong>Distributed Queues:</strong> Retries &amp; dead-letter routing
+              </span>
+              <span className="home-topic-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Shield size={12} color="var(--studio-primary)" />
+                <strong>Architecture &amp; Security:</strong> STAR defense &amp; policy gates
+              </span>
+            </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
@@ -356,160 +347,60 @@ export function HomeHub({
           </div>
         </section>
 
-        {/* 4 High-Level Learning Tracks */}
-        <section aria-label="Core Engineering Disciplines">
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '0.75rem'
-          }}>
-            <div style={{
-              backgroundColor: 'var(--studio-surface)',
-              border: '1px solid var(--studio-border)',
-              borderRadius: '8px',
-              padding: '0.6rem 0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              boxShadow: 'var(--studio-shadow-sm)'
-            }}>
-              <Code2 size={20} color="var(--studio-primary)" style={{ flexShrink: 0 }} />
-              <div>
-                <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-text)', display: 'block' }}>
-                  Framework Internals
-                </strong>
-                <span style={{ fontSize: '0.71875rem', color: 'var(--studio-text-muted)' }}>
-                  Request lifecycle &amp; N+1 query budgets
-                </span>
-              </div>
-            </div>
-
-            <div style={{
-              backgroundColor: 'var(--studio-surface)',
-              border: '1px solid var(--studio-border)',
-              borderRadius: '8px',
-              padding: '0.6rem 0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              boxShadow: 'var(--studio-shadow-sm)'
-            }}>
-              <Database size={20} color="var(--studio-primary)" style={{ flexShrink: 0 }} />
-              <div>
-                <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-text)', display: 'block' }}>
-                  Database Engineering
-                </strong>
-                <span style={{ fontSize: '0.71875rem', color: 'var(--studio-text-muted)' }}>
-                  B-tree seeks &amp; EXPLAIN plan analysis
-                </span>
-              </div>
-            </div>
-
-            <div style={{
-              backgroundColor: 'var(--studio-surface)',
-              border: '1px solid var(--studio-border)',
-              borderRadius: '8px',
-              padding: '0.6rem 0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              boxShadow: 'var(--studio-shadow-sm)'
-            }}>
-              <Cpu size={20} color="var(--studio-primary)" style={{ flexShrink: 0 }} />
-              <div>
-                <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-text)', display: 'block' }}>
-                  Distributed Queues
-                </strong>
-                <span style={{ fontSize: '0.71875rem', color: 'var(--studio-text-muted)' }}>
-                  Idempotency, retries &amp; dead-letter routing
-                </span>
-              </div>
-            </div>
-
-            <div style={{
-              backgroundColor: 'var(--studio-surface)',
-              border: '1px solid var(--studio-border)',
-              borderRadius: '8px',
-              padding: '0.6rem 0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              boxShadow: 'var(--studio-shadow-sm)'
-            }}>
-              <Shield size={20} color="var(--studio-primary)" style={{ flexShrink: 0 }} />
-              <div>
-                <strong style={{ fontSize: '0.8125rem', color: 'var(--studio-text)', display: 'block' }}>
-                  Architecture &amp; Security
-                </strong>
-                <span style={{ fontSize: '0.71875rem', color: 'var(--studio-text-muted)' }}>
-                  STAR interview defense &amp; policy gates
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Streamlined Learner Telemetry Progress Strip */}
-        <section aria-label="Learner Telemetry">
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '0.75rem'
-          }}>
-            {/* Progress % */}
-            <div className="home-metric-card" style={{ padding: '0.6rem 0.85rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span className="home-metric-label">Curriculum Mastery</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--studio-primary)' }}>
-                  {masteredCount} of {totalActive} Mastered
-                </span>
-              </div>
-              <div className="home-metric-value" style={{ fontSize: '1.35rem', marginTop: '2px' }}>
-                <span>{progressPercent}%</span>
-              </div>
-              <div style={{ 
-                height: '4px', 
-                backgroundColor: 'var(--studio-border)', 
-                borderRadius: '2px', 
-                overflow: 'hidden', 
-                marginTop: '4px' 
-              }}>
-                <div style={{ 
-                  height: '100%', 
-                  width: `${progressPercent}%`, 
-                  backgroundColor: 'var(--studio-primary)',
-                  transition: 'width 0.3s ease'
-                }} />
-              </div>
-            </div>
-
-            {/* In-Progress Modules */}
-            <div className="home-metric-card" style={{ padding: '0.6rem 0.85rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span className="home-metric-label">Active Drill</span>
-                <Clock size={14} color="var(--studio-primary)" style={{ opacity: 0.8 }} />
-              </div>
-              <div className="home-metric-value" style={{ fontSize: '1.35rem', marginTop: '2px' }}>
-                <span>{inProgressCount > 0 ? `Week ${inProgressWeek}` : 'None'}</span>
-              </div>
-              <span className="home-metric-subtext" style={{ fontSize: '0.71875rem' }}>
-                {inProgressCount > 0 ? 'Draft progress auto-saved in browser' : 'Select a drill below to begin'}
+        {/* Single Slim Summary Bar */}
+        <section aria-label="Learner Telemetry Summary" style={{ 
+          backgroundColor: 'var(--studio-surface)', 
+          border: '1px solid var(--studio-border)', 
+          borderRadius: '8px', 
+          padding: '0.55rem 1rem', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          gap: '1.25rem',
+          flexWrap: 'wrap',
+          boxShadow: 'var(--studio-shadow-sm)'
+        }}>
+          {/* Mastery Item */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: '220px', flex: 1 }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--studio-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Curriculum Mastery
+              </span>
+              <span style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--studio-text)' }}>
+                {progressPercent}% <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--studio-text-muted)' }}>({masteredCount} of {totalActive} Mastered)</span>
               </span>
             </div>
+            <div style={{ flex: 1, minWidth: '70px', height: '6px', backgroundColor: 'var(--studio-border)', borderRadius: '3px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${progressPercent}%`, backgroundColor: 'var(--studio-primary)', transition: 'width 0.3s ease' }} />
+            </div>
+          </div>
 
-            {/* Sunday Review Queue */}
-            <div className="home-metric-card" style={{ padding: '0.6rem 0.85rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span className="home-metric-label">Sunday Oral Defense</span>
-                <Flag size={14} color="var(--studio-warning)" style={{ opacity: 0.8 }} />
-              </div>
-              <div className="home-metric-value" style={{ fontSize: '1.35rem', marginTop: '2px' }}>
-                <span style={{ color: hesitations.length > 0 ? 'var(--studio-warning)' : 'inherit' }}>
-                  {hesitations.length} Flagged
-                </span>
-              </div>
-              <span className="home-metric-subtext" style={{ fontSize: '0.71875rem' }}>
-                {hesitations.length > 0 ? 'Hesitation review items waiting' : 'No review hesitations queued'}
+          <div style={{ height: '24px', width: '1px', backgroundColor: 'var(--studio-border)' }} />
+
+          {/* Active Drill Item */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Clock size={15} color="var(--studio-primary)" />
+            <div>
+              <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--studio-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+                Active Drill
+              </span>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--studio-text)' }}>
+                {inProgressCount > 0 ? `Week ${inProgressWeek}: Draft auto-saved` : 'None in progress'}
+              </span>
+            </div>
+          </div>
+
+          <div style={{ height: '24px', width: '1px', backgroundColor: 'var(--studio-border)' }} />
+
+          {/* Sunday Review Queue */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Flag size={15} color={hesitations.length > 0 ? 'var(--studio-warning)' : 'var(--studio-text-muted)'} />
+            <div>
+              <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--studio-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+                Sunday Oral Defense
+              </span>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: hesitations.length > 0 ? 'var(--studio-warning)' : 'var(--studio-text)' }}>
+                {hesitations.length > 0 ? `${hesitations.length} Hesitations Flagged` : '0 Queued'}
               </span>
             </div>
           </div>
@@ -728,9 +619,10 @@ export function HomeHub({
               border: 'none',
               padding: 0,
               fontSize: '0.75rem',
-              color: 'var(--studio-text-faint)',
+              color: 'var(--studio-danger)',
               textDecoration: 'underline',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              fontWeight: 500
             }}
           >
             Clear All Learner Data

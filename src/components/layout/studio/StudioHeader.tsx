@@ -4,10 +4,7 @@ import { Tag } from '@govtechmy/myds-react/tag';
 import { 
   Sun, 
   Moon, 
-  Download, 
-  Upload, 
   Flag,
-  Trash2,
   LayoutDashboard,
   Layers,
   Clock,
@@ -17,6 +14,7 @@ import { type DrillDefinition } from '../../../types';
 import { ACTIVE_WEEKS } from '../../../drills/registry';
 import { CURRICULUM_TASKS } from '../../../data/curriculumTasks';
 import { type BridgeHealth } from '../../../services/bridgeClient';
+import { UtilitiesMenu } from '../../common/UtilitiesMenu';
 
 export interface StudioHeaderProps {
   selectedWeek: number;
@@ -69,7 +67,7 @@ export function StudioHeader({
     <>
       <header className="studio-header">
         {/* Zone 1: Identity & Module Selector */}
-        <div className="studio-header-zone-left">
+        <div className="studio-header-zone-left" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {onNavigateHome && (
             <Button
               id="back-to-hub-btn"
@@ -114,51 +112,38 @@ export function StudioHeader({
             SC
           </div>
 
-          <div style={{ display: 'inline-flex', padding: '2px', backgroundColor: 'var(--studio-surface-subtle)', borderRadius: '6px', border: '1px solid var(--studio-border)', flexShrink: 0 }}>
+          <select
+            id="studio-week-picker"
+            value={selectedWeek}
+            onChange={(e) => onSelectWeek(Number(e.target.value))}
+            aria-label="Select curriculum week"
+            className="studio-week-select"
+          >
             {ACTIVE_WEEKS.map((wk) => {
-              const isSelected = selectedWeek === wk;
               const task = CURRICULUM_TASKS.find(t => t.week === wk);
               return (
-                <button
-                  key={wk}
-                  id={`select-week-${wk}-btn`}
-                  type="button"
-                  onClick={() => onSelectWeek(wk)}
-                  style={{
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    fontWeight: isSelected ? 700 : 500,
-                    border: 'none',
-                    backgroundColor: isSelected ? 'var(--studio-primary)' : 'transparent',
-                    color: isSelected ? 'var(--studio-primary-contrast)' : 'var(--studio-text-muted)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    fontFamily: 'var(--studio-font-mono)'
-                  }}
-                  aria-current={isSelected ? 'true' : undefined}
-                  title={`Week ${wk}: ${task ? task.module : ''}`}
-                >
-                  W{wk}
-                </button>
+                <option key={wk} value={wk}>
+                  Week {wk}: {task ? task.module : `Week ${wk}`}
+                </option>
               );
             })}
-          </div>
+          </select>
 
           <span style={{ 
-            fontSize: '0.75rem', 
+            fontSize: '0.8125rem', 
             fontWeight: 600, 
             color: 'var(--studio-text)',
             padding: '2px 8px',
-            borderRadius: '4px',
+            borderRadius: '6px',
             backgroundColor: 'var(--studio-surface-subtle)',
             border: '1px solid var(--studio-border)',
-            maxWidth: '260px',
+            flex: 1,
+            minWidth: 0,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis'
           }} title={activeDrill.title}>
-            Week {activeDrill.week}: {activeDrill.title.split('(')[0].trim()}
+            {activeDrill.title}
           </span>
         </div>
 
@@ -236,26 +221,13 @@ export function StudioHeader({
           </Button>
 
           {/* Grouped Actions: Export / Import / Reset */}
-          <div style={{ display: 'inline-flex', borderRadius: '6px', border: '1px solid var(--studio-border)', overflow: 'hidden' }}>
-            <Button variant="default-outline" size="small" onClick={onExportBackup} aria-label="Export backup JSON" title="Export backup JSON" style={{ border: 'none', borderRadius: 0, padding: '3px 7px' }}>
-              <Download size={13} />
-            </Button>
-            <Button variant="default-outline" size="small" onClick={onImportBackup} aria-label="Import backup JSON" title="Import backup JSON" style={{ border: 'none', borderLeft: '1px solid var(--studio-border)', borderRadius: 0, padding: '3px 7px' }}>
-              <Upload size={13} />
-            </Button>
-            <Button 
-              ref={clearTriggerBtnRef}
-              id="clear-progress-btn"
-              variant="default-outline" 
-              size="small" 
-              onClick={onOpenResetModal} 
-              aria-label="Clear learner progress" 
-              title="Clear learner progress"
-              style={{ border: 'none', borderLeft: '1px solid var(--studio-border)', borderRadius: 0, padding: '3px 7px' }}
-            >
-              <Trash2 size={13} color="var(--studio-danger)" />
-            </Button>
-          </div>
+          <UtilitiesMenu
+            idPrefix="studio"
+            onExportBackup={onExportBackup}
+            onImportBackup={onImportBackup}
+            onOpenResetModal={onOpenResetModal}
+            clearTriggerBtnRef={clearTriggerBtnRef}
+          />
         </div>
       </header>
 
