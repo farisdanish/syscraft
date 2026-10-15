@@ -742,9 +742,10 @@ export function StudioLayout({
 
   return (
     <div className="studio-shell">
-      {/* Top Application Header */}
+      {/* Top Application Header: 3-Zone Studio Workbench */}
       <header className="studio-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        {/* Zone 1: Identity & Module Selector */}
+        <div className="studio-header-zone-left">
           {onNavigateHome && (
             <Button
               id="back-to-hub-btn"
@@ -752,7 +753,7 @@ export function StudioLayout({
               size="small"
               onClick={onNavigateHome}
               aria-label="Return to Curriculum Hub"
-              style={{ padding: '3px 8px', fontSize: '0.75rem' }}
+              style={{ padding: '3px 8px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
             >
               <LayoutDashboard size={13} style={{ marginRight: '5px' }} />
               Curriculum
@@ -766,41 +767,33 @@ export function StudioLayout({
               size="small"
               onClick={onNavigateArchitecture}
               aria-label="View Technical Architecture & How It Works"
-              style={{ padding: '3px 8px', fontSize: '0.75rem' }}
+              style={{ padding: '3px 8px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
             >
               <Layers size={13} style={{ marginRight: '5px' }} />
               How It Works
             </Button>
           )}
+
           <div style={{ 
-            width: '28px', 
-            height: '28px', 
+            width: '26px', 
+            height: '26px', 
             borderRadius: '6px', 
             backgroundColor: 'var(--studio-primary)', 
-            color: '#ffffff', 
+            color: 'var(--studio-primary-contrast)', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center', 
             fontWeight: 700, 
-            fontSize: '0.8125rem' 
+            fontSize: '0.75rem',
+            flexShrink: 0
           }}>
             SC
           </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: 'var(--studio-text)', lineHeight: 1.2 }}>
-              SysCraft Studio
-            </h1>
-            <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-muted)' }}>
-              Interactive Systems &amp; Backend Learning Studio
-            </span>
-          </div>
 
-          <div style={{ marginLeft: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--studio-text-muted)' }}>Module:</span>
-            
+          <div style={{ display: 'inline-flex', padding: '2px', backgroundColor: 'var(--studio-surface-subtle)', borderRadius: '6px', border: '1px solid var(--studio-border)', flexShrink: 0 }}>
             {ACTIVE_WEEKS.map((wk) => {
-              const task = CURRICULUM_TASKS.find(t => t.week === wk);
               const isSelected = selectedWeek === wk;
+              const task = CURRICULUM_TASKS.find(t => t.week === wk);
               return (
                 <button
                   key={wk}
@@ -808,72 +801,103 @@ export function StudioLayout({
                   type="button"
                   onClick={() => handleSelectWeek(wk)}
                   style={{
-                    padding: '3px 8px',
+                    padding: '2px 8px',
                     borderRadius: '4px',
                     fontSize: '0.75rem',
-                    fontWeight: isSelected ? 600 : 400,
-                    border: `1px solid ${isSelected ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
-                    backgroundColor: isSelected ? 'var(--studio-primary-glow)' : 'transparent',
-                    color: isSelected ? 'var(--studio-primary)' : 'var(--studio-text)',
+                    fontWeight: isSelected ? 700 : 500,
+                    border: 'none',
+                    backgroundColor: isSelected ? 'var(--studio-primary)' : 'transparent',
+                    color: isSelected ? 'var(--studio-primary-contrast)' : 'var(--studio-text-muted)',
                     cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
+                    transition: 'all 0.15s ease',
+                    fontFamily: 'var(--studio-font-mono)'
                   }}
+                  aria-current={isSelected ? 'true' : undefined}
+                  title={`Week ${wk}: ${task ? task.module : ''}`}
                 >
-                  Week {wk}: {task ? task.module : `Week ${wk}`}
+                  W{wk}
                 </button>
               );
             })}
-
-            {/* Week 7 Sprint Timer Badge (if active) */}
-            {activeDrill.week === 7 && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                marginLeft: '0.5rem',
-                padding: '2px 8px',
-                borderRadius: '6px',
-                backgroundColor: sprintSeconds <= 300 ? 'rgba(239, 68, 68, 0.15)' : 'var(--studio-surface-subtle)',
-                border: `1px solid ${sprintSeconds <= 300 ? 'var(--studio-danger)' : 'var(--studio-border)'}`,
-                fontSize: '0.75rem',
-                color: sprintSeconds <= 300 ? 'var(--studio-danger)' : 'var(--studio-text)',
-                fontWeight: 600,
-              }}>
-                <Clock size={12} color={sprintSeconds <= 300 ? 'var(--studio-danger)' : 'var(--studio-primary)'} />
-                <span>Sprint: {formatSprintTime(sprintSeconds)}</span>
-                <button
-                  type="button"
-                  onClick={() => setSprintActive(p => !p)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'inherit',
-                    cursor: 'pointer',
-                    padding: '0 2px',
-                    fontWeight: 700,
-                    fontSize: '0.75rem'
-                  }}
-                  aria-label={sprintActive ? "Pause Sprint Timer" : "Start Sprint Timer"}
-                >
-                  {sprintActive ? "⏸ Pause" : "▶ Start"}
-                </button>
-              </div>
-            )}
           </div>
+
+          <span style={{ 
+            fontSize: '0.75rem', 
+            fontWeight: 600, 
+            color: 'var(--studio-text)',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            backgroundColor: 'var(--studio-surface-subtle)',
+            border: '1px solid var(--studio-border)',
+            maxWidth: '260px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }} title={activeDrill.title}>
+            Week {activeDrill.week}: {activeDrill.title.split('(')[0].trim()}
+          </span>
         </div>
 
-        {/* Global Toolbar & Status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {/* Zone 2: Context, Tier & Sprint Timer */}
+        <div className="studio-header-zone-center">
+          <Tag variant={activeDrill.tier === 3 ? "warning" : "primary"} size="small">
+            Tier {activeDrill.tier}: {activeDrill.engine === 'postgresql-docker' ? 'Docker PostgreSQL' : activeDrill.engine === 'sqlite-wasm' ? 'WASM SQLite' : 'Simulation'}
+          </Tag>
+
+          {/* Week 7 Sprint Timer Badge (if active) */}
+          {activeDrill.week === 7 && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '2px 8px',
+              borderRadius: '6px',
+              backgroundColor: sprintSeconds <= 300 ? 'rgba(244, 63, 94, 0.15)' : 'var(--studio-surface-subtle)',
+              border: `1px solid ${sprintSeconds <= 300 ? 'var(--studio-danger)' : 'var(--studio-border)'}`,
+              fontSize: '0.75rem',
+              color: sprintSeconds <= 300 ? 'var(--studio-danger)' : 'var(--studio-text)',
+              fontWeight: 600,
+              fontFamily: 'var(--studio-font-mono)'
+            }}>
+              <Clock size={12} color={sprintSeconds <= 300 ? 'var(--studio-danger)' : 'var(--studio-primary)'} />
+              <span>Sprint: {formatSprintTime(sprintSeconds)}</span>
+              <button
+                type="button"
+                onClick={() => setSprintActive(p => !p)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'inherit',
+                  cursor: 'pointer',
+                  padding: '0 2px',
+                  fontWeight: 700,
+                  fontSize: '0.75rem'
+                }}
+                aria-label={sprintActive ? "Pause Sprint Timer" : "Start Sprint Timer"}
+              >
+                {sprintActive ? "⏸" : "▶"}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Zone 3: Diagnostics, Telemetry & Studio Controls */}
+        <div className="studio-header-zone-right">
           <Tag variant={bridgeStatus.connected ? "success" : "default"} size="small">
-            <Server size={12} style={{ marginRight: '4px' }} />
-            {bridgeStatus.connected ? "Tier 3 Bridge Active" : "Bridge Offline"}
+            <span className={bridgeStatus.connected ? "studio-pulse" : ""} style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              backgroundColor: bridgeStatus.connected ? 'var(--studio-success)' : 'var(--studio-text-faint)',
+              marginRight: '5px',
+              display: 'inline-block'
+            }} />
+            {bridgeStatus.connected ? "Bridge Active" : "Bridge Offline"}
           </Tag>
 
           <Tag variant={sundayCount > 0 ? "warning" : "default"} size="small">
-            <Flag size={12} style={{ marginRight: '4px' }} />
-            Sunday Review ({sundayCount})
+            <Flag size={11} style={{ marginRight: '4px' }} />
+            Review ({sundayCount})
           </Tag>
 
           <Button 
@@ -882,30 +906,32 @@ export function StudioLayout({
             size="small" 
             onClick={toggleTheme}
             aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            style={{ padding: '3px 8px' }}
           >
-            {isDark ? <Sun size={13} style={{ marginRight: '4px' }} /> : <Moon size={13} style={{ marginRight: '4px' }} />}
-            {isDark ? "Light" : "Dark"}
+            {isDark ? <Sun size={13} color="var(--studio-warning)" /> : <Moon size={13} color="var(--studio-primary)" />}
           </Button>
 
-          <Button variant="default-outline" size="small" onClick={handleExportBackup} aria-label="Export backup JSON" title="Export backup JSON">
-            <Download size={13} />
-          </Button>
-
-          <Button variant="default-outline" size="small" onClick={handleImportBackup} aria-label="Import backup JSON" title="Import backup JSON">
-            <Upload size={13} />
-          </Button>
-
-          <Button 
-            ref={clearTriggerBtnRef}
-            id="clear-progress-btn"
-            variant="default-outline" 
-            size="small" 
-            onClick={() => setShowResetModal(true)} 
-            aria-label="Clear learner progress" 
-            title="Clear learner progress"
-          >
-            <Trash2 size={13} />
-          </Button>
+          {/* Grouped Actions: Export / Import / Reset */}
+          <div style={{ display: 'inline-flex', borderRadius: '6px', border: '1px solid var(--studio-border)', overflow: 'hidden' }}>
+            <Button variant="default-outline" size="small" onClick={handleExportBackup} aria-label="Export backup JSON" title="Export backup JSON" style={{ border: 'none', borderRadius: 0, padding: '3px 7px' }}>
+              <Download size={13} />
+            </Button>
+            <Button variant="default-outline" size="small" onClick={handleImportBackup} aria-label="Import backup JSON" title="Import backup JSON" style={{ border: 'none', borderLeft: '1px solid var(--studio-border)', borderRadius: 0, padding: '3px 7px' }}>
+              <Upload size={13} />
+            </Button>
+            <Button 
+              ref={clearTriggerBtnRef}
+              id="clear-progress-btn"
+              variant="default-outline" 
+              size="small" 
+              onClick={() => setShowResetModal(true)} 
+              aria-label="Clear learner progress" 
+              title="Clear learner progress"
+              style={{ border: 'none', borderLeft: '1px solid var(--studio-border)', borderRadius: 0, padding: '3px 7px' }}
+            >
+              <Trash2 size={13} color="var(--studio-danger)" />
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -923,65 +949,90 @@ export function StudioLayout({
         </div>
       )}
 
-      {/* Progressive 5-Step Stepper Navigation with Strict Sequential Gate Invariant */}
+      {/* Progressive 5-Step Stepper Navigation with Strict Sequential Gate Invariant & Illuminated Pipeline */}
       <nav aria-label="Progressive 5-step workflow" className="studio-stepper">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '650px' }}>
-          {WORKFLOW_STEPS.map((s) => {
+        <div className="studio-stepper-track">
+          {WORKFLOW_STEPS.map((s, index) => {
             const isActive = s.step === currentStep;
             const isCompleted = stepCompletions[s.step];
             const isUnlocked = isStepUnlocked(s.step);
             const isLocked = !isUnlocked;
 
+            const lockTooltip = s.step === 2 
+              ? 'Step 2 locked: Click "Proceed to Focused Drill" in Step 1 first' 
+              : s.step === 3 
+              ? 'Step 3 locked: Satisfy all automated assertions in Step 2 first' 
+              : s.step === 4 
+              ? 'Step 4 locked: Acknowledge execution plan in Step 3 first' 
+              : 'Step 5 locked: Submit 5-dimension oral rubric in Step 4 first';
+
             return (
-              <button
-                key={s.step}
-                id={`step-tab-${s.step}`}
-                type="button"
-                disabled={isLocked}
-                onClick={() => {
-                  if (!isLocked) {
-                    goToStep(s.step);
-                  } else {
-                    if (s.step === 2) setPoliteNotice('Step 2 is locked: Click "Proceed to Focused Drill" in Step 1 first.');
-                    else if (s.step === 3) setPoliteNotice('Step 3 is locked: Satisfy all drill assertions in Step 2 to unlock Plan Analysis.');
-                    else if (s.step === 4) setPoliteNotice('Step 4 is locked: Confirm execution analysis in Step 3 to unlock Oral Defense.');
-                    else if (s.step === 5) setPoliteNotice('Step 5 is locked: Submit 5-dimension rubric in Step 4 to unlock Tracer Replay.');
-                  }
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.375rem',
-                  padding: '4px 10px',
-                  borderRadius: '20px',
-                  border: `1px solid ${isActive ? 'var(--studio-primary)' : isCompleted ? 'rgba(16, 185, 129, 0.4)' : 'var(--studio-border)'}`,
-                  backgroundColor: isActive ? 'var(--studio-primary)' : isCompleted ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                  color: isActive ? '#ffffff' : isCompleted ? 'var(--studio-success)' : isLocked ? 'var(--studio-text-muted)' : 'var(--studio-text)',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  cursor: isLocked ? 'not-allowed' : 'pointer',
-                  opacity: isLocked ? 0.5 : 1,
-                  transition: 'all 0.15s ease'
-                }}
-                aria-current={isActive ? 'step' : undefined}
-                title={isLocked ? `Step ${s.step} is locked until prior steps are completed` : s.description}
-              >
-                <span style={{ 
-                  width: '16px', 
-                  height: '16px', 
-                  borderRadius: '50%', 
-                  backgroundColor: isActive ? '#ffffff' : isCompleted ? 'var(--studio-success)' : 'var(--studio-surface-hover)',
-                  color: isActive ? 'var(--studio-primary)' : isCompleted ? '#ffffff' : 'var(--studio-text-muted)',
-                  fontSize: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700
-                }}>
-                  {isLocked ? <Lock size={10} /> : isCompleted && !isActive ? '✓' : s.step}
-                </span>
-                <span>{s.title}</span>
-              </button>
+              <div key={s.step} style={{ display: 'flex', alignItems: 'center', flex: index < WORKFLOW_STEPS.length - 1 ? 1 : 'none' }}>
+                <button
+                  id={`step-tab-${s.step}`}
+                  type="button"
+                  disabled={isLocked}
+                  onClick={() => {
+                    if (!isLocked) {
+                      goToStep(s.step);
+                    } else {
+                      setPoliteNotice(lockTooltip);
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    padding: '4px 11px',
+                    borderRadius: '20px',
+                    border: `1.5px solid ${isActive ? 'var(--studio-primary)' : isCompleted ? 'var(--studio-success)' : 'var(--studio-border)'}`,
+                    backgroundColor: isActive ? 'var(--studio-primary)' : isCompleted ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                    color: isActive ? 'var(--studio-primary-contrast)' : isCompleted ? 'var(--studio-success)' : isLocked ? 'var(--studio-text-faint)' : 'var(--studio-text)',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: isLocked ? 'not-allowed' : 'pointer',
+                    opacity: isLocked ? 0.6 : 1,
+                    boxShadow: isActive ? 'var(--studio-shadow-glow)' : 'none',
+                    transition: 'all 0.2s ease',
+                    whiteSpace: 'nowrap'
+                  }}
+                  aria-current={isActive ? 'step' : undefined}
+                  title={isLocked ? lockTooltip : s.description}
+                >
+                  <span style={{ 
+                    width: '16px', 
+                    height: '16px', 
+                    borderRadius: '50%', 
+                    backgroundColor: isActive ? 'var(--studio-primary-contrast)' : isCompleted ? 'var(--studio-success)' : 'var(--studio-surface-hover)',
+                    color: isActive ? 'var(--studio-primary)' : isCompleted ? 'var(--studio-text-on-accent)' : 'var(--studio-text-muted)',
+                    fontSize: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700
+                  }}>
+                    {isLocked ? <Lock size={9} /> : isCompleted && !isActive ? '✓' : s.step}
+                  </span>
+                  <span>{s.title}</span>
+                </button>
+
+                {/* Illuminated Pipeline Connector to next step */}
+                {index < WORKFLOW_STEPS.length - 1 && (
+                  <div
+                    style={{
+                      flex: 1,
+                      height: '2px',
+                      minWidth: '14px',
+                      maxWidth: '48px',
+                      margin: '0 6px',
+                      backgroundColor: isCompleted ? 'var(--studio-success)' : isUnlocked ? 'var(--studio-border-strong)' : 'var(--studio-border)',
+                      boxShadow: isCompleted ? '0 0 6px rgba(16, 185, 129, 0.35)' : 'none',
+                      transition: 'all 0.25s ease'
+                    }}
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
             );
           })}
         </div>
@@ -1152,6 +1203,7 @@ export function StudioLayout({
                           <code>{activeDrill.targetFile}</code>
                         </span>
                         <Tag variant="warning" size="small">JSON / System Architecture Topology</Tag>
+                        <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-muted)', marginLeft: '0.5rem' }}>Esc releases focus</span>
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1399,6 +1451,8 @@ export function StudioLayout({
                           </Button>
                         )}
 
+                        <span style={{ fontSize: '0.6875rem', color: 'var(--studio-text-muted)', marginRight: '0.25rem' }}>Esc releases focus</span>
+
                         {/* Tier 2 Simulation Evaluation Trigger */}
                         <Button 
                           id="run-simulation-btn"
@@ -1413,6 +1467,18 @@ export function StudioLayout({
                         </Button>
                       </div>
                     </div>
+
+                    {/* Week 7 Timed Sprint Countdown Progress Bar */}
+                    {activeDrill.week === 7 && (
+                      <div style={{ width: '100%', height: '3px', backgroundColor: 'var(--studio-border)', overflow: 'hidden' }} aria-label="Sprint Progress">
+                        <div style={{ 
+                          width: `${Math.min(100, ((5400 - sprintSeconds) / 5400) * 100)}%`, 
+                          height: '100%', 
+                          backgroundColor: sprintSeconds <= 300 ? 'var(--studio-danger)' : sprintSeconds <= 900 ? 'var(--studio-warning)' : 'var(--studio-primary)',
+                          transition: 'width 1s linear'
+                        }} />
+                      </div>
+                    )}
 
                     {/* Monaco Editor Canvas */}
                     <div className="studio-drill-editor-wrapper">
