@@ -129,13 +129,16 @@ export function evaluateSystemDesignDrill(code: string): {
   let parsed: any = null;
   try {
     parsed = JSON.parse(code);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('Top-level JSON must be an object.');
+    }
   } catch {
     return {
       passed: false,
       queriesExecuted: 0,
       simulatedLatencyMs: 12,
       assertionResults: [
-        { name: 'JSON Syntax Valid', passed: false, message: 'Code contains invalid JSON syntax.' },
+        { name: 'JSON Syntax Valid', passed: false, message: 'Code contains invalid JSON syntax or structure.' },
         { name: 'Backpressure Strategy', passed: false, message: 'Unchecked due to syntax error.' },
         { name: 'Partition Key Specification', passed: false, message: 'Unchecked due to syntax error.' },
         { name: 'STAR Story Defense', passed: false, message: 'Unchecked due to syntax error.' },
@@ -143,17 +146,14 @@ export function evaluateSystemDesignDrill(code: string): {
     };
   }
 
-  const hasBackpressure = parsed.architecture?.buffer?.backpressureStrategy && 
-    !parsed.architecture.buffer.backpressureStrategy.includes('TODO');
+  const isNonEmptyStringWithoutTodo = (val: unknown): val is string => {
+    return typeof val === 'string' && val.trim().length > 0 && !val.includes('TODO');
+  };
 
-  const hasPartitionKey = parsed.architecture?.storage?.partitionKey &&
-    !parsed.architecture.storage.partitionKey.includes('TODO');
-
-  const hasStarAction = parsed.starStories?.spikeDefense?.action &&
-    !parsed.starStories.spikeDefense.action.includes('TODO');
-
-  const hasStarResult = parsed.starStories?.spikeDefense?.result &&
-    !parsed.starStories.spikeDefense.result.includes('TODO');
+  const hasBackpressure = isNonEmptyStringWithoutTodo(parsed.architecture?.buffer?.backpressureStrategy);
+  const hasPartitionKey = isNonEmptyStringWithoutTodo(parsed.architecture?.storage?.partitionKey);
+  const hasStarAction = isNonEmptyStringWithoutTodo(parsed.starStories?.spikeDefense?.action);
+  const hasStarResult = isNonEmptyStringWithoutTodo(parsed.starStories?.spikeDefense?.result);
 
   const passed = Boolean(hasBackpressure && hasPartitionKey && hasStarAction && hasStarResult);
 

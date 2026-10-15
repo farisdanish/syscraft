@@ -93,17 +93,34 @@ ${stories
 
   const handleExport = () => {
     const md = generateRfcMarkdown();
-    if (onExportRfc) {
-      onExportRfc(md);
-    } else {
-      const blob = new Blob([md], { type: 'text/markdown' });
+
+    // 1. Copy to clipboard
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      void navigator.clipboard.writeText(md).catch(() => {
+        // Fallback for restricted clipboard contexts
+      });
+    }
+
+    // 2. Trigger browser file download
+    try {
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `weather-pipeline-rfc-${new Date().toISOString().split('T')[0]}.md`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    } catch {
+      // Ignore
     }
+
+    // 3. Notify parent listener
+    if (onExportRfc) {
+      onExportRfc(md);
+    }
+
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

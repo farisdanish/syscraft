@@ -1119,7 +1119,7 @@ export function StudioLayout({
                     <StarStoryBuilder 
                       isDark={isDark}
                       onExportRfc={() => {
-                        setPoliteNotice('Exported Architecture RFC to clipboard & download.');
+                        setPoliteNotice('Exported Architecture RFC to clipboard and downloaded Markdown file.');
                       }}
                       onOpenRubric={() => {
                         goToStep(4);
