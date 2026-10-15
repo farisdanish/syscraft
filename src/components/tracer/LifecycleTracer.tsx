@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   ReactFlow, 
   Background, 
@@ -8,7 +8,8 @@ import {
   MarkerType,
   type Node, 
   type Edge,
-  type NodeProps
+  type NodeProps,
+  type ReactFlowInstance
 } from '@xyflow/react';
 import { Button } from '@govtechmy/myds-react/button';
 import { Tag } from '@govtechmy/myds-react/tag';
@@ -209,6 +210,21 @@ export function LifecycleTracer({
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'canvas' | 'table'>('canvas');
 
+  const reactFlowInstanceRef = useRef<ReactFlowInstance | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-fit view on container resize to ensure all 9 nodes remain in view across responsive viewports
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(() => {
+      if (reactFlowInstanceRef.current) {
+        reactFlowInstanceRef.current.fitView({ padding: 0.15 });
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   const selectedNodeData = currentSteps.find((s) => s.stepNum === activeStep) || currentSteps[0];
 
   // Auto-play interval
@@ -272,13 +288,13 @@ export function LifecycleTracer({
         type: 'smoothstep',
         animated: isEdgeActive,
         style: {
-          stroke: isEdgeActive ? 'var(--studio-primary)' : isEdgePast ? 'var(--studio-success)' : 'var(--studio-border-strong)',
-          strokeWidth: isEdgeActive ? 3 : 1.5,
+          stroke: isEdgeActive ? 'var(--studio-primary)' : isEdgePast ? 'var(--studio-success)' : 'var(--studio-edge-inactive)',
+          strokeWidth: isEdgeActive ? 3 : 2,
           transition: 'stroke 0.25s ease, stroke-width 0.25s ease',
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: isEdgeActive ? 'var(--studio-primary)' : isEdgePast ? 'var(--studio-success)' : 'var(--studio-border-strong)',
+          color: isEdgeActive ? 'var(--studio-primary)' : isEdgePast ? 'var(--studio-success)' : 'var(--studio-edge-inactive)',
         },
       });
     }
@@ -368,11 +384,15 @@ export function LifecycleTracer({
       <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex', overflow: 'hidden' }}>
         
         {viewMode === 'canvas' ? (
-          <div style={{ flex: 1, minHeight: 0, height: '100%', backgroundColor: 'var(--studio-bg)' }}>
+          <div ref={containerRef} style={{ flex: 1, minHeight: 0, height: '100%', backgroundColor: 'var(--studio-bg)' }}>
             <ReactFlow
               nodes={nodes}
               edges={edges}
               nodeTypes={nodeTypes}
+              onInit={(instance) => {
+                reactFlowInstanceRef.current = instance;
+                instance.fitView({ padding: 0.15 });
+              }}
               onNodeClick={(_, node) => {
                 const s = currentSteps.find(item => item.id === node.id);
                 if (s) {
@@ -380,6 +400,7 @@ export function LifecycleTracer({
                 }
               }}
               fitView
+              fitViewOptions={{ padding: 0.15 }}
               attributionPosition="bottom-left"
             >
               <Background color="var(--studio-border-strong)" gap={20} size={1.2} />

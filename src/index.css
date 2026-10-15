@@ -49,6 +49,7 @@
   --studio-success-border: rgba(5, 150, 105, 0.25);
   --studio-danger-border: rgba(220, 38, 38, 0.25);
   --studio-success-glow: 0 0 12px rgba(5, 150, 105, 0.25);
+  --studio-edge-inactive: rgba(100, 116, 139, 0.45);
 
   /* Glassmorphism & Overlays */
   --studio-glass-bg: rgba(255, 255, 255, 0.85);
@@ -105,6 +106,7 @@
   --studio-success-border: rgba(16, 185, 129, 0.35);
   --studio-danger-border: rgba(244, 63, 94, 0.35);
   --studio-success-glow: 0 0 16px rgba(16, 185, 129, 0.3);
+  --studio-edge-inactive: rgba(148, 163, 184, 0.55);
 
   /* Glassmorphism & Overlays */
   --studio-glass-bg: rgba(17, 24, 39, 0.85);
@@ -627,9 +629,25 @@ textarea:focus-visible,
   position: relative;
 }
 
+/* Interactive Card Hover Depth & Micro-Interactions (SKILL §3.2 / Task 6.3) */
+.studio-interactive,
+.home-module-card,
+.home-topic-pill {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.studio-interactive:hover,
 .home-module-card:hover {
-  border-color: var(--studio-border-strong);
+  transform: translateY(-2px);
   box-shadow: var(--studio-shadow-md);
+  border-color: var(--studio-border-strong);
+}
+
+.home-topic-pill:hover {
+  transform: translateY(-1px);
+  border-color: var(--studio-primary);
+  color: var(--studio-text);
 }
 
 .home-module-card.active-drill {

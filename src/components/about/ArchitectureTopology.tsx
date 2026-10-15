@@ -222,8 +222,8 @@ export const ArchitectureTopology: React.FC<ArchitectureTopologyProps> = ({
       target: 'tier3-runner',
       type: 'smoothstep',
       animated: bridgeConnected,
-      style: { stroke: 'var(--studio-primary)', strokeWidth: 2 },
-      markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--studio-primary)' },
+      style: { stroke: bridgeConnected ? 'var(--studio-primary)' : 'var(--studio-edge-inactive)', strokeWidth: 2 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: bridgeConnected ? 'var(--studio-primary)' : 'var(--studio-edge-inactive)' },
     },
     {
       id: 'e-runner-pg',
@@ -231,8 +231,8 @@ export const ArchitectureTopology: React.FC<ArchitectureTopologyProps> = ({
       target: 'tier3-postgres',
       type: 'smoothstep',
       animated: bridgeConnected,
-      style: { stroke: 'var(--studio-primary)', strokeWidth: 2 },
-      markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--studio-primary)' },
+      style: { stroke: bridgeConnected ? 'var(--studio-primary)' : 'var(--studio-edge-inactive)', strokeWidth: 2 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: bridgeConnected ? 'var(--studio-primary)' : 'var(--studio-edge-inactive)' },
     },
   ], [bridgeConnected]);
 

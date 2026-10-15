@@ -20,16 +20,16 @@ You are a senior UI/UX engineer maintaining SysCraft's cohesive, high-end techni
 ---
 
 ## 1. Preferred Tech Stack & Architecture Constraints
-- **Styling:** Vanilla CSS with semantic custom properties (`src/index.css`). *Do not introduce Tailwind CSS.*
-- **Animation:** CSS transforms (`translateY`, `scale`) and keyframes. *No heavy animation dependencies (GSAP, Three.js, R3F).*
+- **Styling:** Vanilla CSS with semantic custom properties (`src/index.css`). *Do not introduce Tailwind CSS utilities.*
+- **Animation:** Hardware-accelerated CSS transforms (`translateY`, `scale`) and keyframes. *No heavy animation dependencies (GSAP, Three.js, R3F).*
 - **Components:** MYDS React design tokens (`@govtechmy/myds-react`), Lucide React icons, Monaco Editor, `@xyflow/react`.
-- **Performance Budget:** Animate only hardware-accelerated properties (`transform`, `opacity`). Never animate `box-shadow`, `filter`, or layout dimensions continuously.
+- **Modularity:** Studio architecture must remain strictly decomposed under `src/components/layout/studio/` with `StudioLayout.tsx` acting as a thin orchestrator (< 200 lines).
 
 ---
 
 ## 2. Palette & Theme Token System
 
-All components must strictly use semantic CSS custom properties defined in `src/index.css`. Never use raw inline hex colors (e.g., `#ffffff`, `#000000`, `#0284c7`).
+All components must strictly use semantic CSS custom properties defined in `src/index.css`. Never use raw inline hex colors (e.g., `#ffffff`, `#000000`) or hardcoded `rgba()` strings.
 
 ### Light Theme Tokens (`:root`)
 ```css
@@ -42,30 +42,55 @@ All components must strictly use semantic CSS custom properties defined in `src/
 
   /* Glassmorphism & Depth */
   --studio-glass-bg: rgba(255, 255, 255, 0.85);
-  --studio-glass-border: rgba(226, 232, 240, 0.8);
+  --studio-glass-border: rgba(226, 232, 240, 0.85);
   --studio-glass-blur: blur(12px);
+  --studio-overlay: rgba(15, 23, 42, 0.65);
   
   /* Borders */
   --studio-border: #e2e8f0;        /* Subtle divider borders (slate-200) */
   --studio-border-strong: #cbd5e1; /* Strong input & card borders (slate-300) */
   --studio-border-focus: #0284c7;  /* Focus ring outline (sky-600) */
 
-  /* Typography */
+  /* Typography (WCAG 2.2 AA ≥ 5.1:1 on #f8fafc) */
   --studio-text: #0f172a;          /* Primary body & headers (slate-900) */
-  --studio-text-muted: #64748b;    /* Secondary captions & labels (slate-500) */
-  --studio-text-faint: #94a3b8;    /* Watermarks & disabled text (slate-400) */
+  --studio-text-muted: #475569;    /* Secondary captions & labels (slate-600, 5.1:1) */
+  --studio-text-faint: #64748b;    /* Subtext & helper badges (slate-500) */
+  --studio-text-on-accent: #ffffff;
 
-  /* Accents */
+  /* Accents & Status */
   --studio-primary: #0284c7;       /* Studio brand cyan (sky-600) */
   --studio-primary-glow: rgba(2, 132, 199, 0.15);
+  --studio-primary-subtle: rgba(2, 132, 199, 0.08);
+  --studio-primary-border: rgba(2, 132, 199, 0.35);
+
   --studio-success: #059669;       /* Pass / optimized status (emerald-600) */
+  --studio-success-glow: rgba(5, 150, 105, 0.15);
+  --studio-success-subtle: rgba(5, 150, 105, 0.08);
+  --studio-success-border: rgba(5, 150, 105, 0.35);
+
   --studio-warning: #d97706;       /* Alert status (amber-600) */
+  --studio-warning-glow: rgba(217, 119, 6, 0.15);
+  --studio-warning-subtle: rgba(217, 119, 6, 0.08);
+  --studio-warning-border: rgba(217, 119, 6, 0.35);
+
   --studio-danger: #dc2626;        /* Error / failure status (red-600) */
+  --studio-danger-glow: rgba(220, 38, 38, 0.15);
+  --studio-danger-subtle: rgba(220, 38, 38, 0.08);
+  --studio-danger-border: rgba(220, 38, 38, 0.35);
+
+  --studio-accent-violet: #7c3aed; /* Architecture / schema accent */
+  --studio-accent-violet-glow: rgba(124, 58, 237, 0.15);
+  --studio-accent-violet-subtle: rgba(124, 58, 237, 0.08);
+  --studio-accent-violet-border: rgba(124, 58, 237, 0.35);
+
+  /* React Flow & Tracer */
+  --studio-edge-inactive: rgba(100, 116, 139, 0.45); /* Crisp directional tracking */
   
   /* Shadows & Spatial Elevation */
   --studio-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --studio-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
-  --studio-shadow-float: 0 12px 24px -4px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.04);
+  --studio-shadow-float: 0 12px 24px -4px rgba(0, 0, 0, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.06);
+  --studio-shadow-glow: 0 0 16px -2px rgba(2, 132, 199, 0.25);
 }
 ```
 
@@ -79,9 +104,10 @@ All components must strictly use semantic CSS custom properties defined in `src/
   --studio-surface-subtle: #0d131f;/* Inset code editors & telemetry wells */
 
   /* Glassmorphism & Depth */
-  --studio-glass-bg: rgba(17, 24, 39, 0.75);
-  --studio-glass-border: rgba(148, 163, 184, 0.14);
+  --studio-glass-bg: rgba(17, 24, 39, 0.85);
+  --studio-glass-border: rgba(148, 163, 184, 0.18);
   --studio-glass-blur: blur(12px);
+  --studio-overlay: rgba(3, 7, 18, 0.75);
   
   /* Borders */
   --studio-border: rgba(148, 163, 184, 0.14); /* Crisp hairline border */
@@ -92,18 +118,42 @@ All components must strictly use semantic CSS custom properties defined in `src/
   --studio-text: #f8fafc;          /* High contrast heading text (slate-50) */
   --studio-text-muted: #94a3b8;    /* Muted secondary text (slate-400) */
   --studio-text-faint: #64748b;    /* Disabled & watermark text (slate-500) */
+  --studio-text-on-accent: #0f172a;
 
-  /* Accents */
+  /* Accents & Status */
   --studio-primary: #38bdf8;       /* Glowing electric cyan */
   --studio-primary-glow: rgba(56, 189, 248, 0.25);
+  --studio-primary-subtle: rgba(56, 189, 248, 0.12);
+  --studio-primary-border: rgba(56, 189, 248, 0.4);
+
   --studio-success: #10b981;       /* Emerald neon */
+  --studio-success-glow: rgba(16, 185, 129, 0.25);
+  --studio-success-subtle: rgba(16, 185, 129, 0.12);
+  --studio-success-border: rgba(16, 185, 129, 0.4);
+
   --studio-warning: #f59e0b;       /* Amber neon */
+  --studio-warning-glow: rgba(245, 158, 11, 0.25);
+  --studio-warning-subtle: rgba(245, 158, 11, 0.12);
+  --studio-warning-border: rgba(245, 158, 11, 0.4);
+
   --studio-danger: #f43f5e;        /* Rose neon */
+  --studio-danger-glow: rgba(244, 63, 94, 0.25);
+  --studio-danger-subtle: rgba(244, 63, 94, 0.12);
+  --studio-danger-border: rgba(244, 63, 94, 0.4);
+
+  --studio-accent-violet: #a78bfa; /* Violet neon */
+  --studio-accent-violet-glow: rgba(167, 139, 250, 0.25);
+  --studio-accent-violet-subtle: rgba(167, 139, 250, 0.12);
+  --studio-accent-violet-border: rgba(167, 139, 250, 0.4);
+
+  /* React Flow & Tracer */
+  --studio-edge-inactive: rgba(148, 163, 184, 0.55);
   
   /* Shadows & Spatial Elevation */
   --studio-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
   --studio-shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.45);
   --studio-shadow-float: 0 16px 32px -4px rgba(0, 0, 0, 0.55), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+  --studio-shadow-glow: 0 0 20px -2px rgba(56, 189, 248, 0.35);
 }
 ```
 
@@ -115,13 +165,17 @@ All components must strictly use semantic CSS custom properties defined in `src/
    - Background canvas: flat `--studio-bg` with subtle dotted grid overlay.
    - Cards & panels: elevated using `--studio-surface`, subtle 1px border, and `--studio-shadow-sm`.
    - Modals, popovers & floating tooltips: floating elevation with `backdrop-filter: var(--studio-glass-blur)`, `--studio-glass-bg`, and `--studio-shadow-float`.
-2. **Tactile Hover Lift:**
-   - Interactive module cards and action buttons should feature subtle micro-elevation on hover:
+2. **Tactile Hover Lift (`.studio-interactive`):**
+   - Interactive module cards and action buttons feature subtle micro-elevation on hover:
      ```css
-     transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
-     &:hover {
+     .studio-interactive {
+       transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+       will-change: transform;
+     }
+     .studio-interactive:hover {
        transform: translateY(-2px);
        border-color: var(--studio-primary);
+       box-shadow: var(--studio-shadow-md);
      }
      ```
 3. **Calibrated Depth (No Unreadable Tilts):**
@@ -130,83 +184,64 @@ All components must strictly use semantic CSS custom properties defined in `src/
 
 ---
 
-## 4. Motion & Animation Standards
+## 4. Studio Component Architecture (`src/components/layout/studio/`)
 
-1. **Immediate Feedback:** Interactive actions (run code, evaluate plan, step tracer) must show immediate visual feedback (loading spinners, badge updates, or polite aria notices).
-2. **Staggered Matrix Entrances:** When displaying grids of cards (such as the 7-week curriculum matrix), apply staggered CSS entrance animations:
-   ```css
-   @keyframes studio-fade-up {
-     from { opacity: 0; transform: translateY(8px); }
-     to { opacity: 1; transform: translateY(0); }
-   }
-   .home-module-card {
-     animation: studio-fade-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
-   }
-   .home-module-card:nth-child(1) { animation-delay: 0.04s; }
-   .home-module-card:nth-child(2) { animation-delay: 0.08s; }
-   /* ... */
-   ```
-3. **Status Pulse Indicators:** Glowing live badges (e.g. running sprint timer, connected Docker bridge) should use subtle 2-second looping keyframe pulses on opacity or box-shadow halo (`0 0 8px var(--studio-primary-glow)`).
-4. **Mandatory Reduced Motion (`prefers-reduced-motion: reduce`):**
-   ```css
-   @media (prefers-reduced-motion: reduce) {
-     *, *::before, *::after {
-       animation-duration: 0.01ms !important;
-       animation-iteration-count: 1 !important;
-       transition-duration: 0.01ms !important;
-       scroll-behavior: auto !important;
-     }
-   }
-   ```
+The Studio must follow this decomposed architecture:
+
+- **`StudioLayout.tsx`**: Lightweight orchestrator (< 200 lines). Connects session hook to header, stepper, active step view, and footer.
+- **`useStudioSession.ts`**: Pure state hook handling drill selection, Monaco state sync, hints, solution reveal, sprint timers, and storage envelopes.
+- **`StudioHeader.tsx`**: Week selector dropdown with `aria-live` announcement, track pills, and utilities menu.
+- **`StudioStepper.tsx`**: 5-step sequential flow (`Concept Brief` → `Focused Drill` → `Analysis & Feedback` → `Oral Rubric` → `Tracer Replay`).
+- **`StepConceptBrief.tsx`**: 2-column problem statement, architecture context, and constraints.
+- **`StepFocusedDrill.tsx`**: Monaco editor, progressive hints drawer, reference solution modal, run controls.
+- **`StepAssertionOutput.tsx`**: Single authoritative home for assertion results, diagnostics, diffs, and EXPLAIN cost plans.
+- **`StepOralRubric.tsx`**: Senior interview defense checklist with qualitative rubric & STAR story builder.
+- **`StepTracerReplay.tsx`**: Planar 9-step execution tracer with snake topology.
+- **`StudioFooter.tsx`**: Step navigation, completion summary.
+- **`ResetProgressModal.tsx`**: Accessible glass dialog with `role="alertdialog"`.
 
 ---
 
-## 5. Editor & IDE Theming Rules
-1. **Monaco Synchronization:**
-   - When `isDark === true`, set Monaco `theme="vs-dark"`.
-   - When `isDark === false`, set Monaco `theme="light"`.
-2. **Focus & Escape Hatch:**
-   - Monaco container must display an explicit caption: `Esc releases focus`.
-   - Pressing Escape or clicking outside transfers focus back to the parent studio container.
+## 5. Teaching Flow & Scaffolding Invariant
+
+1. **Progressive Hint Disclosure:**
+   - Drill definitions provide structured hints (`hints: string[]`).
+   - Hints unlock one at a time via a compact collapsible drawer.
+   - Reference solution is locked behind an explicit confirmation modal.
+2. **Scaffolding Telemetry Invariant (Strict Rule):**
+   - Hints and solution reveal are recorded (`hintsUsed: number`, `solutionRevealed: boolean`) in session state and exported in `ExportEnvelopeV2`.
+   - **Hints and solutions NEVER deduct points from the Oral Rubric score or cap drill completion.**
+   - Display hint usage as a neutral informational chip in Step 4 ("Hint used", "Solution referenced") for learner review context only.
 
 ---
 
 ## 6. React Flow Visual Standards (Flowchart & Tracer Replay)
 
-Never render React Flow with generic unstyled default boxes. Use **Custom Node Components**:
-
-```text
-+--------------------------------------------------------------+
-| [Step #1]                     [PHASE: BOOTSTRAP]             |
-| Client HTTP Ingress                                          |
-| METHOD: GET /api/posts                                       |
-| ------------------------------------------------------------ |
-| Web server dispatches raw HTTP request to public/index.php.  |
-| ● Active Packet Token                                        |
-+--------------------------------------------------------------+
-```
-
-### Custom Node Rules:
-1. **Layout & Geometry:**
+1. **Custom Node Rules:**
    - Width: `240px` to `260px` with uniform card padding (`12px 14px`).
    - Border radius: `10px` with hairline border (`1px solid var(--studio-border)`).
    - Card background: `var(--studio-surface)` with backdrop blur or subtle gradient.
+   - Non-overlapping planar handle routing (Left/Right/Top/Bottom per row).
 2. **State Signaling:**
-   - **Inactive Node:** Muted border (`var(--studio-border)`), opacity `0.85`.
-   - **Active Node:** Bold glowing border (`2px solid var(--studio-primary)`), halo shadow (`0 0 20px var(--studio-primary-glow)`), scale `1.02`.
-   - **Completed Past Node:** Emerald accent border (`1.5px solid var(--studio-success)`), subtle completion badge `✓`.
-3. **Edges & Animations:**
-   - Use `type="smoothstep"` or `type="bezier"` edges with rounded corners.
-   - Active edge must be animated (`animated: true`) with glowing stroke width `3px`.
-   - Marker end: `MarkerType.ArrowClosed` matching current node theme.
-4. **Canvas Background:**
-   - Use `<Background variant={BackgroundVariant.Dots} gap={20} size={1.5} color="var(--studio-border-strong)" />`.
+   - **Inactive Edge:** `var(--studio-edge-inactive)` with `strokeWidth: 2`.
+   - **Active Edge:** `var(--studio-primary)` animated (`animated: true`) with `strokeWidth: 3`.
+   - **Completed Past Edge:** `var(--studio-success)` with `strokeWidth: 2`.
+   - Inactive edge markers must match `var(--studio-edge-inactive)`.
+3. **Viewport Responsiveness:**
+   - Attach `ResizeObserver` to the flow container to automatically call `fitView({ padding: 0.15 })` on window or pane resize.
+   - Include `fitViewOptions={{ padding: 0.15 }}` on `<ReactFlow>`.
+4. **Accessible Alternative:**
+   - Every diagram must have an immediate toggle button: *"Accessible Table View"* displaying all nodes and transitions in a standard semantic HTML `<table>`.
 
 ---
 
 ## 7. Accessibility Checklist (WCAG 2.2 AA & MYDS)
-1. **Zoom & Reflow:** Entire layout must adapt cleanly at 400% zoom without page-level horizontal scroll.
-2. **Keyboard Alternative:** Every diagram must have an immediate toggle button: *"Accessible Table View"* displaying all nodes and transitions in a standard semantic HTML table.
-3. **Focus States:** Every interactive button and input must have visible focus rings (`3px solid var(--studio-border-focus)` with `outline-offset: 2px`).
-4. **No Color-Only Cues:** Pair all pass/fail tags with text and icons (e.g., Checkmark for PASS, Alert for FAIL).
-5. **Reduced Motion:** Verify all animations and pulsing halos disappear cleanly under `prefers-reduced-motion: reduce`.
+
+1. **Contrast:** All body and muted text must achieve ≥ 4.5:1 (SysCraft targets ≥ 5.1:1 on both light and dark modes).
+2. **Focus Indicators:** Universal 3px focus rings on `:focus-visible` for all interactive elements (`outline: 3px solid var(--studio-border-focus); outline-offset: 2px;`).
+3. **Keyboard Navigation:**
+   - Monaco Editor has an explicit `<kbd>Esc</kbd> releases focus` badge bound via `aria-describedby`.
+   - Steppers, tabs, and radio groups support standard arrow-key navigation (Left/Right/Up/Down) with roving `tabIndex`.
+4. **Form Labels:** Explicit `htmlFor` and `id` bindings on all inputs (e.g., STAR Story builder using `useId()`).
+5. **No Color-Only Cues:** Pair all pass/fail tags with text and icons (e.g., Checkmark for PASS, Alert for FAIL).
+6. **Reduced Motion:** All hover lifts, keyframe animations, and pulsing halos must disable cleanly under `@media (prefers-reduced-motion: reduce)`.
