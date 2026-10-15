@@ -4,6 +4,7 @@ import initSqlJs, { type Database } from 'sql.js';
 import { Button } from '@govtechmy/myds-react/button';
 import { Tag } from '@govtechmy/myds-react/tag';
 import { Callout, CalloutTitle, CalloutContent } from '@govtechmy/myds-react/callout';
+import { Tabs, TabsList, TabsTrigger, TabsContent, TabsIcon } from '@govtechmy/myds-react/tabs';
 import { 
   Database as DbIcon, 
   Play, 
@@ -44,98 +45,125 @@ export function QueryPlanLab({
   const [isSeeding, setIsSeeding] = useState<boolean>(true);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<PlanViewTab>('delta');
+  const [seedTrigger, setSeedTrigger] = useState<number>(0);
   const editorRef = useRef<any>(null);
+  const dbRef = useRef<Database | null>(null);
 
   // Initialize SQLite WASM and Seed Synthetically (5,000 observations)
-  const initializeAndSeed = async () => {
-    setIsSeeding(true);
-    try {
-      const SQL = await initSqlJs({
-        locateFile: (file) => `https://sql.js.org/dist/${file}`,
-      });
-
-      const newDb = new SQL.Database();
-
-      // Detect sqlite version
-      const verRes = newDb.exec('SELECT sqlite_version() AS ver;');
-      if (verRes[0]?.values[0]?.[0]) {
-        const detected = String(verRes[0].values[0][0]);
-        setSqlVersion(detected);
-        onVersionDetected?.(detected);
-      }
-
-      // Create Schema
-      newDb.run(`
-        CREATE TABLE weather_observations (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          station_code TEXT NOT NULL,
-          temperature_c REAL NOT NULL,
-          humidity_pct REAL NOT NULL,
-          recorded_at TEXT NOT NULL
-        );
-      `);
-
-      // Seed 5,000 deterministic rows
-      newDb.run('BEGIN TRANSACTION;');
-      const stmt = newDb.prepare(`
-        INSERT INTO weather_observations (station_code, temperature_c, humidity_pct, recorded_at)
-        VALUES ($station, $temp, $humidity, $recorded);
-      `);
-
-      const stations = ['STN-MY-042', 'STN-MY-001', 'STN-MY-099', 'STN-SG-102', 'STN-ID-501'];
-      const baseDate = new Date('2026-01-01T00:00:00Z').getTime();
-
-      for (let i = 0; i < 5000; i++) {
-        const stn = stations[i % stations.length];
-        const temp = +(24 + Math.sin(i) * 8).toFixed(1);
-        const hum = +(60 + Math.cos(i) * 25).toFixed(1);
-        const dateIso = new Date(baseDate + i * 60000).toISOString();
-
-        stmt.run({
-          $station: stn,
-          $temp: temp,
-          $humidity: hum,
-          $recorded: dateIso,
-        });
-      }
-      stmt.free();
-      newDb.run('COMMIT;');
-
-      setDb(newDb);
-
-      // Baseline EXPLAIN QUERY PLAN (Unindexed)
-      const baselineRes = newDb.exec(`
-        EXPLAIN QUERY PLAN
-        SELECT id, station_code, temperature_c, recorded_at
-        FROM weather_observations
-        WHERE station_code = 'STN-MY-042'
-        ORDER BY recorded_at DESC
-        LIMIT 50;
-      `);
-
-      const baselinePlan = parseSqliteExplainPlan(baselineRes, sqlVersion, 0);
-      setCurrentPlan(baselinePlan);
-      const baselineAssertion = verifyPlanOptimization(baselinePlan, 'idx_station_recorded');
-      setOptimizationStatus(baselineAssertion);
-    } catch (err) {
-      console.error('Failed to initialize SQLite WASM:', err);
-      setOptimizationStatus({
-        passed: false,
-        message: 'Failed to initialize WASM database engine.',
-      });
-    } finally {
-      setIsSeeding(false);
-    }
-  };
-
   useEffect(() => {
-    initializeAndSeed();
-    return () => {
-      if (db) {
-        db.close();
+    let isMounted = true;
+    let localDb: Database | null = null;
+
+    const initAndSeed = async () => {
+      setIsSeeding(true);
+      try {
+        const SQL = await initSqlJs({
+          locateFile: (file) => `https://sql.js.org/dist/${file}`,
+        });
+
+        if (!isMounted) return;
+        localDb = new SQL.Database();
+        dbRef.current = localDb;
+
+        // Detect sqlite version
+        const verRes = localDb.exec('SELECT sqlite_version() AS ver;');
+        let detected = '3.45.2';
+        if (verRes[0]?.values[0]?.[0]) {
+          detected = String(verRes[0].values[0][0]);
+          if (isMounted) {
+            setSqlVersion(detected);
+            onVersionDetected?.(detected);
+          }
+        }
+
+        // Create Schema
+        localDb.run(`
+          CREATE TABLE weather_observations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            station_code TEXT NOT NULL,
+            temperature_c REAL NOT NULL,
+            humidity_pct REAL NOT NULL,
+            recorded_at TEXT NOT NULL
+          );
+        `);
+
+        // Seed 5,000 deterministic rows
+        localDb.run('BEGIN TRANSACTION;');
+        const stmt = localDb.prepare(`
+          INSERT INTO weather_observations (station_code, temperature_c, humidity_pct, recorded_at)
+          VALUES ($station, $temp, $humidity, $recorded);
+        `);
+
+        const stations = ['STN-MY-042', 'STN-MY-001', 'STN-MY-099', 'STN-SG-102', 'STN-ID-501'];
+        const baseDate = new Date('2026-01-01T00:00:00Z').getTime();
+
+        for (let i = 0; i < 5000; i++) {
+          const stn = stations[i % stations.length];
+          const temp = +(24 + Math.sin(i) * 8).toFixed(1);
+          const hum = +(60 + Math.cos(i) * 25).toFixed(1);
+          const dateIso = new Date(baseDate + i * 60000).toISOString();
+
+          stmt.run({
+            $station: stn,
+            $temp: temp,
+            $humidity: hum,
+            $recorded: dateIso,
+          });
+        }
+        stmt.free();
+        localDb.run('COMMIT;');
+
+        if (!isMounted) {
+          localDb.close();
+          dbRef.current = null;
+          return;
+        }
+
+        setDb(localDb);
+
+        // Baseline EXPLAIN QUERY PLAN (Unindexed)
+        const baselineRes = localDb.exec(`
+          EXPLAIN QUERY PLAN
+          SELECT id, station_code, temperature_c, recorded_at
+          FROM weather_observations
+          WHERE station_code = 'STN-MY-042'
+          ORDER BY recorded_at DESC
+          LIMIT 50;
+        `);
+
+        const baselinePlan = parseSqliteExplainPlan(baselineRes, detected, 0);
+        setCurrentPlan(baselinePlan);
+        const baselineAssertion = verifyPlanOptimization(baselinePlan, 'idx_station_recorded');
+        setOptimizationStatus(baselineAssertion);
+      } catch (err) {
+        console.error('Failed to initialize SQLite WASM:', err);
+        if (isMounted) {
+          setOptimizationStatus({
+            passed: false,
+            message: 'Failed to initialize WASM database engine.',
+          });
+        }
+      } finally {
+        if (isMounted) {
+          setIsSeeding(false);
+        }
       }
     };
-  }, []);
+
+    initAndSeed();
+
+    return () => {
+      isMounted = false;
+      if (localDb) {
+        try {
+          localDb.close();
+        } catch {
+          // ignore
+        }
+      }
+      dbRef.current = null;
+    };
+  }, [seedTrigger, onVersionDetected]);
 
   // Execute User Index Definition and Run EXPLAIN QUERY PLAN
   const runOptimization = () => {
@@ -188,6 +216,11 @@ export function QueryPlanLab({
     }
   };
 
+  const handleReset = () => {
+    setIsSeeding(true);
+    setSeedTrigger((prev) => prev + 1);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.875rem' }}>
       
@@ -217,7 +250,7 @@ export function QueryPlanLab({
           <Button 
             variant="default-outline" 
             size="small" 
-            onClick={initializeAndSeed} 
+            onClick={handleReset} 
             disabled={isSeeding}
             aria-label="Reset database"
           >
@@ -341,140 +374,75 @@ export function QueryPlanLab({
           minHeight: 0,
           overflow: 'hidden'
         }}>
-          {/* Header & ARIA Tablist */}
-          <div style={{ 
-            padding: '0.625rem 0.875rem', 
-            borderBottom: '1px solid var(--studio-border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '0.5rem',
-            flexShrink: 0
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--studio-text)' }}>
-                Plan Inspector
-              </span>
-              {optimizationStatus && (
-                <Tag variant={optimizationStatus.passed ? 'success' : 'danger'} size="small">
-                  {optimizationStatus.passed ? (
-                    <CheckCircle2 size={11} style={{ marginRight: '3px' }} />
-                  ) : (
-                    <AlertTriangle size={11} style={{ marginRight: '3px' }} />
-                  )}
-                  {optimizationStatus.passed ? 'OPTIMIZED' : 'UNOPTIMIZED'}
-                </Tag>
-              )}
-            </div>
-
-            {/* Accessible Tab Navigation */}
-            <div role="tablist" aria-label="Query Plan Inspection Views" style={{
-              display: 'inline-flex',
-              padding: '2px',
-              backgroundColor: 'var(--studio-surface-subtle)',
-              borderRadius: '6px',
-              border: '1px solid var(--studio-border)'
+          <Tabs
+            value={activeTab}
+            onValueChange={(val) => setActiveTab(val as PlanViewTab)}
+            variant="pill"
+            size="small"
+            style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+          >
+            {/* Header & ARIA Tablist */}
+            <div style={{ 
+              padding: '0.625rem 0.875rem', 
+              borderBottom: '1px solid var(--studio-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.5rem',
+              flexShrink: 0
             }}>
-              <button
-                id="tab-delta"
-                role="tab"
-                type="button"
-                aria-selected={activeTab === 'delta'}
-                aria-controls="panel-delta"
-                onClick={() => setActiveTab('delta')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '3px 8px',
-                  borderRadius: '4px',
-                  fontSize: '0.6875rem',
-                  fontWeight: activeTab === 'delta' ? 700 : 500,
-                  border: 'none',
-                  backgroundColor: activeTab === 'delta' ? 'var(--studio-primary)' : 'transparent',
-                  color: activeTab === 'delta' ? 'var(--studio-primary-contrast)' : 'var(--studio-text-muted)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <TrendingDown size={11} />
-                Cost Delta
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--studio-text)' }}>
+                  Plan Inspector
+                </span>
+                {optimizationStatus && (
+                  <Tag variant={optimizationStatus.passed ? 'success' : 'danger'} size="small">
+                    {optimizationStatus.passed ? (
+                      <CheckCircle2 size={11} style={{ marginRight: '3px' }} />
+                    ) : (
+                      <AlertTriangle size={11} style={{ marginRight: '3px' }} />
+                    )}
+                    {optimizationStatus.passed ? 'OPTIMIZED' : 'UNOPTIMIZED'}
+                  </Tag>
+                )}
+              </div>
 
-              <button
-                id="tab-nodes"
-                role="tab"
-                type="button"
-                aria-selected={activeTab === 'nodes'}
-                aria-controls="panel-nodes"
-                onClick={() => setActiveTab('nodes')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '3px 8px',
-                  borderRadius: '4px',
-                  fontSize: '0.6875rem',
-                  fontWeight: activeTab === 'nodes' ? 700 : 500,
-                  border: 'none',
-                  backgroundColor: activeTab === 'nodes' ? 'var(--studio-primary)' : 'transparent',
-                  color: activeTab === 'nodes' ? 'var(--studio-primary-contrast)' : 'var(--studio-text-muted)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <Layers size={11} />
-                Plan Nodes
-              </button>
-
-              <button
-                id="tab-raw"
-                role="tab"
-                type="button"
-                aria-selected={activeTab === 'raw'}
-                aria-controls="panel-raw"
-                onClick={() => setActiveTab('raw')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '3px 8px',
-                  borderRadius: '4px',
-                  fontSize: '0.6875rem',
-                  fontWeight: activeTab === 'raw' ? 700 : 500,
-                  border: 'none',
-                  backgroundColor: activeTab === 'raw' ? 'var(--studio-primary)' : 'transparent',
-                  color: activeTab === 'raw' ? 'var(--studio-primary-contrast)' : 'var(--studio-text-muted)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <Terminal size={11} />
-                Raw EXPLAIN
-              </button>
+              {/* Accessible Tab Navigation */}
+              <TabsList width="fit">
+                <TabsTrigger value="delta">
+                  <TabsIcon><TrendingDown size={11} /></TabsIcon>
+                  Cost Delta
+                </TabsTrigger>
+                <TabsTrigger value="nodes">
+                  <TabsIcon><Layers size={11} /></TabsIcon>
+                  Plan Nodes
+                </TabsTrigger>
+                <TabsTrigger value="raw">
+                  <TabsIcon><Terminal size={11} /></TabsIcon>
+                  Raw EXPLAIN
+                </TabsTrigger>
+              </TabsList>
             </div>
-          </div>
 
-          {/* Scrollable Tab Panels */}
-          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            
-            {/* Status Callout (Always Visible above tabs) */}
-            {optimizationStatus && (
-              <Callout variant={optimizationStatus.passed ? 'success' : 'warning'}>
-                <CalloutTitle style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem' }}>
-                  {optimizationStatus.passed ? <CheckCircle2 size={14} color="var(--studio-success)" /> : <AlertTriangle size={14} color="var(--studio-warning)" />}
-                  {optimizationStatus.passed ? 'Index Plan Transition Successful' : 'Sequential Scan Detected'}
-                </CalloutTitle>
-                <CalloutContent style={{ fontSize: '0.75rem' }}>
-                  {optimizationStatus.message}
-                </CalloutContent>
-              </Callout>
-            )}
+            {/* Scrollable Tab Panels */}
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              
+              {/* Status Callout (Always Visible above tabs) */}
+              {optimizationStatus && (
+                <Callout variant={optimizationStatus.passed ? 'success' : 'warning'}>
+                  <CalloutTitle style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem' }}>
+                    {optimizationStatus.passed ? <CheckCircle2 size={14} color="var(--studio-success)" /> : <AlertTriangle size={14} color="var(--studio-warning)" />}
+                    {optimizationStatus.passed ? 'Index Plan Transition Successful' : 'Sequential Scan Detected'}
+                  </CalloutTitle>
+                  <CalloutContent style={{ fontSize: '0.75rem' }}>
+                    {optimizationStatus.message}
+                  </CalloutContent>
+                </Callout>
+              )}
 
-            {/* TAB PANEL 1: Cost Delta & Performance Transition */}
-            {activeTab === 'delta' && (
-              <div id="panel-delta" role="tabpanel" aria-labelledby="tab-delta" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {/* TAB PANEL 1: Cost Delta & Performance Transition */}
+              <TabsContent value="delta" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', margin: 0 }}>
                 {/* Executive Performance Delta Highlight Card */}
                 {optimizationStatus?.passed && (
                   <div style={{
@@ -556,12 +524,10 @@ export function QueryPlanLab({
                     <span>Supplementary Benchmark: ~{currentPlan.executionTimeMs.toFixed(2)}ms (Informational only; host-dependent)</span>
                   </div>
                 )}
-              </div>
-            )}
+              </TabsContent>
 
-            {/* TAB PANEL 2: Parsed Plan Nodes */}
-            {activeTab === 'nodes' && (
-              <div id="panel-nodes" role="tabpanel" aria-labelledby="tab-nodes" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {/* TAB PANEL 2: Parsed Plan Nodes */}
+              <TabsContent value="nodes" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', margin: 0 }}>
                 <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--studio-text-muted)', marginBottom: '2px' }}>
                   PARSED PLAN NODES:
                 </div>
@@ -594,12 +560,10 @@ export function QueryPlanLab({
                 ) : (
                   <span style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)' }}>No nodes parsed yet. Click Execute & Analyze Plan above.</span>
                 )}
-              </div>
-            )}
+              </TabsContent>
 
-            {/* TAB PANEL 3: Raw EXPLAIN Rows */}
-            {activeTab === 'raw' && (
-              <div id="panel-raw" role="tabpanel" aria-labelledby="tab-raw" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {/* TAB PANEL 3: Raw EXPLAIN Rows */}
+              <TabsContent value="raw" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', margin: 0 }}>
                 <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--studio-text-muted)', marginBottom: '2px' }}>
                   RAW EXPLAIN QUERY PLAN ROWS:
                 </div>
@@ -618,10 +582,10 @@ export function QueryPlanLab({
                     ? currentPlan.rawExplain.join('\n')
                     : 'Awaiting execution. Click "Execute & Analyze Plan" above.'}
                 </pre>
-              </div>
-            )}
+              </TabsContent>
 
-          </div>
+            </div>
+          </Tabs>
         </div>
 
       </div>
