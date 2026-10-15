@@ -4,6 +4,14 @@ import { Group, Panel, Separator } from 'react-resizable-panels';
 import { Button } from '@govtechmy/myds-react/button';
 import { Tag } from '@govtechmy/myds-react/tag';
 import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogClose, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogTitle 
+} from '@govtechmy/myds-react/alert-dialog';
+import { 
   Play, 
   RotateCcw, 
   FileCode,
@@ -14,8 +22,7 @@ import {
   Unlock,
   Check,
   Copy,
-  X,
-  AlertCircle
+  X
 } from 'lucide-react';
 import { 
   type DrillDefinition,
@@ -111,58 +118,33 @@ export function StepFocusedDrill({
 
   return (
     <div className="studio-drill-container">
-      {/* Confirmation Modal for Solution Revelation */}
-      {showConfirmSolution && (
-        <div 
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="confirm-solution-title"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'var(--studio-overlay)',
-            backdropFilter: 'blur(4px)',
-            padding: '1rem',
-          }}
-        >
-          <div style={{
-            maxWidth: '460px',
-            width: '100%',
-            backgroundColor: 'var(--studio-surface)',
-            border: '1px solid var(--studio-border)',
-            borderRadius: '10px',
-            padding: '1.25rem',
-            boxShadow: 'var(--studio-shadow-float)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.875rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <AlertCircle size={20} color="var(--studio-warning)" />
-              <h3 id="confirm-solution-title" style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--studio-text)' }}>
-                View Reference Solution?
-              </h3>
-            </div>
-            <p style={{ margin: 0, fontSize: '0.8125rem', lineHeight: 1.5, color: 'var(--studio-text-muted)' }}>
-              Viewing the reference solution will be recorded in your session notes for oral review discussion.
-              <br /><br />
-              <strong>Note:</strong> In SysCraft pedagogy, this does NOT deduct from your oral rubric score, which evaluates verbal explanation and defense independently.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
-              <Button variant="default-outline" size="small" onClick={() => setShowConfirmSolution(false)}>
+      {/* Accessible Confirmation Dialog for Solution Revelation */}
+      <AlertDialog 
+        open={showConfirmSolution} 
+        onOpenChange={setShowConfirmSolution} 
+        variant="warning"
+      >
+        <AlertDialogContent>
+          <AlertDialogTitle>
+            View Reference Solution?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Viewing the reference solution will be recorded in your session notes for oral review discussion.
+            <br /><br />
+            <strong>Note:</strong> In SysCraft pedagogy, this does NOT deduct from your oral rubric score, which evaluates verbal explanation and defense independently.
+          </AlertDialogDescription>
+          <AlertDialogAction>
+            <AlertDialogClose asChild>
+              <Button variant="default-outline" size="small">
                 Cancel
               </Button>
-              <Button variant="primary-fill" size="small" onClick={confirmRevealSolution}>
-                Reveal Solution
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </AlertDialogClose>
+            <Button variant="primary-fill" size="small" onClick={confirmRevealSolution}>
+              Reveal Solution
+            </Button>
+          </AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Week 4 Database & EXPLAIN Lab */}
       {activeDrill.week === 4 ? (
