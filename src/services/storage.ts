@@ -144,31 +144,81 @@ export async function getAllProgress() {
   return db.getAll('progress');
 }
 
+// Helper to alias legacy drill IDs
+function resolveCanonicalTaskId(id: string): string {
+  if (id === 'w4-data-layer-indexes') return 'w4-btree-indexing';
+  return id;
+}
+
 // Task State Operations
 export async function getTaskState(taskId: string): Promise<TaskState | undefined> {
   const db = await getDatabase();
-  return db.get('tasks', taskId);
+  const canonicalId = resolveCanonicalTaskId(taskId);
+  const direct = await db.get('tasks', canonicalId);
+  if (direct) return direct;
+
+  // Fallback to legacy ID if querying canonical ID
+  if (canonicalId === 'w4-btree-indexing') {
+    const legacy = await db.get('tasks', 'w4-data-layer-indexes');
+    if (legacy) {
+      const migrated: TaskState = { ...legacy, taskId: 'w4-btree-indexing' };
+      await db.put('tasks', migrated);
+      return migrated;
+    }
+  }
+  return undefined;
 }
 
 export async function saveTaskState(state: TaskState): Promise<void> {
   const db = await getDatabase();
-  await db.put('tasks', state);
+  const canonicalState: TaskState = {
+    ...state,
+    taskId: resolveCanonicalTaskId(state.taskId),
+  };
+  await db.put('tasks', canonicalState);
 }
 
 export async function getAllTaskStates(): Promise<TaskState[]> {
   const db = await getDatabase();
-  return db.getAll('tasks');
+  const all = await db.getAll('tasks');
+  const seen = new Set<string>();
+  const normalized: TaskState[] = [];
+
+  for (const t of all) {
+    const canonicalId = resolveCanonicalTaskId(t.taskId);
+    if (!seen.has(canonicalId)) {
+      seen.add(canonicalId);
+      normalized.push({ ...t, taskId: canonicalId });
+    }
+  }
+  return normalized;
 }
 
 // Granular Drill Session Operations
 export async function getDrillSession(drillId: string): Promise<DrillSessionState | undefined> {
   const db = await getDatabase();
-  return db.get('drillSessions', drillId);
+  const canonicalId = resolveCanonicalTaskId(drillId);
+  const direct = await db.get('drillSessions', canonicalId);
+  if (direct) return direct;
+
+  if (canonicalId === 'w4-btree-indexing') {
+    const legacy = await db.get('drillSessions', 'w4-data-layer-indexes');
+    if (legacy) {
+      const migrated: DrillSessionState = { ...legacy, drillId: 'w4-btree-indexing' };
+      await db.put('drillSessions', migrated);
+      return migrated;
+    }
+  }
+  return undefined;
 }
 
 export async function saveDrillSession(session: DrillSessionState): Promise<void> {
   const db = await getDatabase();
-  await db.put('drillSessions', session);
+  const canonicalSession: DrillSessionState = {
+    ...session,
+    drillId: resolveCanonicalTaskId(session.drillId),
+  };
+  await db.put('drillSessions', canonicalSession);
 }
 
 export async function getAllDrillSessions(): Promise<DrillSessionState[]> {

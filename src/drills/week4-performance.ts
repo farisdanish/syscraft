@@ -1,7 +1,7 @@
 import type { DrillDefinition } from '../types';
 
 export const WEEK_4_DRILL: DrillDefinition = {
-  id: 'w4-data-layer-indexes',
+  id: 'w4-btree-indexing',
   week: 4,
   title: 'B-Tree Compound Indexing & EXPLAIN QUERY PLAN Optimization',
   tier: 1,
