@@ -214,9 +214,12 @@ export async function getDrillSession(drillId: string): Promise<DrillSessionStat
 
 export async function saveDrillSession(session: DrillSessionState): Promise<void> {
   const db = await getDatabase();
+  const canonicalId = resolveCanonicalTaskId(session.drillId);
+  const existing = await db.get('drillSessions', canonicalId);
   const canonicalSession: DrillSessionState = {
     ...session,
-    drillId: resolveCanonicalTaskId(session.drillId),
+    starStories: session.starStories !== undefined ? session.starStories : existing?.starStories,
+    drillId: canonicalId,
   };
   await db.put('drillSessions', canonicalSession);
 }
@@ -345,6 +348,16 @@ const DrillStepCompletionsSchema = z.object({
   5: z.boolean(),
 });
 
+const StarStorySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  category: z.string(),
+  situation: z.string(),
+  task: z.string(),
+  action: z.string(),
+  result: z.string(),
+});
+
 const DrillSessionStateSchema = z.object({
   drillId: z.string(),
   week: z.number(),
@@ -358,6 +371,7 @@ const DrillSessionStateSchema = z.object({
   completed: z.boolean(),
   oralDefenseCompleted: z.boolean(),
   lastActiveAt: z.string(),
+  starStories: z.array(StarStorySchema).optional(),
 });
 
 const EnvelopeSchema = z.object({

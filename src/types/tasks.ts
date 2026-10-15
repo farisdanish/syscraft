@@ -42,6 +42,16 @@ export interface DrillStepCompletions {
   5: boolean; // tracerReplayed
 }
 
+export interface StarStory {
+  id: string;
+  title: string;
+  category: string;
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+}
+
 export interface DrillSessionState {
   drillId: string;
   week: number;
@@ -55,4 +65,5 @@ export interface DrillSessionState {
   completed: boolean;
   oralDefenseCompleted: boolean;
   lastActiveAt: string;
+  starStories?: StarStory[];
 }

@@ -3,22 +3,19 @@ import { Button } from '@govtechmy/myds-react/button';
 import { Tag } from '@govtechmy/myds-react/tag';
 import { Callout, CalloutTitle, CalloutContent } from '@govtechmy/myds-react/callout';
 import { Download, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
+import type { StarStory } from '../../types';
 
-export interface StarStory {
-  id: string;
-  title: string;
-  category: string;
-  situation: string;
-  task: string;
-  action: string;
-  result: string;
-}
+export type { StarStory };
 
 export interface StarStoryBuilderProps {
   onExportRfc?: (rfcMarkdown: string) => void;
   onOpenRubric?: () => void;
   isDark?: boolean;
+  stories?: StarStory[];
+  onChangeStories?: (stories: StarStory[]) => void;
 }
+
+const STORAGE_KEY = 'syscraft-star-stories';
 
 const DEFAULT_STORIES: StarStory[] = [
   {
@@ -41,17 +38,45 @@ const DEFAULT_STORIES: StarStory[] = [
   },
 ];
 
-export function StarStoryBuilder({ onExportRfc, onOpenRubric }: StarStoryBuilderProps) {
-  const [stories, setStories] = useState<StarStory[]>(DEFAULT_STORIES);
+function loadInitialStories(propStories?: StarStory[]): StarStory[] {
+  if (propStories && propStories.length > 0) {
+    return propStories;
+  }
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const cached = localStorage.getItem(STORAGE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed as StarStory[];
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+  return DEFAULT_STORIES;
+}
+
+export function StarStoryBuilder({ onExportRfc, onOpenRubric, stories: propStories, onChangeStories }: StarStoryBuilderProps) {
+  const [localStories, setLocalStories] = useState<StarStory[]>(() => loadInitialStories(propStories));
   const [activeStoryId, setActiveStoryId] = useState<string>('spike-defense');
   const [copied, setCopied] = useState<boolean>(false);
 
+  const stories = propStories && propStories.length > 0 ? propStories : localStories;
   const activeStory = stories.find((s) => s.id === activeStoryId) || stories[0];
 
   const handleUpdateField = (field: keyof StarStory, value: string) => {
-    setStories((prev) =>
-      prev.map((s) => (s.id === activeStoryId ? { ...s, [field]: value } : s))
-    );
+    const updated = stories.map((s) => (s.id === activeStoryId ? { ...s, [field]: value } : s));
+    setLocalStories(updated);
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      }
+    } catch {
+      // ignore quota errors
+    }
+    onChangeStories?.(updated);
   };
 
   const generateRfcMarkdown = (): string => {

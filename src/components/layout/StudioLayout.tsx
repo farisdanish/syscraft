@@ -33,7 +33,8 @@ import {
   type DrillDefinition,
   type DrillStepCompletions,
   type DrillSessionState,
-  type TaskStatus
+  type TaskStatus,
+  type StarStory
 } from '../../types';
 import { 
   ACTIVE_WEEKS,
@@ -132,6 +133,7 @@ export function StudioLayout({
   const [politeNotice, setPoliteNotice] = useState<string>('');
   const [importNotice, setImportNotice] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
+  const [starStories, setStarStories] = useState<StarStory[] | undefined>(undefined);
 
   // 90-minute Timed Sprint State (Week 7)
   const [sprintSeconds, setSprintSeconds] = useState<number>(5400);
@@ -315,7 +317,9 @@ export function StudioLayout({
         setTier3Result(session.tier3Result as BridgeRunResult | null);
         setVerificationSource(session.verificationSource);
         setDrillCompleted(session.completed);
+        setStarStories(session.starStories);
       } else {
+        setStarStories(undefined);
         // Fallback to legacy progress record if migrating
         const legacy = await getDrillProgress(activeDrill.id);
         if (legacy?.completed) {
@@ -397,6 +401,7 @@ export function StudioLayout({
       completed: drillCompleted,
       oralDefenseCompleted: stepCompletions[4],
       lastActiveAt: new Date().toISOString(),
+      starStories: activeDrill.week === 6 ? starStories : undefined,
     };
     await saveDrillSession(currentSession);
 
@@ -415,8 +420,10 @@ export function StudioLayout({
       setTier3Result(targetSession.tier3Result as BridgeRunResult | null);
       setVerificationSource(targetSession.verificationSource);
       setDrillCompleted(targetSession.completed);
+      setStarStories(targetSession.starStories);
       setPoliteNotice(`Resumed session for ${nextDrill.title} at Step ${targetSession.currentStep}`);
     } else {
+      setStarStories(undefined);
       const legacyProg = await getDrillProgress(nextDrill.id);
       if (legacyProg?.completed) {
         setUserCode(nextDrill.initialCode);
@@ -438,7 +445,7 @@ export function StudioLayout({
         setDrillCompleted(false);
       }
     }
-  }, [selectedWeek, activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, userCode, testResults, tier3Result, verificationSource, drillCompleted]);
+  }, [selectedWeek, activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, userCode, testResults, tier3Result, verificationSource, drillCompleted, starStories]);
 
   // Gate 1: Proceed from Step 1 (Concept Brief) to Step 2 (Focused Drill)
   const handleProceedFromConcept = async () => {
@@ -1169,6 +1176,25 @@ export function StudioLayout({
                   <div style={{ height: '100%', overflowY: 'auto', padding: '0.75rem' }}>
                     <StarStoryBuilder 
                       isDark={isDark}
+                      stories={starStories}
+                      onChangeStories={(updated) => {
+                        setStarStories(updated);
+                        void saveDrillSession({
+                          drillId: activeDrill.id,
+                          week: activeDrill.week,
+                          currentStep,
+                          highestStepReached,
+                          stepCompletions,
+                          draftCode: userCode,
+                          testResults,
+                          tier3Result,
+                          verificationSource,
+                          completed: drillCompleted,
+                          oralDefenseCompleted: stepCompletions[4],
+                          lastActiveAt: new Date().toISOString(),
+                          starStories: updated,
+                        });
+                      }}
                       onExportRfc={() => {
                         setPoliteNotice('Exported Architecture RFC to clipboard and downloaded Markdown file.');
                       }}
