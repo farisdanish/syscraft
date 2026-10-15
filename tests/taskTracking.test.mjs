@@ -12,9 +12,14 @@ test('Task Tracking & Catalog Resolution', async (t) => {
   const week4Task = CURRICULUM_TASKS.find((t) => t.id === 'w4-btree-indexing');
   const week7Task = CURRICULUM_TASKS.find((t) => t.id === 'w7-crud-auth-sprint');
 
+  const week5Task = CURRICULUM_TASKS.find((t) => t.id === 'w5-queue-dlq-pipeline');
+  const week6Task = CURRICULUM_TASKS.find((t) => t.id === 'w6-system-design-star');
+
   assert.ok(week1Task, 'Week 1 task must exist in curriculum catalog');
   assert.ok(week2Task, 'Week 2 task must exist in curriculum catalog');
   assert.ok(week4Task, 'Week 4 task must exist in curriculum catalog');
+  assert.ok(week5Task, 'Week 5 task must exist in curriculum catalog');
+  assert.ok(week6Task, 'Week 6 task must exist in curriculum catalog');
   assert.ok(week7Task, 'Week 7 task must exist in curriculum catalog');
 
   await t.test('Active task without prerequisites resolves to "available"', () => {
@@ -80,22 +85,69 @@ test('Task Tracking & Catalog Resolution', async (t) => {
   });
 
   await t.test('Planned task with satisfied prerequisites remains "planned"', () => {
-    // Week 7 requires Week 1 and Week 4, but is planned (statusActiveInMvp: false)
+    // Week 5 requires Week 4, but is planned (statusActiveInMvp: false)
     const allStates = {
-      'w1-laravel-internals-n1': {
-        taskId: 'w1-laravel-internals-n1',
-        status: 'verified',
-        attempts: 1,
-      },
       'w4-btree-indexing': {
         taskId: 'w4-btree-indexing',
         status: 'completed',
         attempts: 1,
       },
     };
-    const status = resolveTaskStatus(week7Task, undefined, allStates);
+    const status = resolveTaskStatus(week5Task, undefined, allStates);
     assert.strictEqual(status, 'planned');
-    assert.strictEqual(resolveTaskAvailability(week7Task, status), 'planned');
+    assert.strictEqual(resolveTaskAvailability(week5Task, status), 'planned');
+  });
+
+  await t.test('Week 6 (Active) resolves to "locked" without Week 4 and "available" when Week 4 is completed', () => {
+    // Locked when prerequisites are missing
+    const lockedStatus = resolveTaskStatus(week6Task, undefined, {});
+    assert.strictEqual(lockedStatus, 'locked');
+    assert.strictEqual(resolveTaskAvailability(week6Task, lockedStatus), 'blocked');
+
+    // Available when Week 4 is completed
+    const allStates = {
+      'w4-btree-indexing': {
+        taskId: 'w4-btree-indexing',
+        status: 'completed',
+        attempts: 1,
+      },
+    };
+    const availableStatus = resolveTaskStatus(week6Task, undefined, allStates);
+    assert.strictEqual(availableStatus, 'available');
+    assert.strictEqual(resolveTaskAvailability(week6Task, availableStatus), 'active');
+  });
+
+  await t.test('Week 7 (Active) multi-prerequisite gating resolves to "locked" until both Week 1 & 4 are satisfied', () => {
+    // Locked if only Week 1 is completed
+    const onlyWeek1 = {
+      'w1-laravel-internals-n1': {
+        taskId: 'w1-laravel-internals-n1',
+        status: 'verified',
+        attempts: 1,
+      },
+    };
+    const status1 = resolveTaskStatus(week7Task, undefined, onlyWeek1);
+    assert.strictEqual(status1, 'locked');
+
+    // Locked if only Week 4 is completed
+    const onlyWeek4 = {
+      'w4-btree-indexing': {
+        taskId: 'w4-btree-indexing',
+        status: 'verified',
+        attempts: 1,
+      },
+    };
+    const status4 = resolveTaskStatus(week7Task, undefined, onlyWeek4);
+    assert.strictEqual(status4, 'locked');
+
+    // Available when BOTH Week 1 & Week 4 are completed/verified
+    const bothSatisfied = {
+      ...onlyWeek1,
+      ...onlyWeek4,
+    };
+    const statusBoth = resolveTaskStatus(week7Task, undefined, bothSatisfied);
+    assert.strictEqual(statusBoth, 'available');
+    assert.strictEqual(resolveTaskAvailability(week7Task, statusBoth), 'active');
   });
 
   await t.test('In-progress status is preserved for active tasks', () => {

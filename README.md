@@ -98,7 +98,7 @@ flowchart LR
 * [X] **Secured Local Bridge & Testbed Prototype (Tier 3):** Loopback bridge daemon (`127.0.0.1:49152`) connecting to `syscraft-testnet` with custom `syscraft-runner:1.0.0` and `postgres:16.4-alpine`, hardened with read-only rootfs, ephemeral learner code injection, real PDO query-budget tracking against PostgreSQL (51 unoptimized queries vs 3 batch eager-loaded queries), strict non-empty origin validation, and child process group timeout management.
 * [X] **Oral Recall Rubric & Operationalized Hesitation Queue:** 5-dimension scored rubric (1–4 scale), latency/retry metrics, and Sunday review queue in IndexedDB.
 
-### Phase 2: High-Value Core Expansions & Home Hub (In Progress)
+### Phase 2: High-Value Core Expansions & Home Hub (Completed & Hardened)
 
 #### Phase 2A: Learner-First Home Hub & Architectural Separation (Completed & Hardened)
 
@@ -106,10 +106,11 @@ flowchart LR
 * [X] **Dedicated "How It Works" Architectural View:** Dedicated technical transparency view separating runtime execution details (Tier 1 WASM SQLite, Tier 2 Simulation FSM, Tier 3 loopback Docker bridge at `127.0.0.1:49152`) and live container diagnostics from learner curriculum discovery.
 * [X] **Desktop Viewport & Layout Sizing Hardening:** Enforced flex-shrink invariants (`.home-main > * { flex-shrink: 0; }`) preventing hero banner and dashboard card squishing, guaranteeing full typography legibility, comfortable tag/button spacing, and smooth scrolling across viewports.
 
-#### Phase 2B: High-Value Core Expansions (Next Steps)
+#### Phase 2B: High-Value Core Expansions & Multi-Module Architecture (Completed & Hardened)
 
-* [ ] **Week 7 Timed CRUD & Auth Sprint:** 90-minute timed mock featuring threat-modeled session fixation regeneration (`$request->session()->regenerate()`), FormRequests, role checks, and policy authorization (`$this->authorize()`).
-* [ ] **Week 6 Scoped MVP:** 1 timed system design (Weather Data Pipeline: 100k req/s), 2 structured STAR stories (Report Export Speedup & Memory OOM Fix), and 1 reusable 1-page architecture design document template.
+* [X] **Week 7 Timed CRUD & Auth Sprint:** 90-minute timed mock featuring accessible WCAG 2.2 polite milestone announcements, session fixation defense (`$request->session()->regenerate()`), IDOR prevention with policy authorization (`$this->authorize('update', $record)`), 5-dimension oral rubric, and dual verification (Tier 2 in-browser AST evaluation and Tier 3 Docker bridge runner).
+* [X] **Week 6 System Design & STAR Defense:** High-throughput Weather Data Ingestion Pipeline (100k req/s), interactive `StarStoryBuilder` with 2 structured production incident scenarios (Buffer backpressure saturation & replication lag), Markdown RFC engineering document generator, and automated systems schema evaluator.
+* [X] **Baseline Normalization & Multi-Module Registry:** Resolved legacy Week 4 ID inconsistencies (`w4-data-layer-indexes` → `w4-btree-indexing`) with backward-compatible IndexedDB session aliasing, and established a generalized `DRILL_REGISTRY` supporting non-destructive state persistence across Weeks 1, 4, 6, and 7.
 
 ### Phase 3: Enrichment Modules (Weeks 2, 3, 5)
 

@@ -153,7 +153,9 @@ export function HomeHub({
     return s === 'completed' || s === 'verified';
   }).length;
 
+  const inProgressTask = activeTasks.find(t => resolveTaskStatus(t, taskStates[t.id], taskStates) === 'in_progress');
   const inProgressCount = activeTasks.filter(t => resolveTaskStatus(t, taskStates[t.id], taskStates) === 'in_progress').length;
+  const inProgressWeek = inProgressTask ? inProgressTask.week : 1;
   const progressPercent = totalActive > 0 ? Math.round((masteredCount / totalActive) * 100) : 0;
 
   // Actions
@@ -376,7 +378,7 @@ export function HomeHub({
               id="hero-start-drill-btn"
               variant="primary-fill"
               size="medium"
-              onClick={() => onLaunchWorkbench(inProgressCount > 0 ? (taskStates['w4-btree-indexing']?.status === 'in_progress' ? 4 : 1) : 1)}
+              onClick={() => onLaunchWorkbench(inProgressCount > 0 ? inProgressWeek : 1)}
               style={{ fontWeight: 600, whiteSpace: 'nowrap' }}
             >
               <Play size={15} style={{ marginRight: '6px' }} />
@@ -530,7 +532,7 @@ export function HomeHub({
                 <Clock size={14} color="var(--studio-primary)" style={{ opacity: 0.8 }} />
               </div>
               <div className="home-metric-value" style={{ fontSize: '1.35rem', marginTop: '2px' }}>
-                <span>{inProgressCount > 0 ? `Week ${taskStates['w4-btree-indexing']?.status === 'in_progress' ? 4 : 1}` : 'None'}</span>
+                <span>{inProgressCount > 0 ? `Week ${inProgressWeek}` : 'None'}</span>
               </div>
               <span className="home-metric-subtext" style={{ fontSize: '0.71875rem' }}>
                 {inProgressCount > 0 ? 'Draft progress auto-saved in browser' : 'Select a drill below to begin'}
