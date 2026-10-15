@@ -66,4 +66,6 @@ export interface DrillSessionState {
   oralDefenseCompleted: boolean;
   lastActiveAt: string;
   starStories?: StarStory[];
+  hintsUsed?: number;
+  solutionRevealed?: boolean;
 }

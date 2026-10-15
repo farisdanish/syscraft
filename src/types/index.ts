@@ -89,6 +89,7 @@ export interface DrillDefinition {
   };
   initialCode: string;
   solutionCode: string;
+  hints?: string[];
   language: "php" | "sql" | "json";
   targetFile: string;
   validationRules: {
@@ -114,6 +115,25 @@ import type { TaskState, DrillSessionState } from './tasks';
 // Persistence Envelope Schema (Versioned & Prototype-Safe)
 export interface ExportEnvelopeV1 {
   schemaVersion: "1.0.0";
+  exportedAt: string;
+  appVersion: "1.0.0";
+  payload: {
+    tasks?: Record<string, TaskState>;
+    completedDrills: Record<string, { 
+      completed: boolean; 
+      score?: number; 
+      verified: boolean;
+      verificationSource?: VerificationSource;
+    }>;
+    drillSessions?: Record<string, DrillSessionState>;
+    hesitations: HesitationLogItem[];
+    oralScores: OralRubricScore[];
+    customNotes: Record<string, string>;
+  };
+}
+
+export interface ExportEnvelopeV2 {
+  schemaVersion: "2.0.0";
   exportedAt: string;
   appVersion: "1.0.0";
   payload: {

@@ -2,6 +2,7 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { z } from 'zod';
 import type { 
   ExportEnvelopeV1, 
+  ExportEnvelopeV2,
   HesitationLogItem, 
   OralRubricScore, 
   TaskState, 
@@ -372,10 +373,12 @@ const DrillSessionStateSchema = z.object({
   oralDefenseCompleted: z.boolean(),
   lastActiveAt: z.string(),
   starStories: z.array(StarStorySchema).optional(),
+  hintsUsed: z.number().min(0).optional(),
+  solutionRevealed: z.boolean().optional(),
 });
 
 const EnvelopeSchema = z.object({
-  schemaVersion: z.string().regex(/^1\.\d+\.\d+$/),
+  schemaVersion: z.string().regex(/^[12]\.\d+\.\d+$/),
   exportedAt: z.string(),
   appVersion: z.string().regex(/^1\.\d+\.\d+$/),
   payload: z.object({
@@ -438,8 +441,8 @@ export async function exportEnvelopeJSON(): Promise<string> {
     customNotes[n.drillId] = n.content;
   }
 
-  const envelope: ExportEnvelopeV1 = {
-    schemaVersion: '1.0.0',
+  const envelope: ExportEnvelopeV2 = {
+    schemaVersion: '2.0.0',
     exportedAt: new Date().toISOString(),
     appVersion: '1.0.0',
     payload: {
