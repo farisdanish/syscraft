@@ -13,6 +13,18 @@ import {
   evaluateSystemDesignDrill, 
   WEEK_6_DRILL 
 } from '../dist-test/drills/week6-system-design.js';
+import { 
+  evaluateCursorPaginationDrill, 
+  WEEK_2_DRILL 
+} from '../dist-test/drills/week2-api-pagination.js';
+import { 
+  evaluateClassRefactoringDrill, 
+  WEEK_3_DRILL 
+} from '../dist-test/drills/week3-clean-architecture.js';
+import { 
+  evaluateQueueDlqDrill, 
+  WEEK_5_DRILL 
+} from '../dist-test/drills/week5-async-processing.js';
 
 test('Task Tracking & Catalog Resolution', async (t) => {
   const week1Task = CURRICULUM_TASKS.find((t) => t.id === 'w1-laravel-internals-n1');
@@ -38,10 +50,10 @@ test('Task Tracking & Catalog Resolution', async (t) => {
   });
 
   await t.test('Planned task without prerequisites resolves to "planned" (not available)', () => {
-    // Week 2 has no prerequisites, but is statusActiveInMvp: false
-    const status = resolveTaskStatus(week2Task, undefined, {});
+    const plannedTask = { ...week2Task, statusActiveInMvp: false, prerequisites: [] };
+    const status = resolveTaskStatus(plannedTask, undefined, {});
     assert.strictEqual(status, 'planned');
-    const availability = resolveTaskAvailability(week2Task, status);
+    const availability = resolveTaskAvailability(plannedTask, status);
     assert.strictEqual(availability, 'planned');
   });
 
@@ -93,7 +105,7 @@ test('Task Tracking & Catalog Resolution', async (t) => {
   });
 
   await t.test('Planned task with satisfied prerequisites remains "planned"', () => {
-    // Week 5 requires Week 4, but is planned (statusActiveInMvp: false)
+    const plannedWithPrereq = { ...week5Task, statusActiveInMvp: false };
     const allStates = {
       'w4-btree-indexing': {
         taskId: 'w4-btree-indexing',
@@ -101,9 +113,9 @@ test('Task Tracking & Catalog Resolution', async (t) => {
         attempts: 1,
       },
     };
-    const status = resolveTaskStatus(week5Task, undefined, allStates);
+    const status = resolveTaskStatus(plannedWithPrereq, undefined, allStates);
     assert.strictEqual(status, 'planned');
-    assert.strictEqual(resolveTaskAvailability(week5Task, status), 'planned');
+    assert.strictEqual(resolveTaskAvailability(plannedWithPrereq, status), 'planned');
   });
 
   await t.test('Week 6 (Active) resolves to "locked" without Week 4 and "available" when Week 4 is completed', () => {
@@ -436,4 +448,148 @@ test('Week 6 System Design Evaluator & Type Safety Invariants', async (t) => {
     }
   });
 });
+
+test('Week 2 REST Cursor Pagination Evaluator & Anti-Bypass Invariants', async (t) => {
+  await t.test('Untouched starter code with OFFSET fails assertions', () => {
+    const res = evaluateCursorPaginationDrill(WEEK_2_DRILL.initialCode);
+    assert.strictEqual(res.passed, false, 'Untouched starter using OFFSET must fail');
+    const offsetAssertion = res.assertionResults.find((a) => a.name === 'Eliminated OFFSET & skip() Modifiers');
+    assert.strictEqual(offsetAssertion.passed, false);
+  });
+
+  await t.test('Comment-only bypass attempts are rejected', () => {
+    const commentExploit = `<?php
+namespace App\\Http\\Controllers\\Api;
+class ObservationApiController extends Controller {
+    public function index(Request $request): JsonResponse {
+        // base64_decode($cursor);
+        // base64_encode("$recorded_at:$id");
+        // $query->where('recorded_at', '<', $cursorRecordedAt);
+        // return response()->json(['type' => 'https://api.syscraft.io/errors/invalid-cursor'], 400);
+        return response()->json([]);
+    }
+}`;
+    const res = evaluateCursorPaginationDrill(commentExploit);
+    assert.strictEqual(res.passed, false, 'Comment-only bypass must fail');
+  });
+
+  await t.test('String, heredoc, and backtick bypass attempts are rejected', () => {
+    const stringExploit = `<?php
+namespace App\\Http\\Controllers\\Api;
+class ObservationApiController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $msg = 'base64_decode($cursor); base64_encode("x:y");';
+        $doc = <<<EOT
+recorded_at < $cursorRecordedAt
+type title status detail instance 400
+next_cursor
+EOT;
+        $cmd = \`base64_decode($cursor);\`;
+        return response()->json([]);
+    }
+}`;
+    const res = evaluateCursorPaginationDrill(stringExploit);
+    assert.strictEqual(res.passed, false, 'String, heredoc, and backtick exploits must fail');
+  });
+
+  await t.test('Valid remediated cursor pagination passes all assertions', () => {
+    const res = evaluateCursorPaginationDrill(WEEK_2_DRILL.solutionCode);
+    assert.strictEqual(res.passed, true, 'Valid cursor solution must pass all assertions');
+    for (const a of res.assertionResults) {
+      assert.strictEqual(a.passed, true, `Assertion "${a.name}" must pass`);
+    }
+  });
+});
+
+test('Week 3 Clean Architecture & Dependency Injection Invariants', async (t) => {
+  await t.test('Untouched starter code with direct instantiation fails', () => {
+    const res = evaluateClassRefactoringDrill(WEEK_3_DRILL.initialCode);
+    assert.strictEqual(res.passed, false, 'Untouched starter with new OpenMeteoClient must fail');
+    const newAssertion = res.assertionResults.find((a) => a.name === 'Eliminated Direct Concrete Instantiation');
+    assert.strictEqual(newAssertion.passed, false);
+  });
+
+  await t.test('Comment-only bypass attempts are rejected', () => {
+    const commentExploit = `<?php
+namespace App\\Services;
+class WeatherReportService {
+    // SensorClientInterface $sensorClient
+    // $this->app->bind(SensorClientInterface::class, OpenMeteoClient::class);
+    // implements WeatherReportServiceInterface
+}`;
+    const res = evaluateClassRefactoringDrill(commentExploit);
+    assert.strictEqual(res.passed, false, 'Comment-only bypass must fail');
+  });
+
+  await t.test('String, heredoc, and backtick bypass attempts are rejected', () => {
+    const stringExploit = `<?php
+namespace App\\Services;
+class WeatherReportService {
+    public function fake() {
+        $msg = 'SensorClientInterface $sensorClient; $this->app->bind(SensorClientInterface::class, OpenMeteoClient::class);';
+        $doc = <<<EOT
+SensorClientInterface WeatherReportServiceInterface
+EOT;
+        $cmd = \`$this->app->bind();\`;
+    }
+}`;
+    const res = evaluateClassRefactoringDrill(stringExploit);
+    assert.strictEqual(res.passed, false, 'String, heredoc, and backtick exploits must fail');
+  });
+
+  await t.test('Valid refactored service with IoC container binding passes all assertions', () => {
+    const res = evaluateClassRefactoringDrill(WEEK_3_DRILL.solutionCode);
+    assert.strictEqual(res.passed, true, 'Valid refactored service must pass all assertions');
+    for (const a of res.assertionResults) {
+      assert.strictEqual(a.passed, true, `Assertion "${a.name}" must pass`);
+    }
+  });
+});
+
+test('Week 5 Resilient Queue & Dead-Letter Pipeline Invariants', async (t) => {
+  await t.test('Untouched starter code without tries and backoff fails', () => {
+    const res = evaluateQueueDlqDrill(WEEK_5_DRILL.initialCode);
+    assert.strictEqual(res.passed, false, 'Untouched starter without tries/backoff must fail');
+    const triesAssertion = res.assertionResults.find((a) => a.name === 'Bounded Retry Ceiling ($tries)');
+    assert.strictEqual(triesAssertion.passed, false);
+  });
+
+  await t.test('Comment-only bypass attempts are rejected', () => {
+    const commentExploit = `<?php
+namespace App\\Jobs;
+class ProcessTelemetryBatchJob {
+    // public int $tries = 3;
+    // public array $backoff = [10, 60, 300];
+    // Cache::lock("telemetry_batch:key");
+    // public function failed() {}
+}`;
+    const res = evaluateQueueDlqDrill(commentExploit);
+    assert.strictEqual(res.passed, false, 'Comment-only bypass must fail');
+  });
+
+  await t.test('String, heredoc, and backtick bypass attempts are rejected', () => {
+    const stringExploit = `<?php
+namespace App\\Jobs;
+class ProcessTelemetryBatchJob {
+    public function fake() {
+        $msg = '$tries = 3; $backoff = [10, 60, 300]; Cache::lock(); failed();';
+        $doc = <<<EOT
+$tries = 3; $backoff = [10, 60, 300];
+EOT;
+        $cmd = \`Cache::lock();\`;
+    }
+}`;
+    const res = evaluateQueueDlqDrill(stringExploit);
+    assert.strictEqual(res.passed, false, 'String, heredoc, and backtick exploits must fail');
+  });
+
+  await t.test('Valid resilient queue job passes all assertions', () => {
+    const res = evaluateQueueDlqDrill(WEEK_5_DRILL.solutionCode);
+    assert.strictEqual(res.passed, true, 'Valid resilient queue job must pass all assertions');
+    for (const a of res.assertionResults) {
+      assert.strictEqual(a.passed, true, `Assertion "${a.name}" must pass`);
+    }
+  });
+});
+
 

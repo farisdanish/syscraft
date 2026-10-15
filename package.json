@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test": "tsc --ignoreConfig src/data/curriculumTasks.ts src/drills/week6-system-design.ts src/drills/week7-security-sprint.ts --outDir dist-test --module esnext --target es2022 --moduleResolution bundler --declaration false && node --test tests/taskTracking.test.mjs",
+    "test": "tsc --ignoreConfig src/data/curriculumTasks.ts src/drills/week2-api-pagination.ts src/drills/week3-clean-architecture.ts src/drills/week5-async-processing.ts src/drills/week6-system-design.ts src/drills/week7-security-sprint.ts --outDir dist-test --module esnext --target es2022 --moduleResolution bundler --declaration false && node --test tests/taskTracking.test.mjs",
     "preview": "vite preview",
     "bridge": "node bridge/bridge-daemon.mjs"
   },
