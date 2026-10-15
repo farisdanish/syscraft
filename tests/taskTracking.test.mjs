@@ -5,6 +5,14 @@ import {
   resolveTaskStatus, 
   resolveTaskAvailability 
 } from '../dist-test/data/curriculumTasks.js';
+import { 
+  evaluateSecuritySprintDrill, 
+  WEEK_7_DRILL 
+} from '../dist-test/drills/week7-security-sprint.js';
+import { 
+  evaluateSystemDesignDrill, 
+  WEEK_6_DRILL 
+} from '../dist-test/drills/week6-system-design.js';
 
 test('Task Tracking & Catalog Resolution', async (t) => {
   const week1Task = CURRICULUM_TASKS.find((t) => t.id === 'w1-laravel-internals-n1');
@@ -234,3 +242,132 @@ test('Envelope Depth Guard Protection', () => {
   };
   assert.strictEqual(checkDepth(maliciousDeepPayload), false, 'Deeply nested payload > 6 must be rejected');
 });
+
+test('Week 7 Security Sprint Evaluator & Anti-Bypass Invariants', async (t) => {
+  await t.test('Untouched starter code fails assertions', () => {
+    const res = evaluateSecuritySprintDrill(WEEK_7_DRILL.initialCode);
+    assert.strictEqual(res.passed, false, 'Untouched starter code must fail');
+    const sessionAssertion = res.assertionResults.find((a) => a.name === 'Session Fixation Defense');
+    const policyAssertion = res.assertionResults.find((a) => a.name === 'Model Policy Gate Enforcement');
+    assert.strictEqual(sessionAssertion.passed, false);
+    assert.strictEqual(policyAssertion.passed, false);
+  });
+
+  await t.test('Comment-only security calls are rejected', () => {
+    const commentExploit = `<?php
+namespace App\\Http\\Controllers;
+class AuthController extends Controller {
+    public function login(Request $request) {
+        // $request->session()->regenerate();
+        /* session()->regenerate(); */
+        return response()->json([]);
+    }
+    public function updateRecord(Request $request, Record $record) {
+        // $this->authorize('update', $record);
+        /* Gate::authorize('update', $record); */
+        $record->update($validated);
+        return response()->json([]);
+    }
+}`;
+    const res = evaluateSecuritySprintDrill(commentExploit);
+    assert.strictEqual(res.passed, false, 'Comment-only submissions must never pass');
+    const sessionAssertion = res.assertionResults.find((a) => a.name === 'Session Fixation Defense');
+    const policyAssertion = res.assertionResults.find((a) => a.name === 'Model Policy Gate Enforcement');
+    assert.strictEqual(sessionAssertion.passed, false);
+    assert.strictEqual(policyAssertion.passed, false);
+  });
+
+  await t.test('String-only security calls are rejected', () => {
+    const stringExploit = `<?php
+namespace App\\Http\\Controllers;
+class AuthController extends Controller {
+    public function login(Request $request) {
+        $msg = '$request->session()->regenerate();';
+        return response()->json([]);
+    }
+    public function updateRecord(Request $request, Record $record) {
+        $msg = '$this->authorize("update", $record);';
+        $record->update($validated);
+        return response()->json([]);
+    }
+}`;
+    const res = evaluateSecuritySprintDrill(stringExploit);
+    assert.strictEqual(res.passed, false, 'String-only submissions must never pass');
+  });
+
+  await t.test('Authorization executed after mutation is rejected', () => {
+    const reorderedExploit = `<?php
+namespace App\\Http\\Controllers;
+class AuthController extends Controller {
+    public function login(Request $request) {
+        if (!Auth::attempt($credentials)) return response()->json([], 401);
+        $request->session()->regenerate();
+        return response()->json([]);
+    }
+    public function updateRecord(Request $request, Record $record) {
+        $record->update($validated);
+        $this->authorize('update', $record);
+        return response()->json([]);
+    }
+}`;
+    const res = evaluateSecuritySprintDrill(reorderedExploit);
+    assert.strictEqual(res.passed, false, 'Authorization after mutation must fail');
+    const policyAssertion = res.assertionResults.find((a) => a.name === 'Model Policy Gate Enforcement');
+    assert.strictEqual(policyAssertion.passed, false);
+  });
+
+  await t.test('Valid remediated submission passes all security assertions', () => {
+    const res = evaluateSecuritySprintDrill(WEEK_7_DRILL.solutionCode);
+    assert.strictEqual(res.passed, true, 'Properly remediated code must pass');
+    for (const a of res.assertionResults) {
+      assert.strictEqual(a.passed, true, `Assertion "${a.name}" must pass`);
+    }
+  });
+});
+
+test('Week 6 System Design Evaluator & Type Safety Invariants', async (t) => {
+  await t.test('Malformed JSON gracefully fails without throwing', () => {
+    const res = evaluateSystemDesignDrill('{ not valid json');
+    assert.strictEqual(res.passed, false);
+    assert.strictEqual(res.assertionResults[0].passed, false);
+  });
+
+  await t.test('Top-level non-object JSON gracefully fails without throwing', () => {
+    const res = evaluateSystemDesignDrill('["array", "not", "object"]');
+    assert.strictEqual(res.passed, false);
+    assert.strictEqual(res.assertionResults[0].passed, false);
+  });
+
+  await t.test('Non-string field types gracefully fail without throwing .includes() TypeError', () => {
+    const nonStringSpec = JSON.stringify({
+      architecture: {
+        buffer: {
+          backpressureStrategy: 12345 // number instead of string
+        },
+        storage: {
+          partitionKey: true // boolean instead of string
+        }
+      },
+      starStories: {
+        spikeDefense: {
+          action: {}, // object instead of string
+          result: null // null instead of string
+        }
+      }
+    });
+    const res = evaluateSystemDesignDrill(nonStringSpec);
+    assert.strictEqual(res.passed, false);
+    assert.strictEqual(res.assertionResults[1].passed, false);
+    assert.strictEqual(res.assertionResults[2].passed, false);
+    assert.strictEqual(res.assertionResults[3].passed, false);
+  });
+
+  await t.test('Valid architecture specification passes all assertions', () => {
+    const res = evaluateSystemDesignDrill(WEEK_6_DRILL.solutionCode);
+    assert.strictEqual(res.passed, true);
+    for (const a of res.assertionResults) {
+      assert.strictEqual(a.passed, true, `Assertion "${a.name}" must pass`);
+    }
+  });
+});
+
