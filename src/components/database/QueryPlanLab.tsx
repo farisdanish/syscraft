@@ -58,7 +58,7 @@ export function QueryPlanLab({
       setIsSeeding(true);
       try {
         const SQL = await initSqlJs({
-          locateFile: (file) => `https://sql.js.org/dist/${file}`,
+          locateFile: (file) => `/${file}`,
         });
 
         if (!isMounted) return;
