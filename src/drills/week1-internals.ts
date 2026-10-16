@@ -18,6 +18,29 @@ export const WEEK_1_DRILL: DrillDefinition = {
       'Eager Loading Solution: with([\'author\', \'comments\']) collapses queries to a fixed budget <= 3 by issuing batched WHERE IN queries.',
       'Large Dataset Memory Limits: Eager loading 100k records hydrates 100k Eloquent objects in RAM. Mitigate memory leaks using LazyCollection via cursor() to stream records one-by-one.',
     ],
+    quiz: {
+      question: 'Why does calling Model::all() on 50,000 database records cause an out-of-memory crash even if your PHP memory limit is 128MB?',
+      options: [
+        {
+          id: 'opt-a',
+          label: 'Eloquent hydrates 50,000 distinct PHP object instances in memory, each with attribute maps, mutation trackers, and relation caches.',
+          isCorrect: true,
+          explanation: 'Each Eloquent model consumes ~2–4KB in userland PHP memory. Hydrating 50,000 instances requires ~150MB+ RAM regardless of raw SQL payload size.',
+        },
+        {
+          id: 'opt-b',
+          label: 'The PDO database connection terminates because the network buffer exceeds MySQL packet limits.',
+          isCorrect: false,
+          explanation: 'PDO can stream large buffers without crashing PHP; the crash occurs during object hydration in PHP memory.',
+        },
+        {
+          id: 'opt-c',
+          label: 'PHP garbage collection disables itself automatically inside Laravel Eloquent collections.',
+          isCorrect: false,
+          explanation: 'Garbage collection is active, but models retained in the collection cannot be collected until the entire collection is out of scope.',
+        },
+      ],
+    },
   },
   hints: [
     "Instead of calling Post::all(), use Eloquent's eager loading method with() to specify related models.",

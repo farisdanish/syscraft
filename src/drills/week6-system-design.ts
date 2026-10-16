@@ -18,6 +18,29 @@ export const WEEK_6_DRILL: DrillDefinition = {
       'Backpressure & Drop Policies: When sensor ingestion exceeds buffer capacity, the gateway sheds non-critical metrics and applies exponential backoff rather than crashing the cluster.',
       'STAR Framework Defense: Articulate Situation, Task, Action, and Result with quantifiable metrics (e.g. 99.99% ingestion SLA, <50ms p95 latency).',
     ],
+    quiz: {
+      question: 'A user publishes a post and immediately redirects to their feed, but the new post is missing. What architecture phenomenon explains this?',
+      options: [
+        {
+          id: 'opt-a',
+          label: 'Replication lag: the write went to the primary database, but the feed read was served by a replica that hasn’t synced yet.',
+          isCorrect: true,
+          explanation: 'Asynchronous replication introduces a lag window where read replicas serve slightly stale snapshots of the primary database.',
+        },
+        {
+          id: 'opt-b',
+          label: 'Cache stampede: concurrent requests overwhelmed the Redis cache instance.',
+          isCorrect: false,
+          explanation: 'A cache stampede causes high CPU or timeout errors, not stale database reads after a redirect.',
+        },
+        {
+          id: 'opt-c',
+          label: 'The primary database rolled back the write transaction after returning HTTP 200.',
+          isCorrect: false,
+          explanation: 'If the response returned HTTP 200, the primary transaction committed successfully.',
+        },
+      ],
+    },
   },
   hints: [
     "Replace the 'TODO' in backpressureStrategy with a strategy such as 'exponential backoff with non-critical metric shedding' or 'buffer spilling to object store'.",

@@ -18,6 +18,29 @@ export const WEEK_7_DRILL: DrillDefinition = {
       'Timing Attack Mechanics: Standard string comparison (===) aborts at the first non-matching byte, leaking character match positions via CPU timing variations. hash_equals() performs constant-time comparison across the entire string length.',
       'Zero-Trust Role Gating: Administrative privileges must be validated via explicit role checks ($user->hasRole("admin")) or policy before() callbacks.',
     ],
+    quiz: {
+      question: 'Why must session()->regenerate() be called immediately upon successful user authentication?',
+      options: [
+        {
+          id: 'opt-a',
+          label: 'To issue a new session token, preventing an attacker from pre-seeding a known session ID and hijacking the user account.',
+          isCorrect: true,
+          explanation: 'In a session fixation attack, the attacker forces a known session ID onto the victim. Regenerating the ID at login invalidates the pre-auth token.',
+        },
+        {
+          id: 'opt-b',
+          label: 'To clear and rebuild the application CSRF token cache in database storage.',
+          isCorrect: false,
+          explanation: 'CSRF token rotation is a separate mitigation; session regeneration specifically protects the session identifier.',
+        },
+        {
+          id: 'opt-c',
+          label: 'Because web browsers reject cookies that do not have a renewed expiration timestamp.',
+          isCorrect: false,
+          explanation: 'Browsers accept updated cookies with existing IDs; regeneration exists purely to defeat session fixation.',
+        },
+      ],
+    },
   },
   hints: [
     "In login(), call $request->session()->regenerate() immediately after Auth::attempt($credentials) succeeds.",

@@ -19,6 +19,29 @@ export const WEEK_2_DRILL: DrillDefinition = {
       'Opaque Tokens: Never expose raw IDs in URLs. Encode cursors as base64 strings: base64_encode("$recorded_at:$id"), and check count === $limit before setting next_cursor.',
       'RFC 9457 Problem Details: When a cursor is malformed, return HTTP 400 with Content-Type: application/problem+json containing keys: type, title, status, detail, instance.',
     ],
+    quiz: {
+      question: 'Why does OFFSET 100000 degrade database query performance even when the query uses an index on id?',
+      options: [
+        {
+          id: 'opt-a',
+          label: 'The database storage engine must traverse and discard all 100,000 index entries sequentially before retrieving the requested page.',
+          isCorrect: true,
+          explanation: 'OFFSET N forces the storage engine to read N index rows into memory and discard them, resulting in O(N) execution cost on deep pages.',
+        },
+        {
+          id: 'opt-b',
+          label: 'The database table locks exclusively for the entire duration of an OFFSET query.',
+          isCorrect: false,
+          explanation: 'Standard SELECT queries do not acquire exclusive table locks during OFFSET operations.',
+        },
+        {
+          id: 'opt-c',
+          label: 'Network transfer payload increases proportionally with the OFFSET number.',
+          isCorrect: false,
+          explanation: 'Only the LIMIT rows are transferred across the wire; the delay is internal disk and index traversal overhead.',
+        },
+      ],
+    },
   },
   hints: [
     "Replace OFFSET with seek conditions: check if $cursor is passed, decode base64, and filter where (recorded_at, id) < (:recorded_at, :id).",

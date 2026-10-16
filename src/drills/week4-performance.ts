@@ -19,6 +19,29 @@ export const WEEK_4_DRILL: DrillDefinition = {
       'Reading EXPLAIN Plans: SQLite reports SCAN TABLE for full heap scans and SEARCH TABLE ... USING INDEX for indexed seeks. "USE TEMP B-TREE FOR ORDER BY" means the index does not satisfy sorting and requires an expensive temporary sort.',
       'Planner Economics: Query planners avoid index seeks when match rate is high (>20% of rows). Scanning pages sequentially is faster than random index lookups for high percentages.',
     ],
+    quiz: {
+      question: 'Under what condition will the SQLite or PostgreSQL query planner intentionally ignore an existing index on a filtered column?',
+      options: [
+        {
+          id: 'opt-a',
+          label: 'When the filter condition has low selectivity (matches a large percentage of rows), making random page lookups costlier than a sequential scan.',
+          isCorrect: true,
+          explanation: 'Traversing an index requires random disk I/O to look up each table page. If >20-30% of rows match, scanning pages sequentially is significantly faster.',
+        },
+        {
+          id: 'opt-b',
+          label: 'When the table has more than 10,000 total rows stored on disk.',
+          isCorrect: false,
+          explanation: 'Indexes become more valuable as table size grows; row count alone never causes the optimizer to bypass an index.',
+        },
+        {
+          id: 'opt-c',
+          label: 'When the SQL query does not contain an explicit ORDER BY clause.',
+          isCorrect: false,
+          explanation: 'Indexes are used for filtering (WHERE) regardless of whether sorting (ORDER BY) is present.',
+        },
+      ],
+    },
   },
   hints: [
     "Identify the columns in the WHERE and ORDER BY clauses: station_code and recorded_at.",

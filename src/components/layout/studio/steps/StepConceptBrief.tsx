@@ -7,10 +7,11 @@ import {
   ChevronRight, 
   Code2, 
   MessageSquare, 
-  ShieldCheck,
-  Cpu
+  ShieldCheck, 
+  Cpu 
 } from 'lucide-react';
 import type { DrillDefinition } from '../../../../types';
+import { ConceptQuizCard } from './ConceptQuizCard';
 
 export interface StepConceptBriefProps {
   activeDrill: DrillDefinition;
@@ -147,6 +148,11 @@ export const StepConceptBrief: React.FC<StepConceptBriefProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Active Concept Check Micro-Quiz */}
+        {activeDrill.conceptBrief.quiz && (
+          <ConceptQuizCard quiz={activeDrill.conceptBrief.quiz} />
+        )}
 
         {/* Action Bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '1px solid var(--studio-border)' }}>

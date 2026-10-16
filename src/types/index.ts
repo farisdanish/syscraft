@@ -75,6 +75,19 @@ export interface HesitationLogItem {
   reviewedSunday: boolean;
 }
 
+// Concept Check Diagnostic Micro-Quiz
+export interface ConceptQuizOption {
+  id: string;
+  label: string;
+  isCorrect: boolean;
+  explanation: string;
+}
+
+export interface ConceptQuiz {
+  question: string;
+  options: ConceptQuizOption[];
+}
+
 // Curriculum Drill Definition
 export interface DrillDefinition {
   id: string;
@@ -86,6 +99,7 @@ export interface DrillDefinition {
     thesis: string;
     diagramType: "lifecycle" | "btree" | "queue" | "diff";
     keyPoints: string[];
+    quiz?: ConceptQuiz;
   };
   initialCode: string;
   solutionCode: string;

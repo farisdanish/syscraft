@@ -19,6 +19,29 @@ export const WEEK_5_DRILL: DrillDefinition = {
       'Timeouts vs Reservation: Queue worker retry_after (in queue config) must ALWAYS exceed job $timeout. If retry_after is shorter, the queue broker will re-assign a running job to a second worker, causing duplicate execution.',
       'At-Least-Once Delivery: Queue systems guarantee message delivery at least once; job handlers must always be architected as idempotent operations.',
     ],
+    quiz: {
+      question: 'Why is it dangerous to manually release an atomic lock (Cache::lock) inside a queue job that failed due to a timeout?',
+      options: [
+        {
+          id: 'opt-a',
+          label: 'The worker supervisor may have already re-queued the job, allowing another worker to acquire the lock and run concurrently.',
+          isCorrect: true,
+          explanation: 'When a job times out, its lock TTL has often expired. Manually releasing can unlock another worker that acquired the lock on retry, causing duplicate processing.',
+        },
+        {
+          id: 'opt-b',
+          label: 'Releasing an expired lock deletes the entire Redis job queue payload.',
+          isCorrect: false,
+          explanation: 'Lock management operates on dedicated cache keys and does not affect Redis queue lists.',
+        },
+        {
+          id: 'opt-c',
+          label: 'Redis throws a fatal syntax error if an expired key is deleted.',
+          isCorrect: false,
+          explanation: 'Redis DEL and Lua unlock scripts return 0 on missing keys without throwing errors.',
+        },
+      ],
+    },
   },
   hints: [
     "Define $tries property: public int $tries = 3; on the job class.",

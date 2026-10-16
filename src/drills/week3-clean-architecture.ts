@@ -19,6 +19,29 @@ export const WEEK_3_DRILL: DrillDefinition = {
       'Lifecycle Separation: ServiceProvider register() must strictly bind container definitions; boot() runs only after all providers are registered.',
       'Worker Memory Leaks (Octane/FrankenPHP): In traditional PHP-FPM, memory is wiped after every request. In Octane/FrankenPHP, singletons persist across requests; binding stateful classes as singletons leaks user data across requests.',
     ],
+    quiz: {
+      question: 'In a high-throughput Octane or RoadRunner environment, what happens if a singleton service holds a mutable array of cached user state?',
+      options: [
+        {
+          id: 'opt-a',
+          label: "The worker process keeps the singleton in memory between requests, leaking previous users' cached data into subsequent requests.",
+          isCorrect: true,
+          explanation: 'Unlike traditional PHP-FPM where memory is wiped per request, long-running Octane workers persist singletons across requests, causing cross-request data pollution.',
+        },
+        {
+          id: 'opt-b',
+          label: 'The PHP runtime crashes immediately with a segmentation fault when a second request arrives.',
+          isCorrect: false,
+          explanation: 'No segmentation fault occurs; PHP happily serves the next request using the polluted singleton state.',
+        },
+        {
+          id: 'opt-c',
+          label: 'The Laravel IoC container re-instantiates singletons whenever HTTP request headers change.',
+          isCorrect: false,
+          explanation: 'Singletons are instantiated exactly once per worker lifetime unless explicitly flushed via Octane lifecycle events.',
+        },
+      ],
+    },
   },
   hints: [
     "In WeatherReportService::__construct(), inject SensorClientInterface $sensorClient instead of instantiating OpenMeteoClient with 'new'.",
