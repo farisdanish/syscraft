@@ -8,6 +8,7 @@ import { StepOralRubric } from './studio/steps/StepOralRubric';
 import { StepTracerReplay } from './studio/steps/StepTracerReplay';
 import { StudioFooter } from './studio/StudioFooter';
 import { ResetProgressModal } from './studio/ResetProgressModal';
+import { PostDrillSummaryDialog } from '../summary/PostDrillSummaryDialog';
 import { useStudioSession } from './studio/useStudioSession';
 
 export interface StudioLayoutProps {
@@ -163,6 +164,7 @@ export function StudioLayout({
             isMastered={session.stepCompletions[5]}
             onBackToRubric={() => session.goToStep(4)}
             onCompleteMastery={session.handleCompleteMastery}
+            onOpenMasterySummary={session.handleOpenMasterySummary}
           />
         )}
       </main>
@@ -176,6 +178,18 @@ export function StudioLayout({
         verificationSource={session.verificationSource}
         bridgeStatus={session.bridgeStatus}
         politeNotice={session.politeNotice}
+      />
+
+      {/* Modal: Post-Drill Mastery Celebration & Analysis */}
+      <PostDrillSummaryDialog
+        open={session.showMasteryDialog}
+        onOpenChange={session.setShowMasteryDialog}
+        summary={session.masterySummary}
+        onAdvanceToNextWeek={session.handleAdvanceToNextWeek}
+        onReturnToHome={() => {
+          if (onNavigateHome) onNavigateHome();
+        }}
+        onExportEnvelope={session.handleExportBackup}
       />
 
       {/* Modal: Confirm Clear Learner Progress */}

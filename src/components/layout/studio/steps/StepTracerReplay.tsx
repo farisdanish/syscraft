@@ -1,7 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { Button } from '@govtechmy/myds-react/button';
 import { Tag } from '@govtechmy/myds-react/tag';
-import { ChevronLeft, Award } from 'lucide-react';
+import { ChevronLeft, Award, Sparkles } from 'lucide-react';
 import type { DrillDefinition } from '../../../../types';
 import { 
   LARAVEL_LIFECYCLE_STEPS, 
@@ -23,6 +23,7 @@ export interface StepTracerReplayProps {
   isMastered: boolean;
   onBackToRubric: () => void;
   onCompleteMastery: () => void;
+  onOpenMasterySummary?: () => void;
 }
 
 export const StepTracerReplay: React.FC<StepTracerReplayProps> = ({
@@ -31,6 +32,7 @@ export const StepTracerReplay: React.FC<StepTracerReplayProps> = ({
   isMastered,
   onBackToRubric,
   onCompleteMastery,
+  onOpenMasterySummary,
 }) => {
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem', overflow: 'hidden' }}>
@@ -167,15 +169,28 @@ export const StepTracerReplay: React.FC<StepTracerReplayProps> = ({
           <ChevronLeft size={14} style={{ marginRight: '4px' }} />
           Back to Oral Rubric
         </Button>
-        <Button 
-          id="complete-mastery-btn"
-          variant="primary-fill" 
-          size="small" 
-          onClick={onCompleteMastery}
-        >
-          <Award size={14} style={{ marginRight: '4px' }} />
-          {isMastered ? "Drill Mastered (5/5 Complete)" : "Mark Drill Mastery Complete"}
-        </Button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {isMastered && onOpenMasterySummary && (
+            <Button
+              id="review-mastery-summary-btn"
+              variant="default-outline"
+              size="small"
+              onClick={onOpenMasterySummary}
+            >
+              <Sparkles size={14} style={{ marginRight: '4px', color: 'var(--studio-primary)' }} />
+              Review Mastery Summary
+            </Button>
+          )}
+          <Button 
+            id="complete-mastery-btn"
+            variant="primary-fill" 
+            size="small" 
+            onClick={onCompleteMastery}
+          >
+            <Award size={14} style={{ marginRight: '4px' }} />
+            {isMastered ? "Drill Mastered (5/5 Complete)" : "Mark Drill Mastery Complete"}
+          </Button>
+        </div>
       </div>
     </div>
   );

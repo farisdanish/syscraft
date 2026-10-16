@@ -5,7 +5,8 @@ import {
   type DrillStepCompletions,
   type DrillSessionState,
   type TaskStatus,
-  type StarStory
+  type StarStory,
+  type DrillMasterySummary
 } from '../../../types';
 import { 
   getDrillByWeek, 
@@ -28,7 +29,8 @@ import {
   saveDrillSession,
   getTaskState,
   saveTaskState,
-  clearLearnerProgress
+  clearLearnerProgress,
+  compileMasterySummary
 } from '../../../services/storage';
 
 export interface UseStudioSessionOptions {
@@ -62,6 +64,8 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
   const [starStories, setStarStories] = useState<StarStory[] | undefined>(undefined);
   const [hintsUsed, setHintsUsed] = useState<number>(0);
   const [solutionRevealed, setSolutionRevealed] = useState<boolean>(false);
+  const [masterySummary, setMasterySummary] = useState<DrillMasterySummary | null>(null);
+  const [showMasteryDialog, setShowMasteryDialog] = useState<boolean>(false);
   const [isLoadingSession, setIsLoadingSession] = useState<boolean>(false);
   const loadedDrillIdRef = useRef<string>('');
 
@@ -631,7 +635,33 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
       completedAt: new Date().toISOString(),
       lastOpenedAt: new Date().toISOString(),
     });
+    // Compile and launch celebratory mastery analysis dialog
+    try {
+      const summary = await compileMasterySummary(activeDrill.id);
+      setMasterySummary(summary);
+      setShowMasteryDialog(true);
+    } catch (err) {
+      console.warn('[useStudioSession] Error compiling mastery summary:', err);
+    }
+
     setPoliteNotice(`Drill mastered! All 5 stages completed for ${activeDrill.title}.`);
+  };
+
+  // Open Mastery Summary (for inspecting previously mastered drills)
+  const handleOpenMasterySummary = async () => {
+    try {
+      const summary = await compileMasterySummary(activeDrill.id);
+      setMasterySummary(summary);
+      setShowMasteryDialog(true);
+    } catch (err) {
+      console.warn('[useStudioSession] Error opening mastery summary:', err);
+    }
+  };
+
+  // Advance to Next Week from Mastery Dialog
+  const handleAdvanceToNextWeek = (nextWeekNum: number) => {
+    setShowMasteryDialog(false);
+    handleSelectWeek(nextWeekNum);
   };
 
   // Save Star Stories from Builder
@@ -827,5 +857,10 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
     solutionRevealed,
     handleRequestHint,
     handleRevealSolution,
+    masterySummary,
+    showMasteryDialog,
+    setShowMasteryDialog,
+    handleOpenMasterySummary,
+    handleAdvanceToNextWeek,
   };
 }
