@@ -28,13 +28,15 @@ interface AboutArchitectureProps {
   onToggleTheme: () => void;
   onNavigateHome: () => void;
   onLaunchWorkbench: (week: number) => void;
+  actionableWeek: number;
 }
 
 export function AboutArchitecture({
   isDark,
   onToggleTheme,
   onNavigateHome,
-  onLaunchWorkbench
+  onLaunchWorkbench,
+  actionableWeek
 }: AboutArchitectureProps) {
   const [bridgeStatus, setBridgeStatus] = useState<BridgeHealth>({ connected: false });
   const [isChecking, setIsChecking] = useState<boolean>(false);
@@ -149,8 +151,8 @@ export function AboutArchitecture({
             id="about-launch-workbench-btn"
             variant="primary-fill"
             size="small"
-            onClick={() => onLaunchWorkbench(1)}
-            aria-label="Open Studio Workbench"
+            onClick={() => onLaunchWorkbench(actionableWeek)}
+            aria-label={`Open Studio Workbench at Week ${actionableWeek}`}
           >
             <Play size={13} style={{ marginRight: '5px' }} />
             Open Workbench
