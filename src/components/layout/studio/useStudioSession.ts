@@ -32,6 +32,7 @@ import {
   clearLearnerProgress,
   compileMasterySummary
 } from '../../../services/storage';
+import { migrateLegacySession } from '../../../services/sessionMigration';
 
 export interface UseStudioSessionOptions {
   initialWeek?: number;
@@ -203,15 +204,16 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
         setSolutionRevealed(false);
         // Fallback to legacy progress record if migrating
         const legacy = await getDrillProgress(activeDrill.id);
-        if (legacy?.completed) {
+        const migrated = migrateLegacySession(legacy);
+        if (migrated) {
           setUserCode(activeDrill.initialCode);
-          setCurrentStep(1);
-          setHighestStepReached(3);
-          setStepCompletions({ 1: true, 2: true, 3: true, 4: false, 5: false });
+          setCurrentStep(migrated.currentStep);
+          setHighestStepReached(migrated.highestStepReached);
+          setStepCompletions(migrated.stepCompletions);
           setTestResults(null);
           setTier3Result(null);
-          setVerificationSource(legacy.verificationSource || 'simulation');
-          setDrillCompleted(true);
+          setVerificationSource(migrated.verificationSource);
+          setDrillCompleted(migrated.drillCompleted);
         } else {
           setUserCode(activeDrill.initialCode);
           setCurrentStep(1);
@@ -322,16 +324,17 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
         setHintsUsed(0);
         setSolutionRevealed(false);
         const legacyProg = await getDrillProgress(nextDrill.id);
-        if (legacyProg?.completed) {
+        const migrated = migrateLegacySession(legacyProg);
+        if (migrated) {
           setUserCode(nextDrill.initialCode);
-          setCurrentStep(1);
-          setHighestStepReached(3);
-          setStepCompletions({ 1: true, 2: true, 3: true, 4: false, 5: false });
+          setCurrentStep(migrated.currentStep);
+          setHighestStepReached(migrated.highestStepReached);
+          setStepCompletions(migrated.stepCompletions);
           setTestResults(null);
           setTier3Result(null);
-          setVerificationSource(legacyProg.verificationSource || 'simulation');
-          setDrillCompleted(true);
-          setPoliteNotice(`Switched to Week ${nextDrill.week}: ${nextDrill.title.split('(')[0].trim()}, resumed at Step 1.`);
+          setVerificationSource(migrated.verificationSource);
+          setDrillCompleted(migrated.drillCompleted);
+          setPoliteNotice(`Switched to Week ${nextDrill.week}: ${nextDrill.title.split('(')[0].trim()}, resumed at Step ${migrated.currentStep}.`);
         } else {
           setUserCode(nextDrill.initialCode);
           setCurrentStep(1);
