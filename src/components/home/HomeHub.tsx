@@ -354,18 +354,7 @@ export function HomeHub({
         </section>
 
         {/* Single Slim Summary Bar */}
-        <section aria-label="Learner Telemetry Summary" style={{ 
-          backgroundColor: 'var(--studio-surface)', 
-          border: '1px solid var(--studio-border)', 
-          borderRadius: '8px', 
-          padding: '0.55rem 1rem', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          gap: '1.25rem',
-          flexWrap: 'wrap',
-          boxShadow: 'var(--studio-shadow-sm)'
-        }}>
+        <section aria-label="Learner Telemetry Summary" className="home-telemetry-hud">
           {/* Mastery Item */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: '220px', flex: 1 }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>

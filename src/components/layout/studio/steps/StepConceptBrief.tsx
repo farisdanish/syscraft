@@ -72,6 +72,7 @@ export const StepConceptBrief: React.FC<StepConceptBriefProps> = ({
             borderRadius: '8px', 
             border: '1px solid var(--studio-border)', 
             backgroundColor: 'var(--studio-surface)',
+            boxShadow: 'var(--studio-shadow-sm)',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.75rem'
@@ -108,6 +109,7 @@ export const StepConceptBrief: React.FC<StepConceptBriefProps> = ({
             borderRadius: '8px', 
             border: '1px solid var(--studio-border)', 
             backgroundColor: 'var(--studio-surface)',
+            boxShadow: 'var(--studio-shadow-sm)',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.875rem'

@@ -11,20 +11,20 @@
   --studio-font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --studio-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  /* Surfaces */
-  --studio-bg: #f8fafc;
-  --studio-surface: #ffffff;
-  --studio-surface-hover: #f1f5f9;
-  --studio-surface-subtle: #f8fafc;
+  /* Surfaces (High-Contrast Layered Elevation) */
+  --studio-bg: #f1f5f9;            /* Slate-100 canvas gives white cards crisp physical elevation */
+  --studio-surface: #ffffff;       /* Pure white card and panel surface */
+  --studio-surface-hover: #e2e8f0; /* Crisp interactive hover */
+  --studio-surface-subtle: #f8fafc;/* Inset wells & code containers */
   
-  /* Borders */
-  --studio-border: #e2e8f0;
-  --studio-border-strong: #cbd5e1;
+  /* Borders (Crisp structural definition) */
+  --studio-border: #cbd5e1;        /* Slate-300 hairline divider */
+  --studio-border-strong: #94a3b8; /* Slate-400 strong border */
   --studio-border-focus: #0284c7;
 
   /* Typography (WCAG 2.2 AA compliant >= 4.5:1 on all surfaces)
      #0f172a on #ffffff: 17.85:1 | #334155 on #ffffff: 10.35:1 | #475569 on #ffffff: 7.58:1
-     #475569 on #f8fafc: 7.24:1  | #475569 on #f1f5f9: 6.92:1 */
+     #475569 on #f1f5f9: 6.40:1  | #0f172a on #f1f5f9: 15.5:1 */
   --studio-text: #0f172a;
   --studio-text-bright: #020617;
   --studio-text-muted: #334155;
@@ -32,8 +32,8 @@
 
   /* Accents */
   --studio-primary: #0284c7;
-  --studio-primary-subtle: rgba(2, 132, 199, 0.08);
-  --studio-primary-glow: rgba(2, 132, 199, 0.15);
+  --studio-primary-subtle: rgba(2, 132, 199, 0.14);
+  --studio-primary-glow: rgba(2, 132, 199, 0.22);
   --studio-primary-contrast: #ffffff;
   --studio-text-on-accent: #ffffff;
   --studio-success: #059669;
@@ -41,58 +41,58 @@
   --studio-danger: #dc2626;
 
   /* Subtle Status Backgrounds & Highlights */
-  --studio-success-subtle: rgba(5, 150, 105, 0.1);
-  --studio-warning-subtle: rgba(217, 119, 6, 0.1);
-  --studio-danger-subtle: rgba(220, 38, 38, 0.1);
-  --studio-info-subtle: rgba(2, 132, 199, 0.1);
-  --studio-accent-violet-subtle: rgba(124, 58, 237, 0.1);
+  --studio-success-subtle: rgba(5, 150, 105, 0.14);
+  --studio-warning-subtle: rgba(217, 119, 6, 0.14);
+  --studio-danger-subtle: rgba(220, 38, 38, 0.14);
+  --studio-info-subtle: rgba(2, 132, 199, 0.14);
+  --studio-accent-violet-subtle: rgba(124, 58, 237, 0.14);
 
   /* Status Borders & Halos */
-  --studio-success-border: rgba(5, 150, 105, 0.25);
-  --studio-danger-border: rgba(220, 38, 38, 0.25);
+  --studio-success-border: rgba(5, 150, 105, 0.4);
+  --studio-danger-border: rgba(220, 38, 38, 0.4);
   --studio-success-glow: 0 0 12px rgba(5, 150, 105, 0.25);
   --studio-edge-inactive: rgba(100, 116, 139, 0.45);
 
-  /* Domain Tracks (Curriculum Specialization) */
+  /* Domain Tracks (Curriculum Specialization - Richer 0.18 opacities for light mode) */
   --studio-track-framework: #0284c7;
-  --studio-track-framework-subtle: rgba(2, 132, 199, 0.08);
-  --studio-track-framework-glow: rgba(2, 132, 199, 0.2);
+  --studio-track-framework-subtle: rgba(2, 132, 199, 0.18);
+  --studio-track-framework-glow: rgba(2, 132, 199, 0.25);
 
   --studio-track-api: #d97706;
-  --studio-track-api-subtle: rgba(217, 119, 6, 0.08);
-  --studio-track-api-glow: rgba(217, 119, 6, 0.2);
+  --studio-track-api-subtle: rgba(217, 119, 6, 0.18);
+  --studio-track-api-glow: rgba(217, 119, 6, 0.25);
 
   --studio-track-clean-arch: #4f46e5;
-  --studio-track-clean-arch-subtle: rgba(79, 70, 229, 0.08);
-  --studio-track-clean-arch-glow: rgba(79, 70, 229, 0.2);
+  --studio-track-clean-arch-subtle: rgba(79, 70, 229, 0.18);
+  --studio-track-clean-arch-glow: rgba(79, 70, 229, 0.25);
 
   --studio-track-database: #059669;
-  --studio-track-database-subtle: rgba(5, 150, 105, 0.08);
-  --studio-track-database-glow: rgba(5, 150, 105, 0.2);
+  --studio-track-database-subtle: rgba(5, 150, 105, 0.18);
+  --studio-track-database-glow: rgba(5, 150, 105, 0.25);
 
   --studio-track-distributed: #7c3aed;
-  --studio-track-distributed-subtle: rgba(124, 58, 237, 0.08);
-  --studio-track-distributed-glow: rgba(124, 58, 237, 0.2);
+  --studio-track-distributed-subtle: rgba(124, 58, 237, 0.18);
+  --studio-track-distributed-glow: rgba(124, 58, 237, 0.25);
 
   --studio-track-system-design: #0891b2;
-  --studio-track-system-design-subtle: rgba(8, 145, 178, 0.08);
-  --studio-track-system-design-glow: rgba(8, 145, 178, 0.2);
+  --studio-track-system-design-subtle: rgba(8, 145, 178, 0.18);
+  --studio-track-system-design-glow: rgba(8, 145, 178, 0.25);
 
   --studio-track-security: #e11d48;
-  --studio-track-security-subtle: rgba(225, 29, 72, 0.08);
-  --studio-track-security-glow: rgba(225, 29, 72, 0.2);
+  --studio-track-security-subtle: rgba(225, 29, 72, 0.18);
+  --studio-track-security-glow: rgba(225, 29, 72, 0.25);
 
   /* Glassmorphism & Overlays */
-  --studio-glass-bg: rgba(255, 255, 255, 0.85);
-  --studio-glass-border: rgba(226, 232, 240, 0.8);
+  --studio-glass-bg: rgba(255, 255, 255, 0.92);
+  --studio-glass-border: rgba(203, 213, 225, 0.85);
   --studio-glass-blur: blur(12px);
   --studio-overlay: rgba(15, 23, 42, 0.6);
   
-  /* Shadows */
-  --studio-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --studio-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
-  --studio-shadow-float: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  --studio-shadow-glow: 0 0 12px rgba(2, 132, 199, 0.08);
+  /* Tactile Shadows & Spatial Elevation (Layered depth for crisp separation on light backgrounds) */
+  --studio-shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.06);
+  --studio-shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.10), 0 2px 6px -1px rgba(15, 23, 42, 0.06);
+  --studio-shadow-float: 0 20px 30px -4px rgba(15, 23, 42, 0.14), 0 8px 14px -4px rgba(15, 23, 42, 0.08);
+  --studio-shadow-glow: 0 0 16px rgba(2, 132, 199, 0.2);
 
   font-family: var(--studio-font-sans);
   color-scheme: light;
@@ -345,7 +345,13 @@ textarea:focus-visible,
   flex-direction: column;
   overflow: hidden;
   background-color: var(--studio-bg);
+  background-image: radial-gradient(rgba(100, 116, 139, 0.25) 1px, transparent 1px);
+  background-size: 24px 24px;
   color: var(--studio-text);
+}
+
+.dark .studio-shell {
+  background-image: radial-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px);
 }
 
 .studio-header {
@@ -360,6 +366,7 @@ textarea:focus-visible,
   color: var(--studio-text);
   z-index: 10;
   min-height: 48px;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05);
 }
 
 .studio-header-zone-left {
@@ -465,6 +472,7 @@ textarea:focus-visible,
   border-radius: 8px;
   padding: 1rem 1rem 1.75rem 1rem;
   scrollbar-gutter: stable;
+  box-shadow: var(--studio-shadow-sm);
 }
 
 .studio-drill-sidebar-fade {
@@ -488,6 +496,7 @@ textarea:focus-visible,
   border-radius: 8px;
   overflow: hidden;
   background-color: var(--studio-surface);
+  box-shadow: var(--studio-shadow-sm);
 }
 
 .studio-drill-editor-wrapper {
@@ -565,7 +574,13 @@ textarea:focus-visible,
   flex-direction: column;
   overflow-x: hidden;
   background-color: var(--studio-bg);
+  background-image: radial-gradient(rgba(100, 116, 139, 0.25) 1px, transparent 1px);
+  background-size: 24px 24px;
   color: var(--studio-text);
+}
+
+.dark .home-container {
+  background-image: radial-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px);
 }
 
 .home-header {
@@ -582,6 +597,7 @@ textarea:focus-visible,
   flex-wrap: wrap;
   gap: 0.75rem;
   z-index: 50;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05);
 }
 
 .home-main {
@@ -597,15 +613,15 @@ textarea:focus-visible,
 }
 
 .home-hero {
-  background: linear-gradient(135deg, var(--studio-surface) 0%, var(--studio-surface-subtle) 100%);
-  border: 1px solid var(--studio-border);
+  background: linear-gradient(135deg, var(--studio-surface) 0%, var(--studio-surface-subtle) 75%, rgba(2, 132, 199, 0.06) 100%);
+  border: 1px solid var(--studio-border-strong);
   border-radius: 10px;
-  padding: 1.1rem 1.35rem;
+  padding: 1.15rem 1.45rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1.25rem;
-  box-shadow: var(--studio-shadow-sm);
+  box-shadow: var(--studio-shadow-md);
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
@@ -628,6 +644,19 @@ textarea:focus-visible,
   width: 4px;
   height: 100%;
   background-color: var(--studio-primary);
+}
+
+.home-telemetry-hud {
+  background: linear-gradient(90deg, var(--studio-surface) 0%, var(--studio-surface-subtle) 100%);
+  border: 1px solid var(--studio-border);
+  border-radius: 8px;
+  padding: 0.65rem 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  box-shadow: var(--studio-shadow-sm);
 }
 
 .home-metrics-grid {
@@ -773,65 +802,65 @@ textarea:focus-visible,
 /* Track-Specific Atmospheric Top Borders and Radiant Gradients */
 .home-module-card[data-track="framework"] {
   border-top: 3px solid var(--studio-track-framework);
-  background: linear-gradient(180deg, var(--studio-track-framework-subtle) 0%, var(--studio-surface) 24%);
+  background: linear-gradient(180deg, var(--studio-track-framework-subtle) 0%, var(--studio-surface) 38%);
 }
 .home-module-card[data-track="framework"]:hover {
   border-color: var(--studio-track-framework);
-  box-shadow: 0 0 18px -2px var(--studio-track-framework-glow), var(--studio-shadow-md);
+  box-shadow: 0 0 20px -2px var(--studio-track-framework-glow), var(--studio-shadow-md);
 }
 
 .home-module-card[data-track="api"] {
   border-top: 3px solid var(--studio-track-api);
-  background: linear-gradient(180deg, var(--studio-track-api-subtle) 0%, var(--studio-surface) 24%);
+  background: linear-gradient(180deg, var(--studio-track-api-subtle) 0%, var(--studio-surface) 38%);
 }
 .home-module-card[data-track="api"]:hover {
   border-color: var(--studio-track-api);
-  box-shadow: 0 0 18px -2px var(--studio-track-api-glow), var(--studio-shadow-md);
+  box-shadow: 0 0 20px -2px var(--studio-track-api-glow), var(--studio-shadow-md);
 }
 
 .home-module-card[data-track="clean-arch"] {
   border-top: 3px solid var(--studio-track-clean-arch);
-  background: linear-gradient(180deg, var(--studio-track-clean-arch-subtle) 0%, var(--studio-surface) 24%);
+  background: linear-gradient(180deg, var(--studio-track-clean-arch-subtle) 0%, var(--studio-surface) 38%);
 }
 .home-module-card[data-track="clean-arch"]:hover {
   border-color: var(--studio-track-clean-arch);
-  box-shadow: 0 0 18px -2px var(--studio-track-clean-arch-glow), var(--studio-shadow-md);
+  box-shadow: 0 0 20px -2px var(--studio-track-clean-arch-glow), var(--studio-shadow-md);
 }
 
 .home-module-card[data-track="database"] {
   border-top: 3px solid var(--studio-track-database);
-  background: linear-gradient(180deg, var(--studio-track-database-subtle) 0%, var(--studio-surface) 24%);
+  background: linear-gradient(180deg, var(--studio-track-database-subtle) 0%, var(--studio-surface) 38%);
 }
 .home-module-card[data-track="database"]:hover {
   border-color: var(--studio-track-database);
-  box-shadow: 0 0 18px -2px var(--studio-track-database-glow), var(--studio-shadow-md);
+  box-shadow: 0 0 20px -2px var(--studio-track-database-glow), var(--studio-shadow-md);
 }
 
 .home-module-card[data-track="distributed"] {
   border-top: 3px solid var(--studio-track-distributed);
-  background: linear-gradient(180deg, var(--studio-track-distributed-subtle) 0%, var(--studio-surface) 24%);
+  background: linear-gradient(180deg, var(--studio-track-distributed-subtle) 0%, var(--studio-surface) 38%);
 }
 .home-module-card[data-track="distributed"]:hover {
   border-color: var(--studio-track-distributed);
-  box-shadow: 0 0 18px -2px var(--studio-track-distributed-glow), var(--studio-shadow-md);
+  box-shadow: 0 0 20px -2px var(--studio-track-distributed-glow), var(--studio-shadow-md);
 }
 
 .home-module-card[data-track="system-design"] {
   border-top: 3px solid var(--studio-track-system-design);
-  background: linear-gradient(180deg, var(--studio-track-system-design-subtle) 0%, var(--studio-surface) 24%);
+  background: linear-gradient(180deg, var(--studio-track-system-design-subtle) 0%, var(--studio-surface) 38%);
 }
 .home-module-card[data-track="system-design"]:hover {
   border-color: var(--studio-track-system-design);
-  box-shadow: 0 0 18px -2px var(--studio-track-system-design-glow), var(--studio-shadow-md);
+  box-shadow: 0 0 20px -2px var(--studio-track-system-design-glow), var(--studio-shadow-md);
 }
 
 .home-module-card[data-track="security"] {
   border-top: 3px solid var(--studio-track-security);
-  background: linear-gradient(180deg, var(--studio-track-security-subtle) 0%, var(--studio-surface) 24%);
+  background: linear-gradient(180deg, var(--studio-track-security-subtle) 0%, var(--studio-surface) 38%);
 }
 .home-module-card[data-track="security"]:hover {
   border-color: var(--studio-track-security);
-  box-shadow: 0 0 18px -2px var(--studio-track-security-glow), var(--studio-shadow-md);
+  box-shadow: 0 0 20px -2px var(--studio-track-security-glow), var(--studio-shadow-md);
 }
 
 .home-module-card.planned-drill {
@@ -849,11 +878,12 @@ textarea:focus-visible,
 
 .home-topic-pill {
   font-size: 0.6875rem;
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 4px;
-  background-color: var(--studio-surface-hover);
+  background-color: var(--studio-surface-subtle);
   color: var(--studio-text-muted);
   border: 1px solid var(--studio-border);
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
   font-family: var(--studio-font-mono);
 }
 
