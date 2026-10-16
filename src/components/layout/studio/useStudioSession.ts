@@ -688,13 +688,13 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
     });
   };
 
-  // Pedagogical Hint Handlers (Recording context without score penalty)
+  // Hint Handlers (Recording context without score penalty)
   const handleRequestHint = useCallback(() => {
     const maxHints = activeDrill.hints?.length || 0;
     if (maxHints === 0) return;
     setHintsUsed((prev) => {
       const next = Math.min(prev + 1, maxHints);
-      setPoliteNotice(`Pedagogical hint ${next} of ${maxHints} unlocked. (Oral rubric score unaffected)`);
+      setPoliteNotice(`Hint ${next} of ${maxHints} unlocked. (Oral defense score unaffected)`);
       void saveDrillSession({
         drillId: activeDrill.id,
         week: activeDrill.week,

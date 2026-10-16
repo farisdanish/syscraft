@@ -28,7 +28,7 @@ export const StepOralRubric: React.FC<StepOralRubricProps> = ({
     <div className="studio-scrollable-step">
       <div style={{ maxWidth: '860px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
         
-        {/* Pedagogical Scaffolding Telemetry Context (No score deduction) */}
+        {/* Guidance and Hint Context (No score deduction) */}
         {(hintsUsed > 0 || solutionRevealed) && (
           <div style={{
             display: 'flex',

@@ -16,7 +16,8 @@ export const WEEK_4_DRILL: DrillDefinition = {
       'B-Tree Index: Balanced tree structure allowing O(log N) logarithmic binary seek directly to matching key boundaries.',
       'Leftmost Prefix Rule: An index on (A, B) accelerates queries on (A) or (A, B), but CANNOT accelerate queries filtering only on (B).',
       'Covering Index: When an index contains all selected columns, the database avoids reading the main table pages entirely.',
-      'Portability Warning: SQLite EXPLAIN outputs relational concepts (SCAN vs SEARCH); it does NOT predict PostgreSQL cost optimizer choices.',
+      'Reading EXPLAIN Plans: SQLite reports SCAN TABLE for full heap scans and SEARCH TABLE ... USING INDEX for indexed seeks. "USE TEMP B-TREE FOR ORDER BY" means the index does not satisfy sorting and requires an expensive temporary sort.',
+      'Planner Economics: Query planners avoid index seeks when match rate is high (>20% of rows). Scanning pages sequentially is faster than random index lookups for high percentages.',
     ],
   },
   hints: [
@@ -72,7 +73,7 @@ export const WEEK_4_DRILL: DrillDefinition = {
       },
       {
         dimension: 'challenge',
-        prompt: 'Answered follow-up: "Why might PostgreSQL choose a Sequential Scan even when an index exists?" (High selectivity > 20%, small table fitting in one page, or stale statistics prior to ANALYZE).',
+        prompt: 'Answered follow-up: "Why might PostgreSQL choose a Sequential Scan even when an index exists?" (Low selectivity / high match rate > 20%, small table fitting in one page, or stale statistics prior to ANALYZE).',
       },
     ],
   },

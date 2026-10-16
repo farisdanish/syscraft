@@ -3,7 +3,7 @@ import type { DrillDefinition } from '../types';
 export const WEEK_7_DRILL: DrillDefinition = {
   id: 'w7-crud-auth-sprint',
   week: 7,
-  title: 'Timed CRUD, Session Fixation Defense & Policy Authorization',
+  title: 'Session Fixation Defense & Policy Authorization Gate',
   tier: 3,
   engine: 'postgresql-docker',
   language: 'php',
@@ -13,10 +13,10 @@ export const WEEK_7_DRILL: DrillDefinition = {
     diagramType: 'lifecycle',
     keyPoints: [
       'Session Fixation: Attackers establish a known session ID prior to login. Without $request->session()->regenerate(), the victim authenticates the attacker-controlled session.',
-      'Policy Authorization: Authentication confirms WHO the user is; Authorization confirms WHAT they are allowed to do. Controllers must enforce $this->authorize("update", $record).',
+      'Policy Authorization: Authentication confirms WHO the user is; Authorization confirms WHAT they can do. Controllers enforce $this->authorize("update", $record), which delegates to RecordPolicy::update(User $user, Record $record): bool { return $user->id === $record->user_id; }.',
       'Multi-Tenancy Isolation: Users must strictly be restricted to records belonging to their tenant or user ID ($user->id === $record->user_id).',
+      'Timing Attack Mechanics: Standard string comparison (===) aborts at the first non-matching byte, leaking character match positions via CPU timing variations. hash_equals() performs constant-time comparison across the entire string length.',
       'Zero-Trust Role Gating: Administrative privileges must be validated via explicit role checks ($user->hasRole("admin")) or policy before() callbacks.',
-      'Timing Attack Resistance: Password verification and token checks must use constant-time comparison (hash_equals).',
     ],
   },
   hints: [

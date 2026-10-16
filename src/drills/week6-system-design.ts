@@ -13,10 +13,10 @@ export const WEEK_6_DRILL: DrillDefinition = {
     diagramType: 'queue',
     keyPoints: [
       'Decoupled Ingestion: An API Gateway absorbs 100k req/sec sensor bursts by streaming into an in-memory buffer (Redis Streams/Kafka), protecting database workers from connection exhaustion.',
-      'Time-Series Partitioning: Database writes are sharded across immutable time chunks to prevent B-Tree index thrashing and enable instantaneous historical data archiving.',
+      'Time-Series Partitioning: Database writes are partitioned across immutable time chunks (e.g. PARTITION BY RANGE (recorded_at::date)) to prevent B-Tree index thrashing and enable fast table drop archiving.',
+      'Replication Lag & Read-Your-Writes: During write bursts, read replicas lag behind primary databases. Prevent read-after-write anomalies by routing authenticated mutation reads to the primary database while serving public reads from cached replicas with max-age headers.',
       'Backpressure & Drop Policies: When sensor ingestion exceeds buffer capacity, the gateway sheds non-critical metrics and applies exponential backoff rather than crashing the cluster.',
       'STAR Framework Defense: Articulate Situation, Task, Action, and Result with quantifiable metrics (e.g. 99.99% ingestion SLA, <50ms p95 latency).',
-      'Defensive Cross-Examination: Confidently explain replication lag, cold-start worker recovery, and write-ahead log (WAL) saturation under interview pressure.',
     ],
   },
   hints: [
@@ -32,7 +32,7 @@ export const WEEK_6_DRILL: DrillDefinition = {
     "gateway": "Edge API Gateway with token bucket rate-limiting",
     "buffer": {
       "technology": "Redis Streams / Kafka partitioned queue",
-      "backpressureStrategy": "TODO: Define backpressure strategy (shedding vs backoff)"
+      "backpressureStrategy": "TODO: Define backpressure strategy (e.g. dynamic sliding-window rate limit with priority shedding)"
     },
     "workers": {
       "concurrency": 64,
@@ -41,7 +41,7 @@ export const WEEK_6_DRILL: DrillDefinition = {
     },
     "storage": {
       "database": "PostgreSQL 16.4",
-      "partitionKey": "TODO: Define composite partition key",
+      "partitionKey": "TODO: Define composite time partition key (e.g. recorded_at::date, station_id)",
       "retentionDays": 90
     }
   },
@@ -49,8 +49,8 @@ export const WEEK_6_DRILL: DrillDefinition = {
     "spikeDefense": {
       "situation": "Unprecedented typhoon caused 500k req/sec sensor burst, saturating network buffers.",
       "task": "Prevent ingestion cluster collapse and maintain zero telemetry loss for tier-1 stations.",
-      "action": "TODO: Document architectural action taken",
-      "result": "TODO: Document measurable outcome achieved"
+      "action": "TODO: Document architectural action taken (e.g. scale Redis shards, enable HTTP 429 Retry-After, batch 1000-row inserts)",
+      "result": "TODO: Document measurable outcome achieved (e.g. 99.995% uptime, eliminated DB connection exhaustion, <50ms p95 latency)"
     }
   }
 }

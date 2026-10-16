@@ -131,7 +131,7 @@ export function StepFocusedDrill({
           <AlertDialogDescription>
             Viewing the reference solution will be recorded in your session notes for oral review discussion.
             <br /><br />
-            <strong>Note:</strong> In SysCraft pedagogy, this does NOT deduct from your oral rubric score, which evaluates verbal explanation and defense independently.
+            <strong>Note:</strong> Using hints or viewing solutions does NOT deduct from your oral defense score, which evaluates verbal explanation and defense independently.
           </AlertDialogDescription>
           <AlertDialogAction>
             <AlertDialogClose asChild>
@@ -418,13 +418,13 @@ export function StepFocusedDrill({
                   </Tag>
                   <Tag variant={activeDrill.week === 7 ? "danger" : "warning"} size="small">
                     {activeDrill.week === 7 
-                      ? "90-Min Time Cap" 
+                      ? "Security Audit • Policy Gate" 
                       : activeDrill.week === 2
                       ? "O(1) Seek • RFC 9457"
                       : activeDrill.week === 3
                       ? "SOLID D • IoC Container"
                       : activeDrill.week === 5
-                      ? "Tries: 3 • Backoff: 15s"
+                      ? "Tries: 3 • Backoff: [10s, 60s, 300s]"
                       : "Budget: ≤ 3 Queries"}
                   </Tag>
                 </div>
@@ -467,21 +467,21 @@ export function StepFocusedDrill({
                       </>
                     ) : activeDrill.week === 2 ? (
                       <>
-                        <strong>1. OFFSET Query Degradation:</strong> <code>OFFSET 10000</code> forces the database to scan and discard 10,000 index rows, degrading pagination to O(N) latency.
+                        <strong>1. OFFSET Query Degradation:</strong> <code>OFFSET 100000</code> forces the database to scan and discard 100,000 index rows, degrading pagination to O(N) latency.
                         <br />
-                        <strong>2. Malformed Error Responses:</strong> Invalid cursors produce non-standard 500 error responses leaking internals instead of RFC 9457 <code>application/problem+json</code> (HTTP 422).
+                        <strong>2. Malformed Error Responses:</strong> Invalid cursors must return standard RFC 9457 <code>application/problem+json</code> (HTTP 400) payloads rather than generic error strings.
                       </>
                     ) : activeDrill.week === 3 ? (
                       <>
-                        <strong>1. Direct Instantiation Coupling:</strong> <code>OrderService</code> instantiates concrete <code>StripePaymentGateway</code> and <code>SmtpMailer</code> using the <code>new</code> keyword, violating the Dependency Inversion Principle.
+                        <strong>1. Direct Instantiation Coupling:</strong> <code>WeatherReportController</code> instantiates concrete <code>OpenMeteoClient</code> using the <code>new</code> keyword, violating the Dependency Inversion Principle.
                         <br />
-                        <strong>2. Untestable God Class:</strong> Unit tests cannot mock billing or mail services without triggering external APIs or modifying production code.
+                        <strong>2. Untestable Service:</strong> Unit tests cannot mock telemetry clients without triggering external network calls.
                       </>
                     ) : activeDrill.week === 5 ? (
                       <>
-                        <strong>1. Worker Poisoning & Infinite Loops:</strong> <code>ProcessWebhookJob</code> lacks max attempt limits and backoff delays, causing malformed payloads to spin in infinite retry storms.
+                        <strong>1. Worker Poisoning & Infinite Loops:</strong> <code>ProcessTelemetryBatchJob</code> lacks bounded retry attempts ($tries) and backoff delays, causing malformed payloads to spin in infinite retry storms.
                         <br />
-                        <strong>2. Unisolated Failures:</strong> Unrecoverable payloads are dropped without archiving to a dead-letter queue (DLQ) for engineering triage.
+                        <strong>2. Unisolated Failures:</strong> Failed batches loop forever without atomic idempotency locks or dead-letter queue (DLQ) isolation.
                       </>
                     ) : (
                       <>
@@ -505,21 +505,21 @@ export function StepFocusedDrill({
                       </>
                     ) : activeDrill.week === 2 ? (
                       <>
-                        <li style={{ marginBottom: '2px' }}>Replace <code>OFFSET</code> with seek predicate: <code>WHERE id &gt; :cursor ORDER BY id ASC LIMIT :limit</code>.</li>
-                        <li style={{ marginBottom: '2px' }}>Return RFC 9457 <code>application/problem+json</code> with <code>type</code>, <code>title</code>, and <code>status: 422</code> on invalid cursor.</li>
-                        <li>Click <strong>Run Test Harness</strong> to evaluate cursor pagination and error contracts.</li>
+                        <li style={{ marginBottom: '2px' }}>Validate cursor: return RFC 9457 <code>application/problem+json</code> (HTTP 400) on malformed or invalid input.</li>
+                        <li style={{ marginBottom: '2px' }}>Replace <code>OFFSET</code> with seek predicate on composite keys: <code>(recorded_at, id)</code>.</li>
+                        <li>Return next_cursor as base64 encoded token only when record count matches limit.</li>
                       </>
                     ) : activeDrill.week === 3 ? (
                       <>
-                        <li style={{ marginBottom: '2px' }}>Extract interfaces and inject <code>PaymentGatewayInterface</code> and <code>NotificationServiceInterface</code> via constructor.</li>
-                        <li style={{ marginBottom: '2px' }}>Bind contracts in the Laravel Service Container using <code>App::bind(...)</code> or <code>App::singleton(...)</code>.</li>
-                        <li>Click <strong>Run Test Harness</strong> or <strong>Run in Docker (Tier 3)</strong> to verify container resolution.</li>
+                        <li style={{ marginBottom: '2px' }}>Refactor into <code>WeatherReportService</code> implementing <code>WeatherReportServiceInterface</code>.</li>
+                        <li style={{ marginBottom: '2px' }}>Inject <code>SensorClientInterface</code> via constructor injection.</li>
+                        <li>Register interface binding in <code>WeatherServiceProvider::register()</code>.</li>
                       </>
                     ) : activeDrill.week === 5 ? (
                       <>
-                        <li style={{ marginBottom: '2px' }}>Configure <code>public int $tries = 3;</code> and implement <code>backoff(): array</code> with delays <code>[15, 60, 300]</code>.</li>
-                        <li style={{ marginBottom: '2px' }}>Implement <code>failed(\Throwable $e)</code> handler routing poison payloads to the dead-letter queue.</li>
-                        <li>Click <strong>Run Test Harness</strong> to evaluate retry scheduling and DLQ dispatch.</li>
+                        <li style={{ marginBottom: '2px' }}>Configure <code>public int $tries = 3;</code> and <code>public array $backoff = [10, 60, 300];</code>.</li>
+                        <li style={{ marginBottom: '2px' }}>Enforce atomic idempotency guard with <code>Cache::lock()</code> before database mutations.</li>
+                        <li>Implement <code>failed(\Throwable $exception)</code> with dead-letter queue routing.</li>
                       </>
                     ) : (
                       <>
@@ -542,42 +542,9 @@ export function StepFocusedDrill({
                     Automated Assertions Evaluated:
                   </span>
                   <ul style={{ margin: 0, paddingLeft: '1.125rem', fontSize: '0.75rem', lineHeight: 1.45, color: 'var(--studio-text)' }}>
-                    {activeDrill.week === 7 ? (
-                      <>
-                        <li>Session fixation defense: <code>$request-&gt;session()-&gt;regenerate()</code> called</li>
-                        <li>Tenant authorization gate: <code>$this-&gt;authorize(&apos;update&apos;, $record)</code> enforced</li>
-                        <li>Syntactically valid PHP 8.3 controller methods</li>
-                        <li>Execution under 90-minute timed sprint constraint</li>
-                      </>
-                    ) : activeDrill.week === 2 ? (
-                      <>
-                        <li>Seek predicate: <code>WHERE id &gt; :cursor</code> replaces <code>OFFSET</code></li>
-                        <li>Deterministic index traversal ordering (<code>ORDER BY id ASC</code>)</li>
-                        <li>RFC 9457 Problem Details schema on invalid cursor format</li>
-                        <li>Opaque cursor encoding for next page cursor token</li>
-                      </>
-                    ) : activeDrill.week === 3 ? (
-                      <>
-                        <li>Dependency inversion: interfaces injected via constructor</li>
-                        <li>Zero concrete <code>new StripePaymentGateway()</code> instantiations</li>
-                        <li>Service container binding: contracts bound to implementations</li>
-                        <li>Clean separation of concerns between payment and notification</li>
-                      </>
-                    ) : activeDrill.week === 5 ? (
-                      <>
-                        <li>Resilient retry limit: <code>public int $tries = 3;</code></li>
-                        <li>Exponential backoff schedule: <code>[15, 60, 300]</code> seconds</li>
-                        <li>Poison message quarantine: dead-letter queue dispatch in <code>failed()</code></li>
-                        <li>Idempotent payload handling with deduplication key</li>
-                      </>
-                    ) : (
-                      <>
-                        <li>Query budget: ≤ 3 distinct queries for 25 records</li>
-                        <li>Zero per-row queries during <code>map()</code> iteration</li>
-                        <li><code>author</code> relationship eager loaded</li>
-                        <li><code>comments</code> relationship eager loaded</li>
-                      </>
-                    )}
+                    {activeDrill.validationRules.expectedAssertions.map((assertion, idx) => (
+                      <li key={idx} style={{ marginBottom: '2px' }}>{assertion}</li>
+                    ))}
                   </ul>
                 </div>
 

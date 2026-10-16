@@ -12,11 +12,11 @@ export const WEEK_1_DRILL: DrillDefinition = {
     thesis: 'Every Laravel HTTP request journeys through a strict pipeline before reaching controllers. Careless relation access inside loops causes catastrophic N+1 query multiplication.',
     diagramType: 'lifecycle',
     keyPoints: [
-      'Ingress starts at public/index.php, which loads Composer autoloader and boots bootstrap/app.php.',
-      'The HTTP Kernel bootstraps service providers (register then boot) before passing requests through global middleware.',
-      'The Service Container uses reflection to resolve controller dependencies, while Facades act as static proxies to bound singletons.',
-      'N+1 Problem: Accessing relations ($post->author) inside iteration runs 1 initial query + N additional queries.',
-      'Solution: Eager load relations via with([\'author\', \'comments\']) to collapse queries to a fixed budget <= 3.',
+      '9-Stage HTTP Ingress Lifecycle: 1. public/index.php entry -> 2. Composer autoloader -> 3. bootstrap/app.php container setup -> 4. HTTP Kernel bootstrap -> 5. Service Providers registered then booted -> 6. Global middleware pipeline -> 7. Router dispatch & route middleware -> 8. Controller action execution -> 9. Response pipeline return.',
+      'Service Container & Reflection: The container inspects constructor type-hints via PHP Reflection to auto-wire dependencies. Facades act as static proxies to bound singletons.',
+      'N+1 Query Multiplication: Accessing relations inside loops ($post->author) issues 1 parent query + N child queries. Prevent in dev using Model::preventLazyLoading(!app()->isProduction()).',
+      'Eager Loading Solution: with([\'author\', \'comments\']) collapses queries to a fixed budget <= 3 by issuing batched WHERE IN queries.',
+      'Large Dataset Memory Limits: Eager loading 100k records hydrates 100k Eloquent objects in RAM. Mitigate memory leaks using LazyCollection via cursor() to stream records one-by-one.',
     ],
   },
   hints: [
@@ -39,7 +39,7 @@ class PostController extends Controller
      *
      * DRILL: Currently executes an N+1 query loop!
      * 1 query for posts + 25 queries for authors + 25 queries for comments = 51 queries.
-     * Task: Add eager loading to collapse query count within the allowed budget (<= 3 queries).
+     * Task: Add eager loading via with() (or withCount for comments) to collapse query count within allowed budget (<= 3 queries).
      */
     public function index(Request $request): JsonResponse
     {
@@ -138,7 +138,8 @@ export function evaluateLaravelDrill(code: string): {
 } {
   const hasWith = /Post::with\s*\(\s*\[?['"]author['"],\s*['"]comments['"]\]?\s*\)/.test(code) ||
                   /Post::with\s*\(\s*['"]author['"],\s*['"]comments['"]\s*\)/.test(code) ||
-                  (code.includes('with(') && code.includes('author') && code.includes('comments'));
+                  (/Post::with\s*\(\s*['"]author['"]\s*\)\s*->\s*withCount\s*\(\s*['"]comments['"]\s*\)/.test(code)) ||
+                  (code.includes('with(') && code.includes('author') && (code.includes('comments') || code.includes('withCount')));
 
   if (hasWith) {
     return {

@@ -15,14 +15,15 @@ export const WEEK_5_DRILL: DrillDefinition = {
       'Worker Starvation: Without max tries ($tries), a job that consistently throws an uncaught exception will re-queue infinitely, consuming worker CPU and starving legitimate jobs.',
       'Exponential Backoff: Immediate retries cause thundering herds on recovering databases; $backoff = [10, 60, 300] allows downstream dependencies to recover gracefully.',
       'Idempotency Keys: Network acknowledgments can fail after successful database commits; workers must check an idempotency key (or atomic lock) before mutating state.',
-      'Dead-Letter Queue (DLQ): After exhausting retry budgets, poison messages must be routed to a dead_letter_jobs table or DLQ topic for manual inspection without halting the worker pool.',
+      'Dead-Letter Queue (DLQ): After exhausting retry budgets, poison messages must be logged and inserted into dead_letter_jobs (idempotency_key, payload, exception, failed_at) for inspection without halting the worker pool.',
+      'Timeouts vs Reservation: Queue worker retry_after (in queue config) must ALWAYS exceed job $timeout. If retry_after is shorter, the queue broker will re-assign a running job to a second worker, causing duplicate execution.',
       'At-Least-Once Delivery: Queue systems guarantee message delivery at least once; job handlers must always be architected as idempotent operations.',
     ],
   },
   hints: [
     "Define $tries property: public int $tries = 3; on the job class.",
     "Implement backoff schedule: public array $backoff = [10, 60, 300]; (or via backoff() method).",
-    "In the failed(?Throwable $exception) hook, route the failed telemetry to the dead_letter_jobs table.",
+    "Enforce idempotency using Cache::lock('telemetry_batch:'.$this->idempotencyKey, 120). In failed(\\Throwable $e), log the error and insert into dead_letter_jobs with keys: idempotency_key, payload, exception, failed_at.",
   ],
   initialCode: `<?php
 
@@ -33,7 +34,9 @@ use Illuminate\\Contracts\\Queue\\ShouldQueue;
 use Illuminate\\Foundation\\Bus\\Dispatchable;
 use Illuminate\\Queue\\InteractsWithQueue;
 use Illuminate\\Queue\\SerializesModels;
+use Illuminate\\Support\\Facades\\Cache;
 use Illuminate\\Support\\Facades\\DB;
+use Illuminate\\Support\\Facades\\Log;
 
 class ProcessTelemetryBatchJob implements ShouldQueue
 {
@@ -49,8 +52,9 @@ class ProcessTelemetryBatchJob implements ShouldQueue
      * TASKS:
      * 1. Define public int $tries = 3;
      * 2. Define public array $backoff = [10, 60, 300];
-     * 3. Enforce idempotency: verify message lock before database mutation.
-     * 4. Implement failed(\\Throwable $exception): alert and route to dead-letter queue.
+     * 3. Enforce idempotency: use Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120)->get() before DB mutation.
+     * 4. Implement failed(\\Throwable $exception): Log error and record into dead_letter_jobs with columns:
+     *    ['idempotency_key', 'payload', 'exception', 'failed_at'].
      */
 
     public function __construct(

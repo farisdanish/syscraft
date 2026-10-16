@@ -353,7 +353,7 @@ export const PostDrillSummaryDialog: React.FC<PostDrillSummaryDialogProps> = ({
             </div>
           </div>
 
-          {/* Card 3: Learning Integrity & Pedagogical Telemetry */}
+          {/* Card 3: Learning Integrity & Assistance */}
           <div style={{
             backgroundColor: 'var(--studio-surface)',
             borderRadius: '8px',
@@ -381,7 +381,7 @@ export const PostDrillSummaryDialog: React.FC<PostDrillSummaryDialogProps> = ({
               </div>
               <div>
                 <strong style={{ fontSize: '0.75rem', color: 'var(--studio-text)', display: 'block' }}>
-                  Pedagogical Integrity & Scaffolding
+                  Assistance & Guidance
                 </strong>
                 <span style={{ fontSize: '0.75rem', color: 'var(--studio-text-muted)' }}>
                   {summary.pedagogicalFraming}

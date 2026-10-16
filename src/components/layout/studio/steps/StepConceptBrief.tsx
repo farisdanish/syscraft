@@ -77,7 +77,22 @@ export const StepConceptBrief: React.FC<StepConceptBriefProps> = ({
             </h2>
             <ul style={{ margin: 0, paddingLeft: '1.25rem', lineHeight: 1.55, fontSize: '0.8125rem', color: 'var(--studio-text-muted)' }}>
               {activeDrill.conceptBrief.keyPoints.map((pt, i) => (
-                <li key={i} style={{ marginBottom: '0.45rem' }}>{pt}</li>
+                <li key={i} style={{ marginBottom: '0.625rem', lineHeight: 1.55 }}>
+                  {(() => {
+                    const colonIdx = pt.indexOf(':');
+                    if (colonIdx > 0 && colonIdx < 40) {
+                      const heading = pt.slice(0, colonIdx);
+                      const detail = pt.slice(colonIdx + 1);
+                      return (
+                        <>
+                          <strong style={{ color: 'var(--studio-text)', fontWeight: 600 }}>{heading}:</strong>
+                          <span>{detail}</span>
+                        </>
+                      );
+                    }
+                    return pt;
+                  })()}
+                </li>
               ))}
             </ul>
           </div>
@@ -107,7 +122,7 @@ export const StepConceptBrief: React.FC<StepConceptBriefProps> = ({
                 <span style={{ color: 'var(--studio-text)', fontWeight: 500 }}>{activeDrill.validationRules.type}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px solid var(--studio-border)' }}>
-                <span style={{ color: 'var(--studio-text-muted)' }}>Pedagogical Hints:</span>
+                <span style={{ color: 'var(--studio-text-muted)' }}>Hints Available:</span>
                 <span style={{ color: 'var(--studio-text)', fontWeight: 500 }}>
                   {activeDrill.hints ? `${activeDrill.hints.length} progressive levels available` : 'Available on demand'}
                 </span>

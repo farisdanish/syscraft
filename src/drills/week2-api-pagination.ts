@@ -13,15 +13,16 @@ export const WEEK_2_DRILL: DrillDefinition = {
     diagramType: 'btree',
     keyPoints: [
       'OFFSET Penalty: OFFSET 100000 LIMIT 20 forces the database to read 100,020 tuples from disk, discarding the first 100,000.',
-      'Seek-Based Cursors: Querying WHERE (recorded_at, id) < (:cursor_at, :cursor_id) jumps directly to the index boundary via logarithmic B-Tree seek.',
-      'Concurrency Stability: Seek pagination eliminates drift: rows inserted before or after the cursor do not shift current window offsets.',
-      'Opaque Tokens: Clients must never parse internal database IDs; cursors must be transmitted as opaque base64-encoded composite tokens.',
-      'RFC 9457 Standard: HTTP error payloads must conform to RFC 9457 Problem Details with type, title, status, detail, and instance fields returning application/problem+json.',
+      'Seek-Based Cursors: Querying WHERE (recorded_at, id) < (:cursor_at, :cursor_id) jumps directly to the index boundary via B-Tree seek without scanning skipped rows.',
+      'Eloquent Implementation: Because SQL row constructor syntax (a, b) < (c, d) is not supported across all drivers, implement it in query builder via: where("recorded_at", "<", $cAt)->orWhere(function ($q) use ($cAt, $cId) { $q->where("recorded_at", "=", $cAt)->where("id", "<", $cId); }).',
+      'Concurrency Stability: Rows inserted before or after the cursor do not shift the current page offset; data never duplicates or disappears.',
+      'Opaque Tokens: Never expose raw IDs in URLs. Encode cursors as base64 strings: base64_encode("$recorded_at:$id"), and check count === $limit before setting next_cursor.',
+      'RFC 9457 Problem Details: When a cursor is malformed, return HTTP 400 with Content-Type: application/problem+json containing keys: type, title, status, detail, instance.',
     ],
   },
   hints: [
     "Replace OFFSET with seek conditions: check if $cursor is passed, decode base64, and filter where (recorded_at, id) < (:recorded_at, :id).",
-    "On invalid or corrupted cursor format, return response()->json([...], 400, ['Content-Type' => 'application/problem+json']) conforming to RFC 9457.",
+    "On invalid or corrupted cursor format, return response()->json(['type' => 'https://api.syscraft.io/errors/invalid-cursor', 'title' => 'Invalid Pagination Cursor', 'status' => 400, 'detail' => 'The cursor parameter is malformed or unparseable.', 'instance' => '/api/observations'], 400, ['Content-Type' => 'application/problem+json']).",
     "Order deterministically: ->orderBy('recorded_at', 'desc')->orderBy('id', 'desc')->limit($limit).",
   ],
   initialCode: `<?php
@@ -41,9 +42,9 @@ class ObservationApiController extends Controller
      * and duplicate/skipped rows when new sensor records are inserted.
      * 
      * TASKS:
-     * 1. Reject invalid/malformed cursors with an RFC 9457 Problem Details response (HTTP 400).
-     * 2. Replace OFFSET/LIMIT with seek-based composite filtering: (recorded_at, id).
-     * 3. Return next_cursor as an opaque base64 string (base64_encode("$recorded_at:$id")).
+     * 1. Validate cursor: decode base64, check delimiter ':'. If malformed, return RFC 9457 HTTP 400 JSON with application/problem+json header.
+     * 2. Replace OFFSET/LIMIT with seek-based filtering on recorded_at & id (use nested boolean orWhere).
+     * 3. Return next_cursor as opaque base64 string (base64_encode("$recorded_at:$id")) only when record count matches $limit, else null.
      */
     public function index(Request $request): JsonResponse
     {
