@@ -116,21 +116,10 @@ export interface ComputeMasterySummaryParams {
   tier: 1 | 2 | 3;
   verificationSource?: VerificationSource;
   completedAt?: string;
-  testResults?: {
-    passed?: boolean;
-    summary?: string;
-    assertions?: Array<{ id: string; name: string; passed: boolean; message?: string }>;
-    benchmark?: {
-      latencyMs?: number;
-      reductionPercentage?: number;
-      queryCount?: number;
-    };
-    queryCount?: number;
-  } | null;
-  tier3Result?: {
-    passed?: boolean;
-    executionTimeMs?: number;
-  } | null;
+  // biome-ignore lint/suspicious/noExplicitAny: testResults and tier3Result can come from legacy sessions as unknown
+  testResults?: any;
+  // biome-ignore lint/suspicious/noExplicitAny: tier3Result can come from legacy sessions as unknown
+  tier3Result?: any;
   oralScore?: OralRubricScore | null;
   hintsUsed?: number;
   solutionRevealed?: boolean;
@@ -161,9 +150,10 @@ export function computeMasterySummary(params: ComputeMasterySummaryParams): Dril
   const nextWeekTitle = isCurriculumCompleted ? null : nextInfo.title;
 
   // Assertions normalization
-  const rawAssertions = params.testResults?.assertions ?? [];
+  const rawAssertions: Array<{ id?: string; name?: string; passed?: boolean; message?: string }> = 
+    Array.isArray(params.testResults?.assertions) ? params.testResults.assertions : [];
   const assertions: MasteryAssertionItem[] = rawAssertions.length > 0 
-    ? rawAssertions.map((a, idx) => ({
+    ? rawAssertions.map((a: { id?: string; name?: string; passed?: boolean; message?: string }, idx: number) => ({
         id: a.id || `a_${idx + 1}`,
         name: a.name || `Assertion ${idx + 1}`,
         passed: Boolean(a.passed),
