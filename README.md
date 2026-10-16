@@ -41,7 +41,7 @@ graph TD
     subgraph Tier_3 [Tier 3: Secured Local Runtime Prototype - Local Docker / CLI]
         T3_NET[Internal Docker Network: syscraft-testnet - No External Egress]
         T3_RUNNER[Custom Runner Image: syscraft-runner:1.0.0 UID 1000:1000]
-        T3_TESTBED[Deterministic PHP 8.3 / Eloquent Testbed Prototype]
+        T3_TESTBED[Custom PHP 8.3 Testbed Runner - Eloquent-Style Stubs, Not Laravel]
         T3_BUDGET[Real PDO Query-Budget Assertion Engine against PostgreSQL]
         T3_PG[PostgreSQL 16.4 Container: Runtime-Derived SELECT version]
     end
@@ -53,7 +53,7 @@ graph TD
 
 * **Tier 1 (Browser-Native):** Runs in-browser via WebAssembly (`sql.js@1.12.0`). Evaluates SQLite query plans semantically, tests JSON/HTTP contracts against **RFC 9457 (Problem Details)**, and persists progress locally in IndexedDB.
 * **Tier 2 (Simulated Backend):** Explicitly labeled as **"Deterministic Simulation"**. Visualizes abstract flows (request lifecycle, queue retry backoff, container bindings) using inspectable rules and documented assumptions rather than claiming live execution.
-* **Tier 3 (Secured Local Runtime Prototype):** Standardized local Docker project or native CLI fallback. Validates code in an isolated **PHP 8.3.11 / PostgreSQL 16.4** testbed prototype with real PDO query-budget evaluation, connected via an isolated internal network (`syscraft-testnet`). Full canonical Laravel 12 framework booting & Pest test suite integration is planned for upcoming expansion.
+* **Tier 3 (Secured Local Runtime Prototype):** Standardized local Docker project or native CLI fallback. Validates code in an isolated **PHP 8.3.11 / PostgreSQL 16.4** testbed prototype with real PDO query-budget evaluation, connected via an isolated internal network (`syscraft-testnet`). The runner (`testbed/artisan`) is a custom PHP script using Eloquent-style stubs (`testbed/bootstrap/models.php`); its output mimics `php artisan test` / Pest formatting, but neither Laravel nor Pest is installed. Full canonical Laravel 12 framework booting & Pest test suite integration is planned for upcoming expansion.
 
 ---
 
@@ -139,6 +139,8 @@ While SysCraft's initial curriculum focuses on Laravel, PHP, and PostgreSQL, its
 
 Future releases can swap or extend the backend runtime by implementing a standardized **Stack Adapter Interface**:
 
+> Target layout for the adapter architecture. It does not describe the current `src/` structure.
+
 ```text
 Core Learning Platform
 ├── lessons/                        # Conceptual briefs, guidelines, and schemas
@@ -151,7 +153,7 @@ Core Learning Platform
     └── StackAdapterInterface.ts    # Contract for test execution & AST evaluation
 
 Stack Adapters (Modular Plugins)
-├── adapters/laravel/               # Reference Implementation: PHP 8.3 + Laravel 12 + Pest 3
+├── adapters/laravel/               # Planned reference: PHP 8.3 + Laravel 12 + Pest 3 (current Tier 3 is the custom testbed runner)
 ├── adapters/django/                # Future: Python 3.12 + Django 5 + Pytest
 ├── adapters/spring/                # Future: Java 21 + Spring Boot 3 + JUnit 5
 ├── adapters/nestjs/                # Future: Node 22 + NestJS 10 + Prisma + Jest
@@ -160,7 +162,7 @@ Stack Adapters (Modular Plugins)
 
 ### 5.3 Implementation Sequencing Strategy
 
-1. **Reference Implementation (Current):** Build and harden the Laravel 12 / PHP 8.3 / PostgreSQL 16 reference system first. Ensure that lesson schemas, drill models, rubric scoring, IndexedDB storage, and loopback bridge protocols are robust and battle-tested.
+1. **Reference Implementation (Current):** Build and harden the PHP 8.3 / PostgreSQL 16 testbed prototype first, then promote it to a full Laravel 12 reference system. Ensure that lesson schemas, drill models, rubric scoring, IndexedDB storage, and loopback bridge protocols are robust and battle-tested.
 2. **Adapter Decoupling:** Keep curriculum content and prompt templates strictly separated from Laravel-specific execution details.
 3. **Pluggable Adapters:** Once the core platform is proven, introduce new stack adapters behind the `StackAdapterInterface` without touching the studio shell, visual flow engine, or hesitation tracker.
 
@@ -177,7 +179,7 @@ Stack Adapters (Modular Plugins)
 | **Tier 1 Database**     | `sql.js@1.12.0` (SQLite `3.45.2` WASM)                                                 |
 | **Tier 3 Runner Image** | `syscraft-runner:1.0.0` (`php:8.3.11-cli-alpine` + Composer `2.7.7` + `pdo_pgsql`) |
 | **Tier 3 Database**     | `postgres:16.4-alpine`                                                                   |
-| **Tier 3 Framework**    | Laravel `12.0.1` + PHPUnit `11.3.3` + Pest `3.0.4`                                   |
+| **Tier 3 Framework**    | None yet: custom runner `testbed/artisan` with Eloquent-style stubs. Planned: Laravel `12.0.1` + PHPUnit `11.3.3` + Pest `3.0.4` |
 
 ---
 
