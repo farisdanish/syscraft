@@ -1,11 +1,11 @@
 import React from 'react';
 import { 
   Dialog, 
+  DialogBody,
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
   DialogDescription, 
-  DialogBody, 
   DialogFooter, 
   DialogClose 
 } from '@govtechmy/myds-react/dialog';
@@ -61,7 +61,7 @@ export const PostDrillSummaryDialog: React.FC<PostDrillSummaryDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
+      <DialogBody 
         id="post-drill-mastery-dialog"
         aria-modal="true"
         aria-labelledby="mastery-summary-title"
@@ -86,7 +86,9 @@ export const PostDrillSummaryDialog: React.FC<PostDrillSummaryDialogProps> = ({
           padding: '1.25rem 1.5rem',
           background: 'linear-gradient(135deg, var(--studio-surface-subtle) 0%, var(--studio-surface) 100%)',
           borderBottom: '1px solid var(--studio-border)',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          width: '100%',
+          boxSizing: 'border-box'
         }}>
           {/* Subtle Celebration Glow */}
           <div style={{
@@ -118,7 +120,7 @@ export const PostDrillSummaryDialog: React.FC<PostDrillSummaryDialogProps> = ({
               }}>
                 <Award size={24} />
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ flex: 1, minWidth: 0, paddingRight: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
                   <Tag variant="success" size="small">
                     Stage 5/5 Mastered
@@ -159,20 +161,22 @@ export const PostDrillSummaryDialog: React.FC<PostDrillSummaryDialogProps> = ({
           </DialogHeader>
         </div>
 
-        {/* Scrollable Multi-Card Scorecard Body */}
-        <DialogBody style={{ 
+        {/* Scrollable Multi-Card Scorecard Content */}
+        <DialogContent style={{ 
           flex: 1, 
           overflowY: 'auto', 
           padding: '1.25rem 1.5rem',
           display: 'flex',
           flexDirection: 'column',
           gap: '1rem',
-          backgroundColor: 'var(--studio-bg)'
+          backgroundColor: 'var(--studio-bg)',
+          boxSizing: 'border-box',
+          maxHeight: 'calc(90vh - 160px)'
         }}>
           {/* Top Row: Two Parallel Cards */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
             gap: '1rem'
           }}>
             {/* Card 1: Technical & Runtime Verification */}
@@ -462,7 +466,7 @@ export const PostDrillSummaryDialog: React.FC<PostDrillSummaryDialogProps> = ({
               </div>
             </div>
           )}
-        </DialogBody>
+        </DialogContent>
 
         {/* Action Controls Footer */}
         <DialogFooter style={{
@@ -473,7 +477,9 @@ export const PostDrillSummaryDialog: React.FC<PostDrillSummaryDialogProps> = ({
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '0.75rem'
+          gap: '0.75rem',
+          width: '100%',
+          boxSizing: 'border-box'
         }}>
           {/* Tertiary Action: Export Proof-of-Work Envelope */}
           <Button 
@@ -525,7 +531,7 @@ export const PostDrillSummaryDialog: React.FC<PostDrillSummaryDialogProps> = ({
             </Button>
           </div>
         </DialogFooter>
-      </DialogContent>
+      </DialogBody>
     </Dialog>
   );
 };
