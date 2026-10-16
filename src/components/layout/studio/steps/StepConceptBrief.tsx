@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import type { DrillDefinition } from '../../../../types';
 import { ConceptQuizCard } from './ConceptQuizCard';
+import { ConceptSchematicCard } from './ConceptSchematicCard';
 
 export interface StepConceptBriefProps {
   activeDrill: DrillDefinition;
@@ -54,6 +55,9 @@ export const StepConceptBrief: React.FC<StepConceptBriefProps> = ({
             {activeDrill.conceptBrief.thesis}
           </CalloutContent>
         </Callout>
+
+        {/* Visual Architectural Dataflow Schematic */}
+        <ConceptSchematicCard drill={activeDrill} />
 
         {/* Two-Column Grid: Principles vs Technical Contracts */}
         <div style={{ 

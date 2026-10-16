@@ -213,19 +213,54 @@ export function OralRubricDialog({
           </p>
         </div>
 
-        {/* Stopwatch Controller */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ 
-            fontSize: '1.5rem', 
-            fontWeight: 800, 
-            fontFamily: 'monospace', 
-            color: secondsRemaining <= 30 ? 'var(--studio-danger)' : 'var(--studio-primary)',
-            padding: '4px 12px',
-            borderRadius: '6px',
-            backgroundColor: 'var(--studio-surface-subtle)',
-            border: '1px solid var(--studio-border)'
-          }}>
-            {formatTime(secondsRemaining)}
+        {/* Stopwatch Controller with Circular Progress Ring HUD */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <div 
+            className={secondsRemaining <= 30 && isTimerRunning ? 'studio-timer-urgent' : ''}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              padding: '3px 10px 3px 6px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--studio-surface-subtle)',
+              border: `1.5px solid ${secondsRemaining <= 30 ? 'var(--studio-danger)' : (secondsRemaining <= 60 ? 'var(--studio-warning)' : 'var(--studio-border)')}`,
+              transition: 'border-color 0.3s ease'
+            }}
+          >
+            {/* SVG Countdown Ring */}
+            <svg width="32" height="32" viewBox="0 0 44 44" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+              <circle
+                cx="22"
+                cy="22"
+                r="18"
+                fill="none"
+                stroke="var(--studio-border)"
+                strokeWidth="3.5"
+              />
+              <circle
+                cx="22"
+                cy="22"
+                r="18"
+                fill="none"
+                stroke={secondsRemaining <= 30 ? 'var(--studio-danger)' : (secondsRemaining <= 60 ? 'var(--studio-warning)' : 'var(--studio-primary)')}
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                strokeDasharray="113.1"
+                strokeDashoffset={113.1 * (1 - secondsRemaining / 180)}
+                style={{ transition: 'stroke-dashoffset 0.8s linear, stroke 0.3s ease' }}
+              />
+            </svg>
+
+            <span style={{ 
+              fontSize: '1.25rem', 
+              fontWeight: 800, 
+              color: secondsRemaining <= 30 ? 'var(--studio-danger)' : (secondsRemaining <= 60 ? 'var(--studio-warning)' : 'var(--studio-text)'),
+              letterSpacing: '-0.02em',
+              lineHeight: 1
+            }} className="studio-mono">
+              {formatTime(secondsRemaining)}
+            </span>
           </div>
 
           <Button 
@@ -244,6 +279,7 @@ export function OralRubricDialog({
               setIsTimerRunning(false);
               setSecondsRemaining(180);
             }}
+            aria-label="Reset timer to 3 minutes"
           >
             <RotateCcw size={14} />
           </Button>
@@ -323,14 +359,20 @@ export function OralRubricDialog({
                   {cp.prompt}
                 </p>
                 
-                {/* Semantic Accessible Radio Group (1 - 4) with Roving TabIndex & Keyboard Support */}
+                {/* Semantic Accessible Radio Group (1 - 4) with Roving TabIndex & Tiered Level Indicators */}
                 <div 
                   role="radiogroup" 
                   aria-label={`${cp.dimension} dimension rating`}
-                  style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}
+                  style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}
                 >
-                  {[1, 2, 3, 4].map((scoreVal) => {
+                  {[
+                    { score: 1, label: 'L1', tag: 'Novice' },
+                    { score: 2, label: 'L2', tag: 'Working' },
+                    { score: 3, label: 'L3', tag: 'Target' },
+                    { score: 4, label: 'L4', tag: 'Staff' }
+                  ].map(({ score: scoreVal, label, tag }) => {
                     const isChecked = currentScore === scoreVal;
+                    const isTarget = scoreVal === 3;
                     return (
                       <button
                         key={scoreVal}
@@ -341,24 +383,32 @@ export function OralRubricDialog({
                         onClick={() => handleScoreChange(cp.dimension, scoreVal)}
                         onKeyDown={(e) => onKeyDownRadioGroup(e, cp.dimension)}
                         style={{
-                          width: '36px',
-                          height: '36px',
+                          height: '32px',
+                          padding: '0 8px',
                           borderRadius: '6px',
-                          border: `1.5px solid ${isChecked ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
-                          backgroundColor: isChecked ? 'var(--studio-primary)' : 'var(--studio-surface-subtle)',
+                          border: `1.5px solid ${isChecked ? 'var(--studio-primary)' : (isTarget ? 'var(--studio-border-strong)' : 'var(--studio-border)')}`,
+                          backgroundColor: isChecked ? 'var(--studio-primary)' : (isTarget ? 'var(--studio-primary-subtle)' : 'var(--studio-surface-subtle)'),
                           color: isChecked ? 'var(--studio-primary-contrast)' : 'var(--studio-text)',
                           fontWeight: 700,
-                          fontSize: '13px',
+                          fontSize: '12px',
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
-                          display: 'flex',
+                          display: 'inline-flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: isChecked ? '0 0 0 1px var(--studio-primary-glow)' : 'none'
+                          gap: '4px',
+                          boxShadow: isChecked ? '0 0 10px var(--studio-primary-glow)' : 'none'
                         }}
-                        aria-label={`${cp.dimension}, ${scoreVal} of 4, ${isChecked ? 'checked' : 'not checked'}`}
+                        aria-label={`${cp.dimension}, ${label} (${tag}), ${isChecked ? 'checked' : 'not checked'}`}
                       >
-                        {scoreVal}
+                        <span>{label}</span>
+                        <span style={{ 
+                          fontSize: '10px', 
+                          fontWeight: 600, 
+                          opacity: isChecked ? 0.95 : 0.75,
+                          textTransform: 'uppercase'
+                        }}>
+                          {tag}
+                        </span>
                       </button>
                     );
                   })}

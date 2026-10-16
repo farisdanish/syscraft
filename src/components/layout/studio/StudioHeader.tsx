@@ -63,6 +63,11 @@ export function StudioHeader({
   importNotice,
   onDismissImportNotice,
 }: StudioHeaderProps) {
+  const currentTask = CURRICULUM_TASKS.find(t => t.week === activeDrill.week);
+  const currentTrack = currentTask?.trackDomain || 'framework';
+  const trackColorVar = `var(--studio-track-${currentTrack})`;
+  const trackGlowVar = `var(--studio-track-${currentTrack}-glow)`;
+
   return (
     <>
       <header className="studio-header">
@@ -100,14 +105,16 @@ export function StudioHeader({
             width: '26px', 
             height: '26px', 
             borderRadius: '6px', 
-            backgroundColor: 'var(--studio-primary)', 
+            backgroundColor: trackColorVar, 
             color: 'var(--studio-primary-contrast)', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center', 
             fontWeight: 700, 
             fontSize: '0.75rem',
-            flexShrink: 0
+            boxShadow: `0 0 10px ${trackGlowVar}`,
+            flexShrink: 0,
+            transition: 'background-color 0.2s ease, box-shadow 0.2s ease'
           }}>
             SC
           </div>

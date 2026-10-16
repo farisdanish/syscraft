@@ -53,6 +53,35 @@
   --studio-success-glow: 0 0 12px rgba(5, 150, 105, 0.25);
   --studio-edge-inactive: rgba(100, 116, 139, 0.45);
 
+  /* Domain Tracks (Curriculum Specialization) */
+  --studio-track-framework: #0284c7;
+  --studio-track-framework-subtle: rgba(2, 132, 199, 0.08);
+  --studio-track-framework-glow: rgba(2, 132, 199, 0.2);
+
+  --studio-track-api: #d97706;
+  --studio-track-api-subtle: rgba(217, 119, 6, 0.08);
+  --studio-track-api-glow: rgba(217, 119, 6, 0.2);
+
+  --studio-track-clean-arch: #4f46e5;
+  --studio-track-clean-arch-subtle: rgba(79, 70, 229, 0.08);
+  --studio-track-clean-arch-glow: rgba(79, 70, 229, 0.2);
+
+  --studio-track-database: #059669;
+  --studio-track-database-subtle: rgba(5, 150, 105, 0.08);
+  --studio-track-database-glow: rgba(5, 150, 105, 0.2);
+
+  --studio-track-distributed: #7c3aed;
+  --studio-track-distributed-subtle: rgba(124, 58, 237, 0.08);
+  --studio-track-distributed-glow: rgba(124, 58, 237, 0.2);
+
+  --studio-track-system-design: #0891b2;
+  --studio-track-system-design-subtle: rgba(8, 145, 178, 0.08);
+  --studio-track-system-design-glow: rgba(8, 145, 178, 0.2);
+
+  --studio-track-security: #e11d48;
+  --studio-track-security-subtle: rgba(225, 29, 72, 0.08);
+  --studio-track-security-glow: rgba(225, 29, 72, 0.2);
+
   /* Glassmorphism & Overlays */
   --studio-glass-bg: rgba(255, 255, 255, 0.85);
   --studio-glass-border: rgba(226, 232, 240, 0.8);
@@ -112,6 +141,35 @@
   --studio-success-glow: 0 0 16px rgba(16, 185, 129, 0.3);
   --studio-edge-inactive: rgba(148, 163, 184, 0.55);
 
+  /* Domain Tracks (Curriculum Specialization) */
+  --studio-track-framework: #38bdf8;
+  --studio-track-framework-subtle: rgba(56, 189, 248, 0.12);
+  --studio-track-framework-glow: rgba(56, 189, 248, 0.3);
+
+  --studio-track-api: #f59e0b;
+  --studio-track-api-subtle: rgba(245, 158, 11, 0.12);
+  --studio-track-api-glow: rgba(245, 158, 11, 0.3);
+
+  --studio-track-clean-arch: #818cf8;
+  --studio-track-clean-arch-subtle: rgba(129, 140, 248, 0.12);
+  --studio-track-clean-arch-glow: rgba(129, 140, 248, 0.3);
+
+  --studio-track-database: #10b981;
+  --studio-track-database-subtle: rgba(16, 185, 129, 0.12);
+  --studio-track-database-glow: rgba(16, 185, 129, 0.3);
+
+  --studio-track-distributed: #a78bfa;
+  --studio-track-distributed-subtle: rgba(167, 139, 250, 0.12);
+  --studio-track-distributed-glow: rgba(167, 139, 250, 0.3);
+
+  --studio-track-system-design: #22d3ee;
+  --studio-track-system-design-subtle: rgba(34, 211, 238, 0.12);
+  --studio-track-system-design-glow: rgba(34, 211, 238, 0.3);
+
+  --studio-track-security: #fb7185;
+  --studio-track-security-subtle: rgba(251, 113, 133, 0.12);
+  --studio-track-security-glow: rgba(251, 113, 133, 0.3);
+
   /* Glassmorphism & Overlays */
   --studio-glass-bg: rgba(17, 24, 39, 0.85);
   --studio-glass-border: rgba(148, 163, 184, 0.18);
@@ -163,6 +221,55 @@ html, body {
 
 .studio-pulse {
   animation: studio-pulse-glow 2.5s infinite ease-in-out;
+}
+
+/* Milestone Unlock Pop Animation */
+@keyframes studio-badge-pop {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.studio-badge-pop {
+  animation: studio-badge-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Telemetry Metric Shimmer */
+@keyframes studio-metric-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--studio-success-glow);
+  }
+  50% {
+    box-shadow: 0 0 16px 2px var(--studio-success-glow);
+  }
+}
+
+.studio-metric-pulse {
+  animation: studio-metric-pulse 2s infinite ease-in-out;
+}
+
+/* Urgent Timer Pulse */
+@keyframes studio-timer-urgent {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 18px var(--studio-danger-glow);
+  }
+}
+
+.studio-timer-urgent {
+  animation: studio-timer-urgent 1s infinite ease-in-out;
 }
 
 /* High Contrast Accessible Focus Indicators */
@@ -661,6 +768,70 @@ textarea:focus-visible,
 .home-module-card.active-drill:hover {
   border-color: var(--studio-primary);
   box-shadow: 0 0 0 1px var(--studio-primary-glow), var(--studio-shadow-md);
+}
+
+/* Track-Specific Atmospheric Top Borders and Radiant Gradients */
+.home-module-card[data-track="framework"] {
+  border-top: 3px solid var(--studio-track-framework);
+  background: linear-gradient(180deg, var(--studio-track-framework-subtle) 0%, var(--studio-surface) 24%);
+}
+.home-module-card[data-track="framework"]:hover {
+  border-color: var(--studio-track-framework);
+  box-shadow: 0 0 18px -2px var(--studio-track-framework-glow), var(--studio-shadow-md);
+}
+
+.home-module-card[data-track="api"] {
+  border-top: 3px solid var(--studio-track-api);
+  background: linear-gradient(180deg, var(--studio-track-api-subtle) 0%, var(--studio-surface) 24%);
+}
+.home-module-card[data-track="api"]:hover {
+  border-color: var(--studio-track-api);
+  box-shadow: 0 0 18px -2px var(--studio-track-api-glow), var(--studio-shadow-md);
+}
+
+.home-module-card[data-track="clean-arch"] {
+  border-top: 3px solid var(--studio-track-clean-arch);
+  background: linear-gradient(180deg, var(--studio-track-clean-arch-subtle) 0%, var(--studio-surface) 24%);
+}
+.home-module-card[data-track="clean-arch"]:hover {
+  border-color: var(--studio-track-clean-arch);
+  box-shadow: 0 0 18px -2px var(--studio-track-clean-arch-glow), var(--studio-shadow-md);
+}
+
+.home-module-card[data-track="database"] {
+  border-top: 3px solid var(--studio-track-database);
+  background: linear-gradient(180deg, var(--studio-track-database-subtle) 0%, var(--studio-surface) 24%);
+}
+.home-module-card[data-track="database"]:hover {
+  border-color: var(--studio-track-database);
+  box-shadow: 0 0 18px -2px var(--studio-track-database-glow), var(--studio-shadow-md);
+}
+
+.home-module-card[data-track="distributed"] {
+  border-top: 3px solid var(--studio-track-distributed);
+  background: linear-gradient(180deg, var(--studio-track-distributed-subtle) 0%, var(--studio-surface) 24%);
+}
+.home-module-card[data-track="distributed"]:hover {
+  border-color: var(--studio-track-distributed);
+  box-shadow: 0 0 18px -2px var(--studio-track-distributed-glow), var(--studio-shadow-md);
+}
+
+.home-module-card[data-track="system-design"] {
+  border-top: 3px solid var(--studio-track-system-design);
+  background: linear-gradient(180deg, var(--studio-track-system-design-subtle) 0%, var(--studio-surface) 24%);
+}
+.home-module-card[data-track="system-design"]:hover {
+  border-color: var(--studio-track-system-design);
+  box-shadow: 0 0 18px -2px var(--studio-track-system-design-glow), var(--studio-shadow-md);
+}
+
+.home-module-card[data-track="security"] {
+  border-top: 3px solid var(--studio-track-security);
+  background: linear-gradient(180deg, var(--studio-track-security-subtle) 0%, var(--studio-surface) 24%);
+}
+.home-module-card[data-track="security"]:hover {
+  border-color: var(--studio-track-security);
+  box-shadow: 0 0 18px -2px var(--studio-track-security-glow), var(--studio-shadow-md);
 }
 
 .home-module-card.planned-drill {

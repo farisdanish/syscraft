@@ -1,4 +1,6 @@
-import type { ExecutionTier, VerificationSource, WorkflowStep } from './index';
+import type { ExecutionTier, VerificationSource, WorkflowStep, TrackDomain } from './index';
+
+export type { TrackDomain };
 
 export type TaskStatus =
   | 'locked'
@@ -23,6 +25,7 @@ export interface CurriculumTask {
   statusActiveInMvp: boolean; // true for Week 1 & 4; false (planned) for Weeks 2, 3, 5, 6, 7
   description?: string;
   topics?: string[];
+  trackDomain?: TrackDomain;
 }
 
 export interface TaskState {

@@ -13,6 +13,7 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     statusActiveInMvp: true,
     description: 'Eliminate N+1 database roundtrips using Eloquent eager loading and trace the 9-stage HTTP request lifecycle.',
     topics: ['Eloquent Eager Loading', 'N+1 Query Budget (≤3)', 'Request Lifecycle & Ingress Pipeline', 'Model::preventLazyLoading'],
+    trackDomain: 'framework',
   },
   {
     id: 'w2-rest-cursor-pagination',
@@ -26,6 +27,7 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     statusActiveInMvp: true,
     description: 'Implement seek-based cursor pagination for high-volume APIs and emit RFC 9457 standard problem details.',
     topics: ['Seek-based Cursors', 'RFC 9457 Problem Details', 'Opaque Tokens', 'Index Traversal'],
+    trackDomain: 'api',
   },
   {
     id: 'w3-class-refactoring-di',
@@ -39,6 +41,7 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     statusActiveInMvp: true,
     description: 'Refactor bloated procedural code into clean services, bind contracts in Laravel IoC, and inject dependencies.',
     topics: ['Dependency Inversion', 'Service Providers', 'Constructor Injection', 'Interface Segregation'],
+    trackDomain: 'clean-arch',
   },
   {
     id: 'w4-btree-indexing',
@@ -52,6 +55,7 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     statusActiveInMvp: true,
     description: 'Engineer composite B-Tree indexes in SQLite WASM and PostgreSQL, validating execution plans with EXPLAIN.',
     topics: ['Composite B-Tree Indexes', 'EXPLAIN QUERY PLAN', 'Index Covering', 'Search vs Scan'],
+    trackDomain: 'database',
   },
   {
     id: 'w5-queue-dlq-pipeline',
@@ -65,6 +69,7 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     statusActiveInMvp: true,
     description: 'Construct idempotent queue consumers with exponential backoff and isolate poisonous messages in a dead-letter queue.',
     topics: ['Exponential Backoff', 'Dead-Letter Queues (DLQ)', 'Idempotency Keys', 'Worker Poisoning'],
+    trackDomain: 'distributed',
   },
   {
     id: 'w6-system-design-star',
@@ -78,6 +83,7 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     statusActiveInMvp: true,
     description: 'Architect a 100k req/sec sensor pipeline and defend storage, buffering, and failover tradeoffs using STAR.',
     topics: ['STAR Method Defense', 'Time-Series Sharding', 'Buffer Backpressure', 'SLA/SLI Tradeoffs'],
+    trackDomain: 'system-design',
   },
   {
     id: 'w7-crud-auth-sprint',
@@ -91,6 +97,7 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     statusActiveInMvp: true,
     description: 'Enforce multi-tenant model policy gates, defend against session fixation via session regeneration, and prevent IDOR vulnerability.',
     topics: ['Policy Authorization', 'Session Regeneration', 'Role-Based Access Control', 'Timed Sprint'],
+    trackDomain: 'security',
   },
 ];
 

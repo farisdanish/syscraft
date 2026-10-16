@@ -4,6 +4,15 @@
 
 export type ExecutionTier = 1 | 2 | 3;
 
+export type TrackDomain =
+  | 'framework'
+  | 'api'
+  | 'clean-arch'
+  | 'database'
+  | 'distributed'
+  | 'system-design'
+  | 'security';
+
 export type DatabaseEngine = "sqlite-wasm" | "postgresql-docker" | "simulated-laravel";
 
 export type WorkflowStep = 1 | 2 | 3 | 4 | 5;
@@ -95,6 +104,7 @@ export interface DrillDefinition {
   title: string;
   tier: ExecutionTier;
   engine: DatabaseEngine;
+  trackDomain?: TrackDomain;
   conceptBrief: {
     thesis: string;
     diagramType: "lifecycle" | "btree" | "queue" | "diff";

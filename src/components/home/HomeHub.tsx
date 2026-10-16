@@ -306,23 +306,23 @@ export function HomeHub({
             <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--studio-text-muted)', lineHeight: 1.55 }}>
               Interactive code challenges, database query plan labs, and structured architectural defense to prepare you for senior backend interviews and high-scale production systems.
             </p>
-            {/* Disciplines Row as Compact Pills */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.65rem' }}>
-              <span className="home-topic-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <Code2 size={12} color="var(--studio-primary)" />
-                <strong>Framework Internals:</strong> Lifecycle &amp; N+1 budgets
+            {/* Disciplines Row as Compact Pills with Track Colors */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.65rem' }}>
+              <span className="home-topic-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'var(--studio-track-framework-subtle)', borderColor: 'rgba(2, 132, 199, 0.25)' }}>
+                <Code2 size={13} color="var(--studio-track-framework)" />
+                <strong style={{ color: 'var(--studio-text)' }}>Framework Internals:</strong> Lifecycle &amp; N+1 budgets
               </span>
-              <span className="home-topic-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <Database size={12} color="var(--studio-primary)" />
-                <strong>Database Engineering:</strong> B-Tree seeks &amp; EXPLAIN
+              <span className="home-topic-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'var(--studio-track-database-subtle)', borderColor: 'rgba(5, 150, 105, 0.25)' }}>
+                <Database size={13} color="var(--studio-track-database)" />
+                <strong style={{ color: 'var(--studio-text)' }}>Database Engineering:</strong> B-Tree seeks &amp; EXPLAIN
               </span>
-              <span className="home-topic-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <Cpu size={12} color="var(--studio-primary)" />
-                <strong>Distributed Queues:</strong> Retries &amp; dead-letter routing
+              <span className="home-topic-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'var(--studio-track-distributed-subtle)', borderColor: 'rgba(124, 58, 237, 0.25)' }}>
+                <Cpu size={13} color="var(--studio-track-distributed)" />
+                <strong style={{ color: 'var(--studio-text)' }}>Distributed Queues:</strong> Retries &amp; dead-letter routing
               </span>
-              <span className="home-topic-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <Shield size={12} color="var(--studio-primary)" />
-                <strong>Architecture &amp; Security:</strong> STAR defense &amp; policy gates
+              <span className="home-topic-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'var(--studio-track-security-subtle)', borderColor: 'rgba(225, 29, 72, 0.25)' }}>
+                <Shield size={13} color="var(--studio-track-security)" />
+                <strong style={{ color: 'var(--studio-text)' }}>Architecture &amp; Security:</strong> STAR defense &amp; policy gates
               </span>
             </div>
           </div>
@@ -376,8 +376,14 @@ export function HomeHub({
                 {progressPercent}% <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--studio-text-muted)' }}>({masteredCount} of {totalActive} Mastered)</span>
               </span>
             </div>
-            <div style={{ flex: 1, minWidth: '70px', height: '6px', backgroundColor: 'var(--studio-border)', borderRadius: '3px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${progressPercent}%`, backgroundColor: 'var(--studio-primary)', transition: 'width 0.3s ease' }} />
+            <div style={{ flex: 1, minWidth: '70px', height: '7px', backgroundColor: 'var(--studio-border)', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ 
+                height: '100%', 
+                width: `${progressPercent}%`, 
+                background: 'linear-gradient(90deg, var(--studio-primary) 0%, var(--studio-success) 100%)', 
+                boxShadow: progressPercent > 0 ? '0 0 8px var(--studio-success-glow)' : 'none',
+                transition: 'width 0.4s ease' 
+              }} />
             </div>
           </div>
 
@@ -442,10 +448,14 @@ export function HomeHub({
               const isLocked = status === 'locked';
               const isPlanned = status === 'planned';
 
+              const track = task.trackDomain || 'framework';
+              const trackColorVar = `var(--studio-track-${track})`;
+
               return (
                 <div 
                   key={task.id} 
                   className={`home-module-card ${task.statusActiveInMvp ? 'active-drill' : 'planned-drill'}`}
+                  data-track={track}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
                     {/* Header Row: Week pill & Status tag */}
@@ -454,7 +464,7 @@ export function HomeHub({
                         fontSize: '0.6875rem', 
                         fontWeight: 700, 
                         letterSpacing: '0.05em', 
-                        color: task.statusActiveInMvp ? 'var(--studio-primary)' : 'var(--studio-text-muted)'
+                        color: task.statusActiveInMvp ? trackColorVar : 'var(--studio-text-muted)'
                       }}>
                         WEEK {task.week} • {task.module.toUpperCase()}
                       </span>

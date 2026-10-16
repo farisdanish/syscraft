@@ -34,6 +34,16 @@ export interface PostDrillSummaryDialogProps {
   onExportEnvelope: () => void;
 }
 
+const MILESTONE_TITLES: Record<number, { title: string; subtitle: string; icon: string }> = {
+  1: { title: 'N+1 Query Slayer', subtitle: 'Eliminated catastrophic relational loop queries with eager loading', icon: '⚡' },
+  2: { title: 'Cursor Traversal Architect', subtitle: 'Engineered seek-based pagination & RFC 9457 errors', icon: '🧭' },
+  3: { title: 'IoC Container Master', subtitle: 'Decomposed procedural bloat via dependency inversion', icon: '🧩' },
+  4: { title: 'B-Tree Optimizer', subtitle: 'Transformed full table scans into lightning index seeks', icon: '🌲' },
+  5: { title: 'Resilient Queue Specialist', subtitle: 'Configured exponential backoff & dead-letter isolation', icon: '📦' },
+  6: { title: 'STAR Defense Strategist', subtitle: 'Defended high-throughput time-series pipeline architecture', icon: '🛡️' },
+  7: { title: 'Auth Gate Guardian', subtitle: 'Defeated session fixation & enforced policy authorization', icon: '🔐' },
+};
+
 export const PostDrillSummaryDialog: React.FC<PostDrillSummaryDialogProps> = ({
   open,
   onOpenChange,
@@ -43,6 +53,12 @@ export const PostDrillSummaryDialog: React.FC<PostDrillSummaryDialogProps> = ({
   onExportEnvelope,
 }) => {
   if (!summary) return null;
+
+  const milestone = MILESTONE_TITLES[summary.week] || { 
+    title: 'Systems Engineer', 
+    subtitle: 'Mastered production invariants', 
+    icon: '🏆' 
+  };
 
   const handleAdvance = () => {
     if (summary.nextWeekNumber) {
@@ -173,6 +189,54 @@ export const PostDrillSummaryDialog: React.FC<PostDrillSummaryDialogProps> = ({
           boxSizing: 'border-box',
           maxHeight: 'calc(90vh - 160px)'
         }}>
+          {/* Milestone Title Unlock Banner */}
+          <div style={{
+            padding: '0.875rem 1rem',
+            borderRadius: '8px',
+            backgroundColor: 'var(--studio-surface)',
+            border: '1px solid var(--studio-success-border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+            boxShadow: '0 0 14px var(--studio-success-subtle)'
+          }} className="studio-badge-pop">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--studio-success-subtle)',
+                border: '1px solid var(--studio-success-border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.35rem',
+                flexShrink: 0
+              }}>
+                {milestone.icon}
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--studio-success)', letterSpacing: '0.04em' }}>
+                    Milestone Title Unlocked
+                  </span>
+                </div>
+                <strong style={{ fontSize: '0.95rem', color: 'var(--studio-text)', display: 'block' }}>
+                  {milestone.title}
+                </strong>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--studio-text-muted)' }}>
+                  {milestone.subtitle}
+                </p>
+              </div>
+            </div>
+            <Tag variant="success" size="small">
+              <Sparkles size={11} style={{ marginRight: '3px' }} />
+              Achievement Claimed
+            </Tag>
+          </div>
+
           {/* Top Row: Two Parallel Cards */}
           <div style={{
             display: 'grid',
@@ -515,7 +579,7 @@ export const PostDrillSummaryDialog: React.FC<PostDrillSummaryDialogProps> = ({
               variant="primary-fill" 
               size="small" 
               onClick={handleAdvance}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontWeight: 700, boxShadow: '0 0 14px var(--studio-primary-glow)' }}
             >
               {summary.isCurriculumCompleted ? (
                 <>
