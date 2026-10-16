@@ -6,8 +6,12 @@ import type {
   OralRubricScore, 
   TaskState, 
   TaskStatus, 
-  DrillSessionState 
+  DrillSessionState,
+  DrillMasterySummary
 } from '../types';
+import { computeMasterySummary } from './masterySummary';
+import { CURRICULUM_TASKS } from '../data/curriculumTasks';
+import { getDrillById } from '../drills/registry';
 
 interface SysCraftDB extends DBSchema {
   progress: {
@@ -283,6 +287,42 @@ export async function getCustomNote(drillId: string): Promise<string> {
   const db = await getDatabase();
   const record = await db.get('notes', drillId);
   return record?.content || '';
+}
+
+// Post-Drill Mastery Summary Aggregation
+export async function compileMasterySummary(drillId: string): Promise<DrillMasterySummary> {
+  const session = await getDrillSession(drillId);
+  const taskState = await getTaskState(drillId);
+  const oralScores = await getOralScores(drillId);
+  const latestOralScore = oralScores.length > 0 
+    ? [...oralScores].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]
+    : undefined;
+
+  const canonicalId = drillId === 'w4-data-layer-indexes' ? 'w4-btree-indexing' : drillId;
+  const curriculumTask = CURRICULUM_TASKS.find(t => t.id === canonicalId);
+  const drillDef = getDrillById(canonicalId);
+
+  const week = session?.week ?? curriculumTask?.week ?? drillDef?.week ?? 1;
+  const title = curriculumTask?.title ?? drillDef?.title ?? `Week ${week} Drill`;
+  const module = curriculumTask?.module ?? `Module ${week}`;
+  const tier = (curriculumTask?.tier ?? (week === 1 || week === 5 ? 2 : week === 3 || week === 7 ? 3 : 1)) as (1 | 2 | 3);
+  const verificationSource = taskState?.verificationSource ?? session?.verificationSource ?? 'simulation';
+
+  return computeMasterySummary({
+    drillId: canonicalId,
+    week,
+    title,
+    module,
+    tier,
+    verificationSource,
+    completedAt: taskState?.completedAt ?? session?.lastActiveAt ?? new Date().toISOString(),
+    testResults: session?.testResults,
+    tier3Result: session?.tier3Result,
+    oralScore: latestOralScore,
+    hintsUsed: session?.hintsUsed ?? 0,
+    solutionRevealed: session?.solutionRevealed ?? false,
+    starStory: session?.starStories?.[0],
+  });
 }
 
 // Distinct Reset Semantics

@@ -110,7 +110,7 @@ export interface DrillDefinition {
 export type VerificationSource = "simulation" | "local-runtime" | "self-reported";
 
 export * from './tasks';
-import type { TaskState, DrillSessionState } from './tasks';
+import type { TaskState, DrillSessionState, StarStory } from './tasks';
 
 // Persistence Envelope Schema (Versioned & Prototype-Safe)
 export interface ExportEnvelopeV1 {
@@ -160,6 +160,59 @@ export interface EncryptedExportEnvelopeV1 {
   saltB64: string;
   nonceB64: string;
   ciphertextB64: string;
+}
+
+// Mastery Summary Contract for Post-Drill Analysis
+export interface MasteryOralScoreBreakdown {
+  scores: {
+    correctness: number;
+    tradeoff: number;
+    failure: number;
+    clarity: number;
+    challenge?: number;
+  };
+  totalPoints: number;
+  maxPoints: number;
+  percentage: number;
+  deliveryNotes?: string;
+  timestamp?: string;
+}
+
+export interface MasteryAssertionItem {
+  id: string;
+  name: string;
+  passed: boolean;
+  message?: string;
+}
+
+export interface MasteryBenchmark {
+  latencyMs?: number;
+  queryCount?: number;
+  executionTimeMs?: number;
+  reductionPercentage?: number;
+}
+
+export interface DrillMasterySummary {
+  drillId: string;
+  week: number;
+  title: string;
+  module: string;
+  completedAt: string;
+  tier: 1 | 2 | 3;
+  verificationSource: VerificationSource;
+  passed: boolean;
+  assertions: MasteryAssertionItem[];
+  benchmark?: MasteryBenchmark;
+  oralScore?: MasteryOralScoreBreakdown;
+  hintsUsed: number;
+  solutionRevealed: boolean;
+  pedagogicalFraming: string;
+  keyInvariants: string[];
+  starStory?: StarStory;
+  nextWeekId: string | null;
+  nextWeekNumber: number | null;
+  nextWeekTitle: string | null;
+  isCurriculumCompleted: boolean;
 }
 
 export * from './tasks';
