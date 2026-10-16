@@ -21,7 +21,13 @@ import {
   Cpu,
   Shield
 } from 'lucide-react';
-import { CURRICULUM_TASKS, resolveTaskStatus, resolveTaskAvailability } from '../../data/curriculumTasks';
+import { 
+  CURRICULUM_TASKS, 
+  resolveTaskStatus, 
+  resolveTaskAvailability,
+  resolveNextActionableTask,
+  resolveCtaPresentation
+} from '../../data/curriculumTasks';
 import { ResetProgressModal } from '../layout/studio/ResetProgressModal';
 import { UtilitiesMenu } from '../common/UtilitiesMenu';
 import type { TaskState, HesitationLogItem } from '../../types';
@@ -109,9 +115,8 @@ export function HomeHub({
     return s === 'completed' || s === 'verified';
   }).length;
 
-  const inProgressTask = activeTasks.find(t => resolveTaskStatus(t, taskStates[t.id], taskStates) === 'in_progress');
-  const inProgressCount = activeTasks.filter(t => resolveTaskStatus(t, taskStates[t.id], taskStates) === 'in_progress').length;
-  const inProgressWeek = inProgressTask ? inProgressTask.week : 1;
+  const action = resolveNextActionableTask(CURRICULUM_TASKS, taskStates);
+  const cta = resolveCtaPresentation(action, CURRICULUM_TASKS);
   const progressPercent = totalActive > 0 ? Math.round((masteredCount / totalActive) * 100) : 0;
 
   // Actions
@@ -226,8 +231,8 @@ export function HomeHub({
             id="hub-launch-workbench-btn"
             variant="primary-fill"
             size="small"
-            onClick={() => onLaunchWorkbench(inProgressCount > 0 ? inProgressWeek : 1)}
-            aria-label="Open Studio Workbench"
+            onClick={() => onLaunchWorkbench(action.week)}
+            aria-label={`Open Studio Workbench at Week ${action.week}`}
           >
             <Play size={13} style={{ marginRight: '5px' }} />
             Open Workbench
@@ -327,11 +332,12 @@ export function HomeHub({
               id="hero-start-drill-btn"
               variant="primary-fill"
               size="medium"
-              onClick={() => onLaunchWorkbench(inProgressCount > 0 ? inProgressWeek : 1)}
+              onClick={() => onLaunchWorkbench(action.week)}
               style={{ fontWeight: 600, whiteSpace: 'nowrap' }}
+              aria-label={cta.ariaLabel}
             >
               <Play size={15} style={{ marginRight: '6px' }} />
-              {inProgressCount > 0 ? 'Resume In-Progress Drill' : 'Start Week 1: Laravel Internals'}
+              {cta.label}
             </Button>
 
             <Button
@@ -385,7 +391,11 @@ export function HomeHub({
                 Active Drill
               </span>
               <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--studio-text)' }}>
-                {inProgressCount > 0 ? `Week ${inProgressWeek}: Draft auto-saved` : 'None in progress'}
+                {action.kind === 'in_progress'
+                  ? `Week ${action.week}: Draft auto-saved`
+                  : action.kind === 'review'
+                  ? 'None (Curriculum Complete)'
+                  : `None (Next: Week ${action.week})`}
               </span>
             </div>
           </div>
