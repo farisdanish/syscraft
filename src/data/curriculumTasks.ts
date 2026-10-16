@@ -144,3 +144,101 @@ export function resolveTaskAvailability(
   }
   return 'active';
 }
+
+export type FrontierKind = 'in_progress' | 'available' | 'review';
+export interface FrontierAction {
+  week: number;
+  kind: FrontierKind;
+}
+export interface CtaPresentation {
+  label: string;
+  ariaLabel: string;
+}
+
+/**
+ * Resolves the learner's active curriculum frontier.
+ * Pure, total, and deterministic: always returns a valid week in [1..7].
+ */
+export function resolveNextActionableTask(
+  tasks: CurriculumTask[],
+  taskStates: Record<string, TaskState>
+): FrontierAction {
+  const active = tasks.filter((t) => t.statusActiveInMvp);
+  const status = (t: CurriculumTask) => resolveTaskStatus(t, taskStates[t.id], taskStates);
+  const mastered = (s: TaskStatus) => s === 'completed' || s === 'verified';
+
+  // 1. Earliest uncompleted wins: among active where status in {in_progress, available}, sort by week asc
+  const candidates = active
+    .filter((t) => {
+      const s = status(t);
+      return s === 'in_progress' || s === 'available';
+    })
+    .sort((a, b) => a.week - b.week);
+
+  if (candidates.length > 0) {
+    const chosen = candidates[0];
+    const s = status(chosen);
+    return {
+      week: chosen.week,
+      kind: s === 'in_progress' ? 'in_progress' : 'available',
+    };
+  }
+
+  // 2. All mastered: if all active tasks are mastered, return review state with derived highest week
+  if (active.length > 0 && active.every((t) => mastered(status(t)))) {
+    const maxWeek = Math.max(...active.map((t) => t.week));
+    return { week: maxWeek, kind: 'review' };
+  }
+
+  // 3. Fallback (totality):
+  // A mixed mastered + deferred state (e.g. w1-w6 mastered, w7 deferred)
+  // or a state with deferred tasks falls back to earliest non-mastered non-deferred task.
+  const remaining = active
+    .filter((t) => !mastered(status(t)) && status(t) !== 'deferred')
+    .sort((a, b) => a.week - b.week);
+
+  if (remaining.length > 0) {
+    return { week: remaining[0].week, kind: 'available' };
+  }
+
+  // 4. Ultimate fallback: guarantees totality (never returns undefined / week outside 1-7)
+  return { week: 1, kind: 'available' };
+}
+
+/**
+ * Produces user-facing label and accessible aria-label for curriculum launch CTAs.
+ */
+export function resolveCtaPresentation(
+  action: FrontierAction,
+  tasks: CurriculumTask[]
+): CtaPresentation {
+  const title = tasks.find((t) => t.week === action.week)?.title ?? '';
+  const n = action.week;
+
+  if (action.kind === 'in_progress') {
+    return {
+      label: `Resume Week ${n}: ${title}`,
+      ariaLabel: `Resume Week ${n} workbench: ${title}`,
+    };
+  }
+
+  if (action.kind === 'review') {
+    return {
+      label: 'Review Curriculum Mastery',
+      ariaLabel: `Review curriculum mastery for Week ${n}`,
+    };
+  }
+
+  if (n === 1) {
+    return {
+      label: `Start Week 1: ${title}`,
+      ariaLabel: `Launch Week 1 workbench: ${title}`,
+    };
+  }
+
+  return {
+    label: `Continue to Week ${n}: ${title}`,
+    ariaLabel: `Launch Week ${n} workbench: ${title}`,
+  };
+}
+

@@ -6,7 +6,9 @@ import { fileURLToPath } from 'node:url';
 import { 
   CURRICULUM_TASKS, 
   resolveTaskStatus, 
-  resolveTaskAvailability 
+  resolveTaskAvailability,
+  resolveNextActionableTask,
+  resolveCtaPresentation
 } from '../dist-test/data/curriculumTasks.js';
 import { 
   evaluateSecuritySprintDrill, 
@@ -636,6 +638,112 @@ test('Bridge Command Manifest Parity & Tier 3 Invariants', async (t) => {
     const ids = manifest.allowedCommands.map((c) => c.id);
     const uniqueIds = new Set(ids);
     assert.strictEqual(ids.length, uniqueIds.size, 'All manifest command IDs must be unique');
+  });
+});
+
+test('Active Frontier Resolver & CTA Presentation Invariants', async (t) => {
+  await t.test('Fresh learner state (empty states) resolves to Week 1 available', () => {
+    const action = resolveNextActionableTask(CURRICULUM_TASKS, {});
+    assert.deepStrictEqual(action, { week: 1, kind: 'available' });
+
+    const cta = resolveCtaPresentation(action, CURRICULUM_TASKS);
+    assert.strictEqual(cta.label, 'Start Week 1: Laravel Request Lifecycle & Eloquent N+1 Elimination');
+    assert.strictEqual(cta.ariaLabel, 'Launch Week 1 workbench: Laravel Request Lifecycle & Eloquent N+1 Elimination');
+  });
+
+  await t.test('Week 1 completed resolves to Week 2 available', () => {
+    const states = {
+      'w1-laravel-internals-n1': { taskId: 'w1-laravel-internals-n1', status: 'completed', attempts: 1 }
+    };
+    const action = resolveNextActionableTask(CURRICULUM_TASKS, states);
+    assert.deepStrictEqual(action, { week: 2, kind: 'available' });
+
+    const cta = resolveCtaPresentation(action, CURRICULUM_TASKS);
+    assert.strictEqual(cta.label, 'Continue to Week 2: REST Cursor Pagination & RFC 9457 Problem Details');
+    assert.strictEqual(cta.ariaLabel, 'Launch Week 2 workbench: REST Cursor Pagination & RFC 9457 Problem Details');
+  });
+
+  await t.test('Week 1 verified resolves to Week 2 available', () => {
+    const states = {
+      'w1-laravel-internals-n1': { taskId: 'w1-laravel-internals-n1', status: 'verified', attempts: 1 }
+    };
+    const action = resolveNextActionableTask(CURRICULUM_TASKS, states);
+    assert.deepStrictEqual(action, { week: 2, kind: 'available' });
+  });
+
+  await t.test('Non-contiguous completion (Weeks 1 & 4 completed) resolves to earliest available (Week 2)', () => {
+    const states = {
+      'w1-laravel-internals-n1': { taskId: 'w1-laravel-internals-n1', status: 'completed', attempts: 1 },
+      'w4-btree-indexing': { taskId: 'w4-btree-indexing', status: 'completed', attempts: 1 }
+    };
+    const action = resolveNextActionableTask(CURRICULUM_TASKS, states);
+    assert.deepStrictEqual(action, { week: 2, kind: 'available' });
+  });
+
+  await t.test('Active in_progress task resolves with in_progress kind and Resume copy', () => {
+    const states = {
+      'w1-laravel-internals-n1': { taskId: 'w1-laravel-internals-n1', status: 'completed', attempts: 1 },
+      'w2-rest-cursor-pagination': { taskId: 'w2-rest-cursor-pagination', status: 'completed', attempts: 1 },
+      'w3-class-refactoring-di': { taskId: 'w3-class-refactoring-di', status: 'completed', attempts: 1 },
+      'w4-btree-indexing': { taskId: 'w4-btree-indexing', status: 'in_progress', attempts: 1 }
+    };
+    const action = resolveNextActionableTask(CURRICULUM_TASKS, states);
+    assert.deepStrictEqual(action, { week: 4, kind: 'in_progress' });
+
+    const cta = resolveCtaPresentation(action, CURRICULUM_TASKS);
+    assert.strictEqual(cta.label, 'Resume Week 4: B-Tree Compound Indexing & EXPLAIN QUERY PLAN Lab');
+    assert.strictEqual(cta.ariaLabel, 'Resume Week 4 workbench: B-Tree Compound Indexing & EXPLAIN QUERY PLAN Lab');
+  });
+
+  await t.test('Week 1 in_progress resolves to Week 1 in_progress with Resume copy', () => {
+    const states = {
+      'w1-laravel-internals-n1': { taskId: 'w1-laravel-internals-n1', status: 'in_progress', attempts: 1 }
+    };
+    const action = resolveNextActionableTask(CURRICULUM_TASKS, states);
+    assert.deepStrictEqual(action, { week: 1, kind: 'in_progress' });
+
+    const cta = resolveCtaPresentation(action, CURRICULUM_TASKS);
+    assert.strictEqual(cta.label, 'Resume Week 1: Laravel Request Lifecycle & Eloquent N+1 Elimination');
+    assert.strictEqual(cta.ariaLabel, 'Resume Week 1 workbench: Laravel Request Lifecycle & Eloquent N+1 Elimination');
+  });
+
+  await t.test('All active tasks completed resolves to review with derived highest week', () => {
+    const states = {};
+    for (const t of CURRICULUM_TASKS.filter(ct => ct.statusActiveInMvp)) {
+      states[t.id] = { taskId: t.id, status: 'completed', attempts: 1 };
+    }
+    const action = resolveNextActionableTask(CURRICULUM_TASKS, states);
+    assert.deepStrictEqual(action, { week: 7, kind: 'review' });
+
+    const cta = resolveCtaPresentation(action, CURRICULUM_TASKS);
+    assert.strictEqual(cta.label, 'Review Curriculum Mastery');
+    assert.strictEqual(cta.ariaLabel, 'Review curriculum mastery for Week 7');
+  });
+
+  await t.test('Week 1 completed + Week 2 deferred resolves to Week 3 available', () => {
+    const states = {
+      'w1-laravel-internals-n1': { taskId: 'w1-laravel-internals-n1', status: 'completed', attempts: 1 },
+      'w2-rest-cursor-pagination': { taskId: 'w2-rest-cursor-pagination', status: 'deferred', attempts: 1 }
+    };
+    const action = resolveNextActionableTask(CURRICULUM_TASKS, states);
+    assert.deepStrictEqual(action, { week: 3, kind: 'available' });
+  });
+
+  await t.test('Totality: Week 1 deferred resolves to Week 2 available', () => {
+    const states = {
+      'w1-laravel-internals-n1': { taskId: 'w1-laravel-internals-n1', status: 'deferred', attempts: 1 }
+    };
+    const action = resolveNextActionableTask(CURRICULUM_TASKS, states);
+    assert.deepStrictEqual(action, { week: 2, kind: 'available' });
+  });
+
+  await t.test('Totality: Synthetic all-active deferred falls back cleanly to Week 1 available', () => {
+    const states = {};
+    for (const t of CURRICULUM_TASKS.filter(ct => ct.statusActiveInMvp)) {
+      states[t.id] = { taskId: t.id, status: 'deferred', attempts: 1 };
+    }
+    const action = resolveNextActionableTask(CURRICULUM_TASKS, states);
+    assert.deepStrictEqual(action, { week: 1, kind: 'available' });
   });
 });
 
