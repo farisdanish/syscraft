@@ -86,3 +86,21 @@ export function canCompleteMastery(
     stepCompletions[4]
   );
 }
+
+/**
+ * Resolves the safest valid step when hydrating or restoring a drill session.
+ * Ensures the target step is within 1..5 and that all prerequisite steps are completed.
+ * Falls back to Step 1 if the target step is locked or out of bounds.
+ */
+export function resolveSafeTargetStep(
+  savedStep: unknown,
+  stepCompletions: DrillStepCompletions
+): WorkflowStep {
+  if (typeof savedStep === 'number' && savedStep >= 1 && savedStep <= 5) {
+    const candidate = savedStep as WorkflowStep;
+    if (canAdvanceToStep(candidate, stepCompletions)) {
+      return candidate;
+    }
+  }
+  return 1;
+}

@@ -36,7 +36,8 @@ import { migrateLegacySession } from '../../../services/sessionMigration';
 import { 
   isConceptGateSatisfied, 
   canAdvanceToStep, 
-  canCompleteMastery 
+  canCompleteMastery,
+  resolveSafeTargetStep
 } from '../../../services/progressionGates';
 
 export interface UseStudioSessionOptions {
@@ -72,7 +73,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
   const [solutionRevealed, setSolutionRevealed] = useState<boolean>(false);
   const [masterySummary, setMasterySummary] = useState<DrillMasterySummary | null>(null);
   const [showMasteryDialog, setShowMasteryDialog] = useState<boolean>(false);
-  const [isLoadingSession, setIsLoadingSession] = useState<boolean>(false);
+  const [isLoadingSession, setIsLoadingSession] = useState<boolean>(true);
   const loadedDrillIdRef = useRef<string>('');
 
   // 90-minute Timed Sprint State (Week 7)
@@ -182,54 +183,64 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
       return;
     }
     loadedDrillIdRef.current = activeDrill.id;
+    setIsLoadingSession(true);
+
     const loadSession = async () => {
-      const session = await getDrillSession(activeDrill.id);
-      if (!isMounted) return;
-      if (session) {
-        setUserCode(session.draftCode);
-        setCurrentStep(session.currentStep);
-        setHighestStepReached(session.highestStepReached);
-        setStepCompletions(session.stepCompletions);
-        setTestResults(session.testResults);
-        setTier3Result(session.tier3Result as BridgeRunResult | null);
-        setVerificationSource(session.verificationSource);
-        setDrillCompleted(session.completed);
-        setStarStories(session.starStories);
-        setHintsUsed(session.hintsUsed || 0);
-        setSolutionRevealed(session.solutionRevealed || false);
-      } else {
-        setStarStories(undefined);
-        setHintsUsed(0);
-        setSolutionRevealed(false);
-        // Fallback to legacy progress record if migrating
-        const legacy = await getDrillProgress(activeDrill.id);
-        const migrated = migrateLegacySession(legacy);
-        if (migrated) {
-          setUserCode(activeDrill.initialCode);
-          setCurrentStep(migrated.currentStep);
-          setHighestStepReached(migrated.highestStepReached);
-          setStepCompletions(migrated.stepCompletions);
-          setTestResults(null);
-          setTier3Result(null);
-          setVerificationSource(migrated.verificationSource);
-          setDrillCompleted(migrated.drillCompleted);
+      try {
+        const session = await getDrillSession(activeDrill.id);
+        if (!isMounted) return;
+        if (session) {
+          setUserCode(session.draftCode);
+          const targetStep = resolveSafeTargetStep(session.currentStep, session.stepCompletions);
+          setCurrentStep(targetStep);
+          setHighestStepReached(session.highestStepReached || targetStep);
+          setStepCompletions(session.stepCompletions);
+          setTestResults(session.testResults);
+          setTier3Result(session.tier3Result as BridgeRunResult | null);
+          setVerificationSource(session.verificationSource);
+          setDrillCompleted(session.completed);
+          setStarStories(session.starStories);
+          setHintsUsed(session.hintsUsed || 0);
+          setSolutionRevealed(session.solutionRevealed || false);
         } else {
-          setUserCode(activeDrill.initialCode);
-          setCurrentStep(1);
-          setHighestStepReached(1);
-          setStepCompletions({ 1: false, 2: false, 3: false, 4: false, 5: false });
-          setTestResults(null);
-          setTier3Result(null);
-          setVerificationSource('simulation');
-          setDrillCompleted(false);
+          setStarStories(undefined);
+          setHintsUsed(0);
+          setSolutionRevealed(false);
+          // Fallback to legacy progress record if migrating
+          const legacy = await getDrillProgress(activeDrill.id);
+          const migrated = migrateLegacySession(legacy);
+          if (migrated) {
+            setUserCode(activeDrill.initialCode);
+            setCurrentStep(migrated.currentStep);
+            setHighestStepReached(migrated.highestStepReached);
+            setStepCompletions(migrated.stepCompletions);
+            setTestResults(null);
+            setTier3Result(null);
+            setVerificationSource(migrated.verificationSource);
+            setDrillCompleted(migrated.drillCompleted);
+          } else {
+            setUserCode(activeDrill.initialCode);
+            setCurrentStep(1);
+            setHighestStepReached(1);
+            setStepCompletions({ 1: false, 2: false, 3: false, 4: false, 5: false });
+            setTestResults(null);
+            setTier3Result(null);
+            setVerificationSource('simulation');
+            setDrillCompleted(false);
+          }
+        }
+        const hes = await getSundayHesitations();
+        if (isMounted) setSundayCount(hes.length);
+      } finally {
+        if (isMounted) {
+          setIsLoadingSession(false);
         }
       }
-      const hes = await getSundayHesitations();
-      if (isMounted) setSundayCount(hes.length);
     };
     loadSession();
     return () => {
       isMounted = false;
+      loadedDrillIdRef.current = '';
     };
   }, [activeDrill.id, activeDrill.initialCode]);
 

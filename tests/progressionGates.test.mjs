@@ -7,6 +7,7 @@ import {
   computeOralScore,
   canAdvanceToStep,
   canCompleteMastery,
+  resolveSafeTargetStep,
 } from '../dist-test/services/progressionGates.js';
 
 test('Progression Gates: Step 1 Verified Concept Gate', async (t) => {
@@ -148,5 +149,36 @@ test('Progression Gates: Mastery Prerequisite Guard', async (t) => {
   await t.test('Mastery check remains true for already completed drills (idempotent pass)', () => {
     const alreadyMastered = { 1: true, 2: true, 3: true, 4: true, 5: true };
     assert.strictEqual(canCompleteMastery(alreadyMastered), true);
+  });
+});
+
+test('Progression Gates: Safe Session Step Restoration', async (t) => {
+  await t.test('Restores Step 2 when Step 1 is completed', () => {
+    const stepCompletions = { 1: true, 2: false, 3: false, 4: false, 5: false };
+    assert.strictEqual(resolveSafeTargetStep(2, stepCompletions), 2);
+  });
+
+  await t.test('Falls back to Step 1 when saved step is 2 but Step 1 is not completed', () => {
+    const stepCompletions = { 1: false, 2: false, 3: false, 4: false, 5: false };
+    assert.strictEqual(resolveSafeTargetStep(2, stepCompletions), 1);
+  });
+
+  await t.test('Restores Step 4 when Steps 1, 2, and 3 are completed', () => {
+    const stepCompletions = { 1: true, 2: true, 3: true, 4: false, 5: false };
+    assert.strictEqual(resolveSafeTargetStep(4, stepCompletions), 4);
+  });
+
+  await t.test('Falls back to Step 1 when saved step is 4 but Step 3 is incomplete', () => {
+    const stepCompletions = { 1: true, 2: true, 3: false, 4: false, 5: false };
+    assert.strictEqual(resolveSafeTargetStep(4, stepCompletions), 1);
+  });
+
+  await t.test('Falls back to Step 1 for invalid, undefined, null, or out-of-bounds saved steps', () => {
+    const allCompleted = { 1: true, 2: true, 3: true, 4: true, 5: true };
+    assert.strictEqual(resolveSafeTargetStep(undefined, allCompleted), 1);
+    assert.strictEqual(resolveSafeTargetStep(null, allCompleted), 1);
+    assert.strictEqual(resolveSafeTargetStep(0, allCompleted), 1);
+    assert.strictEqual(resolveSafeTargetStep(6, allCompleted), 1);
+    assert.strictEqual(resolveSafeTargetStep('2', allCompleted), 1);
   });
 });
