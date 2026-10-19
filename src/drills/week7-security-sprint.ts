@@ -15,7 +15,7 @@ export const WEEK_7_DRILL: DrillDefinition = {
       'Session Fixation: Attackers establish a known session ID prior to login. Without $request->session()->regenerate(), the victim authenticates the attacker-controlled session.',
       'Policy Authorization: Authentication confirms WHO the user is; Authorization confirms WHAT they can do. Controllers enforce $this->authorize("update", $record), which delegates to RecordPolicy::update(User $user, Record $record): bool { return $user->id === $record->user_id; }.',
       'Multi-Tenancy Isolation: Users must strictly be restricted to records belonging to their tenant or user ID ($user->id === $record->user_id) to eliminate Insecure Direct Object References (IDOR).',
-      'Authenticated Multi-Tenant Truth Table: (1) Tenant A on Record A -> HTTP 200 Authorized, (2) Tenant B on Record A -> HTTP 403 Forbidden, (3) Unauthenticated Guest -> HTTP 401 Unauthorized.',
+      'Authenticated Multi-Tenant Truth Table: (1) Tenant A on Record A -> HTTP 200 Authorized, (2) Tenant B on Record A -> HTTP 403 Forbidden, (3) Unauthenticated Guest -> With authentication middleware protecting the route, an unauthenticated request receives HTTP 401.',
       'Defense-in-Depth Layering: Robust web security couples transport protections (SameSite cookies, CSRF tokens) with application state defense (session ID invalidation on login, strict policy gates on mutations).',
     ],
     quiz: {
@@ -449,18 +449,18 @@ export function evaluateSecuritySprintDrill(code: string): {
         message: authorizeMessage,
       },
       {
-        name: 'HTTP 403 Forbidden Response',
+        name: 'Policy Gate Syntax Check',
         passed: hasAuthorize,
         message: hasAuthorize
-          ? 'Passed: Unauthorized cross-tenant attempts rejected with standard HTTP 403 Forbidden.'
-          : 'Failed: Unauthorized requests are permitted to mutate foreign tenant data.',
+          ? 'Passed: Policy authorization call ($this->authorize("update", $record) or Gate::authorize) declared on mutation endpoint.'
+          : 'Failed: Missing policy authorization gate on mutation endpoint.',
       },
       {
-        name: 'Multi-Tenant Security Gate Verification',
+        name: 'Authorization Mutation-Order Check',
         passed,
         message: passed
-          ? 'Passed: Simulation verified: multi-tenant policy check enforced before record mutation.'
-          : 'Failed: Security assertions not satisfied.',
+          ? 'Passed: Policy authorization check precedes model mutation ($record->update). Runtime HTTP status and database behavior require the Tier 3 bridge test.'
+          : 'Failed: Authorization gate must be executed before model mutation ($record->update).',
       },
     ],
   };

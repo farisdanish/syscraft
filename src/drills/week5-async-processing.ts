@@ -9,13 +9,13 @@ export const WEEK_5_DRILL: DrillDefinition = {
   language: 'php',
   targetFile: 'app/Jobs/ProcessTelemetryBatchJob.php',
   conceptBrief: {
-    thesis: 'Background workers processing external sensor observations inevitably encounter transient downtime and corrupted payloads. Unprotected jobs cause worker starvation through infinite retry loops; resilient pipelines enforce exponential backoff, atomic idempotency locks, and dead-letter queue (DLQ) isolation.',
+    thesis: 'Background workers processing external sensor observations inevitably encounter transient downtime and corrupted payloads. Unprotected jobs can monopolize worker capacity through unconstrained retry loops; resilient pipelines enforce bounded attempts ($tries), exponential backoff, atomic concurrency locks, and dead-letter queue (DLQ) isolation.',
     diagramType: 'queue',
     keyPoints: [
-      'Worker Starvation: Without max tries ($tries), a job that consistently throws an uncaught exception will re-queue infinitely, consuming worker CPU and starving legitimate jobs.',
-      'Configuration Precedence: Job-level properties ($tries and $backoff) declared on the Job class take precedence over queue worker daemon CLI flags (e.g. php artisan queue:work --tries=3).',
+      'Worker Attempt Limits: By default, Laravel attempts a job once unless retry flags or job-level bounds are set. Running php artisan queue:work --tries=N sets a worker ceiling, while --tries=0 allows unlimited retries. Declaring public int $tries on the Job class explicitly overrides worker flags, bounding execution so repeatedly failing poison jobs do not consume worker capacity.',
+      'Configuration Precedence: Job-level properties ($tries and $backoff) declared on the Job class take precedence over queue worker daemon CLI flags. A bounded retry policy guarantees that failing jobs are failed cleanly after budgeted attempts.',
       'Exponential Backoff: Immediate retries cause thundering herds on recovering databases; $backoff = [10, 60, 300] allows downstream dependencies to recover gracefully.',
-      'Durable Idempotency vs. Transient Locks: Cache::lock() guards against concurrent in-flight execution races, but once released, subsequent re-deliveries will re-acquire the lock. Durable idempotency requires an atomic insert/claim into a database table (e.g. processed_batches with unique idempotency_key inside DB::transaction) or insertOrIgnore on unique domain columns.',
+      'Durable Idempotency vs. Transient Locks: Cache::lock() guards against concurrent in-flight execution races, but once released, subsequent re-deliveries will re-acquire the lock. Durable idempotency requires an atomic insert/claim into a database table (e.g. processed_batches with unique idempotency_key) inside the same DB::transaction as observation writes. A concurrency lock alone is not durable idempotency.',
       'Dead-Letter Queue (DLQ): After exhausting retry budgets, poison messages must be logged and inserted into dead_letter_jobs (idempotency_key, payload, exception, failed_at) for inspection without halting the worker pool.',
       'Timeouts vs Reservation: Queue worker retry_after (in queue config) must ALWAYS exceed job $timeout. If retry_after is shorter, the queue broker will re-assign a running job to a second worker, causing duplicate execution.',
       'At-Least-Once Delivery: Queue systems guarantee message delivery at least once; job handlers must always be architected as idempotent operations.',
@@ -45,9 +45,9 @@ export const WEEK_5_DRILL: DrillDefinition = {
     },
   },
   hints: [
-    "Define $tries property: public int $tries = 3; on the job class.",
-    "Implement backoff schedule: public array $backoff = [10, 60, 300]; (or via backoff() method).",
-    "Enforce idempotency using Cache::lock('telemetry_batch:'.$this->idempotencyKey, 120). In failed(\\Throwable $e), log the error and insert into dead_letter_jobs with keys: idempotency_key, payload, exception, failed_at.",
+    "Define $tries property: public int $tries = 3; on the job class to override worker defaults with a bounded retry ceiling.",
+    "Implement backoff schedule: public array $backoff = [10, 60, 300]; (or via backoff() method) to shed load during downstream outages.",
+    "Enforce dual idempotency: acquire Cache::lock('telemetry_batch:'.$this->idempotencyKey, 120), then inside DB::transaction atomically claim processed_batches (idempotency_key) via insertOrIgnore (checking affected rows === 0 to return early on duplicate delivery) before writing observations, releasing the lock in finally. In failed(\\Throwable $e), log the error and insert into dead_letter_jobs with fields: idempotency_key, payload, exception, failed_at.",
   ],
   initialCode: `<?php
 
@@ -67,16 +67,19 @@ class ProcessTelemetryBatchJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
-     * DRILL: Unprotected Queue Job (Vulnerable to Worker Poisoning & Duplicate Writes)
-     * 1. No $tries configured: Default infinite retry loops on uncaught exception!
-     * 2. No exponential $backoff: Immediately retries, slamming struggling databases.
-     * 3. No idempotency check: Duplicate execution inserts duplicate sensor records.
-     * 4. No failed() hook: Poisonous payloads loop forever without dead-letter isolation.
+     * DRILL: Unprotected Queue Job (Vulnerable to Worker Monopolization & Duplicate Writes)
+     * 1. No bounded $tries configured: An unconfigured worker or --tries=0 allows jobs to retry indefinitely.
+     * 2. No exponential $backoff: Immediate retries slam recovering downstream databases.
+     * 3. No durable idempotency: Concurrent or retried executions insert duplicate sensor records.
+     * 4. No failed() DLQ routing: Poisonous payloads fail to be isolated to dead_letter_jobs.
      *
      * TASKS:
      * 1. Define public int $tries = 3;
      * 2. Define public array $backoff = [10, 60, 300];
-     * 3. Enforce idempotency: use Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120)->get() before DB mutation.
+     * 3. Enforce idempotency: acquire Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120),
+     *    then atomically claim processed_batches in DB::transaction (e.g. insertOrIgnore) before inserting observations.
+     *    Handle duplicate claims so redeliveries do not fail into the DLQ (avoid race-prone exists() checks).
+     *    Always release lock in finally.
      * 4. Implement failed(\\Throwable $exception): Log error and record into dead_letter_jobs with columns:
      *    ['idempotency_key', 'payload', 'exception', 'failed_at'].
      */
@@ -132,22 +135,27 @@ class ProcessTelemetryBatchJob implements ShouldQueue
         }
 
         try {
-            DB::transaction(function () {
-                DB::table('processed_batches')->insert([
+            $claimed = false;
+            DB::transaction(function () use (&$claimed) {
+                $affected = DB::table('processed_batches')->insertOrIgnore([
                     'idempotency_key' => $this->idempotencyKey,
                     'processed_at' => now()->toIso8601String(),
                 ]);
 
+                if ($affected === 0) {
+                    return;
+                }
+
+                $claimed = true;
                 foreach ($this->telemetryBatch as $reading) {
                     DB::table('weather_observations')->insertOrIgnore($reading);
                 }
             });
-        } catch (\\Throwable $e) {
-            if (str_contains($e->getMessage(), 'processed_batches') || str_contains($e->getMessage(), 'duplicate') || str_contains($e->getMessage(), 'UNIQUE')) {
+
+            if (!$claimed) {
                 Log::info("Batch already processed in durable ledger: {$this->idempotencyKey}");
                 return;
             }
-            throw $e;
         } finally {
             $lock->release();
         }
@@ -184,7 +192,7 @@ class ProcessTelemetryBatchJob implements ShouldQueue
     checkpoints: [
       {
         dimension: 'correctness',
-        prompt: 'Accurately articulated the relationship between worker reservation timeouts (retry_after) and job execution limits ($tries & $timeout).',
+        prompt: 'Accurately articulated the relationship between worker reservation timeouts (retry_after), attempt limits ($tries), worker defaults, and job timeouts ($timeout).',
       },
       {
         dimension: 'tradeoff',
@@ -196,7 +204,7 @@ class ProcessTelemetryBatchJob implements ShouldQueue
       },
       {
         dimension: 'clarity',
-        prompt: 'Explained idempotency mechanisms: using distributed locks (Redis atomic lock) or database unique constraints to safely handle duplicate message delivery.',
+        prompt: 'Explained dual idempotency: using short-lived distributed concurrency locks (Cache::lock) coupled with durable database transaction claims (processed_batches) to prevent duplicate processing across retries.',
       },
       {
         dimension: 'challenge',
@@ -289,6 +297,8 @@ function stripPhpCommentsAndInertStrings(code: string): string {
       i++;
       if (whitelistedLiterals.has(strContent.trim())) {
         result += `"${strContent.trim()}"`;
+      } else if (/\$[a-zA-Z0-9_>-]*idempotencyKey\b/.test(strContent)) {
+        result += `"${strContent}"`;
       } else {
         result += '""';
       }
@@ -379,6 +389,72 @@ function extractMethodBody(code: string, methodName: string): string | null {
 }
 
 /**
+ * Extract closure block body following a target pattern based on brace depth.
+ */
+function extractClosureAfter(code: string, pattern: string): string | null {
+  const idx = code.indexOf(pattern);
+  if (idx === -1) return null;
+  const braceIdx = code.indexOf('{', idx);
+  if (braceIdx === -1) return null;
+  let depth = 1;
+  let i = braceIdx + 1;
+  while (i < code.length && depth > 0) {
+    if (code[i] === '{') depth++;
+    else if (code[i] === '}') depth--;
+    if (depth === 0) {
+      return code.slice(braceIdx + 1, i);
+    }
+    i++;
+  }
+  return null;
+}
+
+/**
+ * Splits top-level entries of a PHP array literal across matching braces/brackets/parentheses.
+ */
+function splitTopLevelArrayEntries(rawArgs: string): string[] | null {
+  const trimmed = rawArgs.trim();
+  let inner = '';
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    inner = trimmed.slice(1, -1);
+  } else if (/^array\s*\(/i.test(trimmed) && trimmed.endsWith(')')) {
+    const start = trimmed.indexOf('(');
+    inner = trimmed.slice(start + 1, -1);
+  } else {
+    return null;
+  }
+
+  const entries: string[] = [];
+  let current = '';
+  let parenDepth = 0;
+  let bracketDepth = 0;
+  let braceDepth = 0;
+
+  for (let idx = 0; idx < inner.length; idx++) {
+    const ch = inner[idx];
+    if (ch === '(') parenDepth++;
+    else if (ch === ')') parenDepth = Math.max(0, parenDepth - 1);
+    else if (ch === '[') bracketDepth++;
+    else if (ch === ']') bracketDepth = Math.max(0, bracketDepth - 1);
+    else if (ch === '{') braceDepth++;
+    else if (ch === '}') braceDepth = Math.max(0, braceDepth - 1);
+    else if (ch === ',' && parenDepth === 0 && bracketDepth === 0 && braceDepth === 0) {
+      if (current.trim().length > 0) {
+        entries.push(current.trim());
+      }
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  if (current.trim().length > 0) {
+    entries.push(current.trim());
+  }
+
+  return entries;
+}
+
+/**
  * Deterministic client evaluation for Week 5 Resilient Queue & Dead-Letter Pipeline
  */
 export function evaluateQueueDlqDrill(code: string): {
@@ -426,26 +502,171 @@ export function evaluateQueueDlqDrill(code: string): {
 
   if (handleBody) {
     const referencesKey = handleBody.includes('idempotencyKey');
-    const hasLock =
-      (/Cache::lock\s*\(/.test(handleBody) || /->\s*lock\s*\(/.test(handleBody)) &&
-      (/->\s*get\s*\(/.test(handleBody) || /->\s*block\s*\(/.test(handleBody));
-    const hasLedger = handleBody.includes('processed_batches') && handleBody.includes('insert');
-    const hasTransaction = handleBody.includes('transaction');
-    const hasRelease = /->\s*release\s*\(/.test(handleBody);
+
+    const lockAssignRegex = /\$([a-zA-Z0-9_]+)\s*=\s*(?:Cache::lock|->\s*lock)\s*\(/;
+    const lockMatch = lockAssignRegex.exec(handleBody);
+    const lockVar = lockMatch ? lockMatch[1] : null;
+
+    let hasLock = false;
+    let lockAcqPos = -1;
+    if (lockVar) {
+      const acqRegex = new RegExp(`\\$${lockVar}\\s*->\\s*(?:get|block)\\s*\\(`, 'g');
+      const acqMatch = acqRegex.exec(handleBody);
+      if (acqMatch) {
+        hasLock = true;
+        lockAcqPos = acqMatch.index;
+      }
+    }
+
+    const txnPos = handleBody.search(/DB::transaction\s*\(/);
+
+    let hasReleaseInFinally = false;
+    if (lockVar) {
+      const finallyIdx = handleBody.indexOf('finally');
+      if (finallyIdx !== -1) {
+        const afterFinally = handleBody.slice(finallyIdx);
+        const braceIdx = afterFinally.indexOf('{');
+        if (braceIdx !== -1) {
+          let depth = 1;
+          let i = braceIdx + 1;
+          while (i < afterFinally.length && depth > 0) {
+            if (afterFinally[i] === '{') depth++;
+            else if (afterFinally[i] === '}') depth--;
+            if (depth === 0) {
+              const finallyBody = afterFinally.slice(braceIdx + 1, i);
+              const releaseRegex = new RegExp(`\\$${lockVar}\\s*->\\s*release\\s*\\(`);
+              hasReleaseInFinally = releaseRegex.test(finallyBody);
+              break;
+            }
+            i++;
+          }
+        }
+      }
+    }
+
+    const hasLedger = /['"]processed_batches['"]/.test(handleBody) && handleBody.includes('insert');
+    const hasTransaction = txnPos !== -1;
+
+    const txnClosure = extractClosureAfter(handleBody, 'DB::transaction');
+    const ledgerInTxn = Boolean(txnClosure && /['"]processed_batches['"]/.test(txnClosure));
+    const obsInTxn = Boolean(txnClosure && /['"]weather_observations['"]/.test(txnClosure));
+
+    let ledgerBeforeObs = false;
+    let ledgerMatch: RegExpExecArray | null = null;
+    let obsMatch: RegExpExecArray | null = null;
+    if (txnClosure) {
+      ledgerMatch = /['"]processed_batches['"]/.exec(txnClosure);
+      obsMatch = /['"]weather_observations['"]/.exec(txnClosure);
+      ledgerBeforeObs = Boolean(ledgerMatch && obsMatch && ledgerMatch.index < obsMatch.index);
+    }
+
+    let hasValidAtomicClaim = false;
+    let ledgerStoresKey = false;
+    if (txnClosure && ledgerMatch && obsMatch && ledgerMatch.index < obsMatch.index) {
+      const preObsCode = txnClosure.slice(0, obsMatch.index);
+      const assignRegex = /\$([a-zA-Z0-9_]+)\s*=\s*[^;]*?['"]processed_batches['"][^;]*?->\s*insertOrIgnore\s*\(/;
+      const assignMatch = assignRegex.exec(preObsCode);
+
+      if (assignMatch) {
+        const varName = assignMatch[1];
+        const callArgStart = assignMatch.index + assignMatch[0].length;
+        let parenDepth = 1;
+        let k = callArgStart;
+        let insertArgs = '';
+        while (k < preObsCode.length && parenDepth > 0) {
+          if (preObsCode[k] === '(') parenDepth++;
+          else if (preObsCode[k] === ')') parenDepth--;
+          if (parenDepth === 0) {
+            insertArgs = preObsCode.slice(callArgStart, k);
+            break;
+          }
+          k++;
+        }
+        const entries = splitTopLevelArrayEntries(insertArgs);
+        if (entries) {
+          let idempotencyKeyCount = 0;
+          let validKeyEntryCount = 0;
+          const keyRegex = /^\s*(['"])idempotency_key\1\s*=>\s*([\s\S]+?)\s*$/;
+
+          for (const entry of entries) {
+            const match = keyRegex.exec(entry);
+            if (match) {
+              idempotencyKeyCount++;
+              const val = match[2].replace(/\s+/g, '');
+              if (val === '$this->idempotencyKey') {
+                validKeyEntryCount++;
+              }
+            }
+          }
+
+          ledgerStoresKey = idempotencyKeyCount === 1 && validKeyEntryCount === 1;
+        }
+
+        const postAssignCode = preObsCode.slice(assignMatch.index + assignMatch[0].length);
+
+        const conditionRegex = new RegExp(
+          `if\\s*\\(\\s*(?:` +
+          `!\\s*\\$${varName}\\b|` +
+          `empty\\s*\\(\\s*\\$${varName}\\s*\\)|` +
+          `\\$${varName}\\s*(?:===?|<=?)\\s*0\\b|` +
+          `\\$${varName}\\s*<\\s*1\\b|` +
+          `\\$${varName}\\s*===?\\s*false\\b|` +
+          `0\\s*(?:===?|>=?)\\s*\\$${varName}\\b|` +
+          `false\\s*===?\\s*\\$${varName}\\b` +
+          `)\\s*\\)`,
+          'gi'
+        );
+
+        let ifMatch: RegExpExecArray | null = null;
+        while ((ifMatch = conditionRegex.exec(postAssignCode)) !== null) {
+          const afterIf = postAssignCode.slice(ifMatch.index + ifMatch[0].length).trim();
+          let ifBody = '';
+          if (afterIf.startsWith('{')) {
+            let depth = 1;
+            let j = 1;
+            while (j < afterIf.length && depth > 0) {
+              if (afterIf[j] === '{') depth++;
+              else if (afterIf[j] === '}') depth--;
+              if (depth === 0) {
+                ifBody = afterIf.slice(1, j);
+                break;
+              }
+              j++;
+            }
+          } else {
+            const semi = afterIf.indexOf(';');
+            if (semi !== -1) {
+              ifBody = afterIf.slice(0, semi);
+            }
+          }
+
+          if (/\breturn\b/.test(ifBody)) {
+            hasValidAtomicClaim = true;
+            break;
+          }
+        }
+      }
+    }
 
     if (!referencesKey) {
       idempotencyMessage = 'Failed: Missing references to $this->idempotencyKey in handle() concurrency guard.';
-    } else if (!hasLock) {
-      idempotencyMessage = 'Failed: Missing atomic concurrency lock (Cache::lock with ->get() or ->block()) on the idempotency key.';
+    } else if (!hasLock || (txnPos !== -1 && lockAcqPos > txnPos)) {
+      idempotencyMessage = 'Failed: Atomic concurrency lock (Cache::lock with ->get() or ->block() on the lock variable) must be acquired before database transaction.';
     } else if (!hasLedger) {
-      idempotencyMessage = 'Failed: Missing durable idempotency ledger claim in processed_batches table before inserting observations.';
-    } else if (!hasTransaction) {
-      idempotencyMessage = 'Failed: Database mutations and processed_batches ledger write must be atomic within a DB::transaction.';
-    } else if (!hasRelease) {
-      idempotencyMessage = 'Failed: Atomic concurrency lock must be released in a finally block.';
+      idempotencyMessage = 'Failed: Missing durable idempotency ledger claim in processed_batches table.';
+    } else if (!hasTransaction || !ledgerInTxn || !obsInTxn) {
+      idempotencyMessage = 'Failed: Both processed_batches claim and observation writes must occur atomically within a DB::transaction.';
+    } else if (!ledgerBeforeObs) {
+      idempotencyMessage = 'Failed: Durable idempotency claim on processed_batches must precede observation writes.';
+    } else if (!hasReleaseInFinally) {
+      idempotencyMessage = 'Failed: Atomic concurrency lock must be released inside a finally block on the acquired lock variable.';
+    } else if (!hasValidAtomicClaim) {
+      idempotencyMessage = 'Failed: Duplicate claims on processed_batches must be handled atomically (assign insertOrIgnore() result to a variable and check for zero/false with an early return before writing observations).';
+    } else if (!ledgerStoresKey) {
+      idempotencyMessage = "Failed: Durable idempotency ledger claim on processed_batches must store $this->idempotencyKey in the 'idempotency_key' column.";
     } else {
       hasIdempotency = true;
-      idempotencyMessage = 'Passed: Durable idempotency enforced with atomic concurrency lock, processed_batches claim, and shared transaction.';
+      idempotencyMessage = 'Passed: Durable idempotency enforced with atomic concurrency lock, processed_batches claim before observations, duplicate-claim handling, shared transaction, and finally release.';
     }
   }
 
@@ -455,10 +676,22 @@ export function evaluateQueueDlqDrill(code: string): {
   let dlqMessage = 'Failed: Missing failed(\\Throwable $exception) hook with dead-letter queue routing.';
 
   if (failedBody) {
-    const recordsDeadLetter = failedBody.includes('dead_letter_jobs') || failedBody.includes('insert') || failedBody.includes('Log::error');
-    if (recordsDeadLetter) {
+    const targetsDlqTable = failedBody.includes("'dead_letter_jobs'") || failedBody.includes('"dead_letter_jobs"');
+    const hasInsert = /->\s*insert\s*\(/.test(failedBody);
+    const hasIdempotencyKeyField = failedBody.includes("'idempotency_key'") || failedBody.includes('"idempotency_key"');
+    const hasPayloadField = failedBody.includes("'payload'") || failedBody.includes('"payload"');
+    const hasExceptionField = failedBody.includes("'exception'") || failedBody.includes('"exception"');
+    const hasFailedAtField = failedBody.includes("'failed_at'") || failedBody.includes('"failed_at"');
+
+    const hasAllFields = hasIdempotencyKeyField && hasPayloadField && hasExceptionField && hasFailedAtField;
+
+    if (!targetsDlqTable || !hasInsert) {
+      dlqMessage = 'Failed: failed() must insert the failed job payload into the dead_letter_jobs table (logging alone is insufficient).';
+    } else if (!hasAllFields) {
+      dlqMessage = 'Failed: dead_letter_jobs record must contain idempotency_key, payload, exception, and failed_at fields.';
+    } else {
       hasDeadLetter = true;
-      dlqMessage = 'Passed: Dead-letter isolation and permanent failure logging implemented in failed() callback.';
+      dlqMessage = 'Passed: Dead-letter isolation with complete fields (idempotency_key, payload, exception, failed_at) recorded in dead_letter_jobs.';
     }
   }
 

@@ -127,7 +127,7 @@ export const StepTracerReplay: React.FC<StepTracerReplayProps> = ({
                 : activeDrill.week === 2
                 ? "Tier 1: SQLite WASM / REST Engine"
                 : activeDrill.week === 3
-                ? "Tier 3: PHP 8.3 / IoC Container"
+                ? "Tier 3: PHP 8.3 testbed / Laravel-style IoC stubs"
                 : activeDrill.week === 4 
                 ? `Tier 1: SQLite ${runtimeSqlVersion} (WASM Engine)` 
                 : activeDrill.week === 5

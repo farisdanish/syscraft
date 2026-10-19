@@ -16,7 +16,7 @@ export const WEEK_1_DRILL: DrillDefinition = {
       'Service Container & Reflection: The container inspects constructor type-hints via PHP Reflection to auto-wire dependencies. Facades act as static proxies to bound singletons.',
       'N+1 Query Multiplication: Accessing relations inside loops ($post->author) issues 1 parent query + N child queries. Prevent in dev using Model::preventLazyLoading(!app()->isProduction()).',
       'Eager Loading Solution: with([\'author\', \'comments\']) collapses queries to a fixed budget <= 3 by issuing batched WHERE IN queries.',
-      'Large Dataset Memory & Streaming: Eager loading 100k records hydrates 100k Eloquent objects in RAM (~150MB+). cursor() returns a LazyCollection backed by a single PDO statement generator, streaming one model at a time with low memory. However, cursor() keeps an open database cursor/socket, so it cannot safely perform nested database queries or mutations on the same connection. For processing with mutations, use chunking via lazy() or lazyById().',
+      'Large Dataset Memory & Streaming: Eager loading large record sets hydrates many Eloquent model instances in RAM (for example, 100k objects can consume 150MB+ in memory benchmarks). cursor() returns a LazyCollection backed by a PHP generator, hydrating one model at a time to reduce peak memory. However, cursor() cannot eager-load relationships; Laravel recommends lazy() when relations must be eager-loaded. Note that PDO may still buffer raw query results depending on driver configuration, so cursor() alone is not guaranteed to remain memory-safe for arbitrarily large datasets. When records are updated during iteration, lazyById() is preferred because it chunks via primary key seeks.',
     ],
     quiz: {
       question: 'In a Laravel controller action, you fetch 25 Post records using Post::all(). Inside a loop over the collection, you access $post->author->name (belongsTo) and $post->comments->count() (hasMany). Assuming no eager loading and no query caching, how many total database queries are executed?',
@@ -146,7 +146,7 @@ class PostController extends Controller
       },
       {
         dimension: 'challenge',
-        prompt: 'Successfully answered follow-up: "What happens if an eager-loaded relation contains 100,000 sub-records? How does cursor() differ from lazy()/lazyById() regarding database cursor sockets and concurrent mutations?"',
+        prompt: 'Successfully answered follow-up: "Why can’t cursor() eager-load relationships, when should lazy() be preferred, and why is lazyById() safer when records are updated during iteration?"',
       },
     ],
   },

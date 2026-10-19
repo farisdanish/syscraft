@@ -521,7 +521,7 @@ export function OralRubricDialog({
             Oral Defense Verified ({attemptResult.totalScore}/20)
           </CalloutTitle>
           <CalloutContent style={{ fontSize: '0.8125rem' }}>
-            Unscripted oral defense meets Staff-level criteria! Step 5: Tracer Replay is now unlocked.
+            Unscripted oral defense meets the 14-point passing threshold. Step 5: Tracer Replay is now unlocked.
           </CalloutContent>
         </Callout>
       )}

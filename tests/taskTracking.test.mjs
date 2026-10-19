@@ -403,6 +403,15 @@ class AuthController extends Controller {
     assert.strictEqual(policyAssertion.passed, false);
   });
 
+  await t.test('Simulation assertion names reflect syntax and ordering checks rather than execution', () => {
+    const res = evaluateSecuritySprintDrill(WEEK_7_DRILL.solutionCode);
+    const syntaxAssertion = res.assertionResults.find((a) => a.name === 'Policy Gate Syntax Check');
+    const orderAssertion = res.assertionResults.find((a) => a.name === 'Authorization Mutation-Order Check');
+    assert.ok(syntaxAssertion, 'Policy Gate Syntax Check assertion must exist');
+    assert.ok(orderAssertion, 'Authorization Mutation-Order Check assertion must exist');
+    assert.match(orderAssertion.message, /Runtime HTTP status and database behavior require the Tier 3 bridge test/);
+  });
+
   await t.test('Valid remediated submission passes all security assertions', () => {
     const res = evaluateSecuritySprintDrill(WEEK_7_DRILL.solutionCode);
     assert.strictEqual(res.passed, true, 'Properly remediated code must pass');
@@ -484,6 +493,183 @@ test('Week 6 System Design Evaluator & Type Safety Invariants', async (t) => {
     assert.strictEqual(res.passed, false, 'Filler strings without metrics must fail');
     const starAssertion = res.assertionResults.find((a) => a.name === 'STAR Architecture Story Defense');
     assert.strictEqual(starAssertion.passed, false);
+  });
+
+  await t.test('Generic filler strings longer than minimum length are rejected', () => {
+    const fillerSpec = JSON.stringify({
+      architecture: {
+        buffer: { backpressureStrategy: 'This is a very long sentence that exceeds ten characters but contains no mechanisms.' },
+        workers: { batchSize: 1000 },
+        storage: { partitionKey: 'recorded_at::date' },
+      },
+      starStories: {
+        spikeDefense: {
+          action: 'This is a long generic sentence explaining what we did in great detail without keywords.',
+          result: 'Everything went very smoothly and everyone was extremely pleased with how it turned out.',
+          resultMetrics: { uptimePercent: 99.99, p95LatencyMs: 30 }
+        },
+      },
+    });
+    const res = evaluateSystemDesignDrill(fillerSpec);
+    assert.strictEqual(res.passed, false);
+    const bpAssertion = res.assertionResults.find((a) => a.name === 'Buffer Backpressure Strategy');
+    assert.strictEqual(bpAssertion.passed, false);
+    const starAssertion = res.assertionResults.find((a) => a.name === 'STAR Architecture Story Defense');
+    assert.strictEqual(starAssertion.passed, false);
+  });
+
+  await t.test('uptimePercent out of bounds (1000) is rejected', () => {
+    const invalidUptimeSpec = JSON.parse(WEEK_6_DRILL.solutionCode);
+    invalidUptimeSpec.starStories.spikeDefense.resultMetrics.uptimePercent = 1000;
+    const res = evaluateSystemDesignDrill(JSON.stringify(invalidUptimeSpec));
+    assert.strictEqual(res.passed, false);
+    const starAssertion = res.assertionResults.find((a) => a.name === 'STAR Architecture Story Defense');
+    assert.strictEqual(starAssertion.passed, false);
+  });
+
+  await t.test('Negative p95LatencyMs (-1) is rejected', () => {
+    const negativeLatencySpec = JSON.parse(WEEK_6_DRILL.solutionCode);
+    negativeLatencySpec.starStories.spikeDefense.resultMetrics.p95LatencyMs = -1;
+    const res = evaluateSystemDesignDrill(JSON.stringify(negativeLatencySpec));
+    assert.strictEqual(res.passed, false);
+    const starAssertion = res.assertionResults.find((a) => a.name === 'STAR Architecture Story Defense');
+    assert.strictEqual(starAssertion.passed, false);
+  });
+
+  await t.test('Zero p95LatencyMs (0) is rejected', () => {
+    const zeroLatencySpec = JSON.parse(WEEK_6_DRILL.solutionCode);
+    zeroLatencySpec.starStories.spikeDefense.resultMetrics.p95LatencyMs = 0;
+    const res = evaluateSystemDesignDrill(JSON.stringify(zeroLatencySpec));
+    assert.strictEqual(res.passed, false);
+    const starAssertion = res.assertionResults.find((a) => a.name === 'STAR Architecture Story Defense');
+    assert.strictEqual(starAssertion.passed, false);
+  });
+
+  await t.test('Vague prose with valid metrics is rejected', () => {
+    const vagueSpec = JSON.parse(WEEK_6_DRILL.solutionCode);
+    vagueSpec.starStories.spikeDefense.action = 'We did some generic work to solve the problems that happened.';
+    vagueSpec.starStories.spikeDefense.result = 'The results were totally fine and the system was stable all day.';
+    const res = evaluateSystemDesignDrill(JSON.stringify(vagueSpec));
+    assert.strictEqual(res.passed, false);
+    const starAssertion = res.assertionResults.find((a) => a.name === 'STAR Architecture Story Defense');
+    assert.strictEqual(starAssertion.passed, false);
+  });
+
+  await t.test('Backpressure sentence with no recognized mechanism is rejected', () => {
+    const noMechSpec = JSON.parse(WEEK_6_DRILL.solutionCode);
+    noMechSpec.architecture.buffer.backpressureStrategy = 'We just handle it as nicely and smoothly as we can.';
+    const res = evaluateSystemDesignDrill(JSON.stringify(noMechSpec));
+    assert.strictEqual(res.passed, false);
+    const bpAssertion = res.assertionResults.find((a) => a.name === 'Buffer Backpressure Strategy');
+    assert.strictEqual(bpAssertion.passed, false);
+  });
+
+  await t.test('Backpressure strategy specifying admission control passes', () => {
+    const admissionSpec = JSON.parse(WEEK_6_DRILL.solutionCode);
+    admissionSpec.architecture.buffer.backpressureStrategy = 'Bounded ingress with admission control and token bucket shedding';
+    const res = evaluateSystemDesignDrill(JSON.stringify(admissionSpec));
+    const bpAssertion = res.assertionResults.find((a) => a.name === 'Buffer Backpressure Strategy');
+    assert.strictEqual(bpAssertion.passed, true);
+  });
+
+  await t.test('Structured object fields adhering to documented schemas pass evaluation', () => {
+    const structuredSpec = JSON.parse(WEEK_6_DRILL.solutionCode);
+    structuredSpec.architecture.buffer.backpressureStrategy = {
+      mechanism: 'token bucket rate limiting',
+      trigger: 'queue depth exceeds 80 percent',
+      response: 'return HTTP 429 with Retry-After',
+    };
+    structuredSpec.starStories.spikeDefense.action = {
+      mechanism: 'partitioned Redis Streams and batched writes',
+      execution: 'scaled consumers while applying admission control',
+    };
+    structuredSpec.starStories.spikeDefense.result = {
+      outcome: 'maintained ingestion during the burst',
+      evidence: '99.995% uptime with 34ms p95 latency',
+    };
+    const res = evaluateSystemDesignDrill(JSON.stringify(structuredSpec));
+    assert.strictEqual(res.passed, true);
+    for (const a of res.assertionResults) {
+      assert.strictEqual(a.passed, true, `Assertion "${a.name}" must pass`);
+    }
+  });
+
+  await t.test('Structured backpressure with unknown key {"x": ...} is rejected', () => {
+    const spec = JSON.parse(WEEK_6_DRILL.solutionCode);
+    spec.architecture.buffer.backpressureStrategy = { x: 'token bucket controls overload' };
+    const res = evaluateSystemDesignDrill(JSON.stringify(spec));
+    assert.strictEqual(res.passed, false);
+    const bp = res.assertionResults.find((a) => a.name === 'Buffer Backpressure Strategy');
+    assert.strictEqual(bp.passed, false);
+  });
+
+  await t.test('Structured backpressure missing required keys trigger and response is rejected', () => {
+    const spec = JSON.parse(WEEK_6_DRILL.solutionCode);
+    spec.architecture.buffer.backpressureStrategy = { mechanism: 'token bucket' };
+    const res = evaluateSystemDesignDrill(JSON.stringify(spec));
+    assert.strictEqual(res.passed, false);
+    const bp = res.assertionResults.find((a) => a.name === 'Buffer Backpressure Strategy');
+    assert.strictEqual(bp.passed, false);
+  });
+
+  await t.test('Structured backpressure containing TODO in trigger is rejected', () => {
+    const spec = JSON.parse(WEEK_6_DRILL.solutionCode);
+    spec.architecture.buffer.backpressureStrategy = {
+      mechanism: 'token bucket',
+      trigger: 'TODO',
+      response: 'return 429',
+    };
+    const res = evaluateSystemDesignDrill(JSON.stringify(spec));
+    assert.strictEqual(res.passed, false);
+    const bp = res.assertionResults.find((a) => a.name === 'Buffer Backpressure Strategy');
+    assert.strictEqual(bp.passed, false);
+  });
+
+  await t.test('Structured action with unknown key {"x": ...} is rejected', () => {
+    const spec = JSON.parse(WEEK_6_DRILL.solutionCode);
+    spec.starStories.spikeDefense.action = { x: 'scaled the worker cluster substantially' };
+    const res = evaluateSystemDesignDrill(JSON.stringify(spec));
+    assert.strictEqual(res.passed, false);
+    const star = res.assertionResults.find((a) => a.name === 'STAR Architecture Story Defense');
+    assert.strictEqual(star.passed, false);
+  });
+
+  await t.test('Structured result with evidence lacking measurable units is rejected', () => {
+    const spec = JSON.parse(WEEK_6_DRILL.solutionCode);
+    spec.starStories.spikeDefense.result = {
+      outcome: 'everything remained healthy',
+      evidence: 'good',
+    };
+    const res = evaluateSystemDesignDrill(JSON.stringify(spec));
+    assert.strictEqual(res.passed, false);
+    const star = res.assertionResults.find((a) => a.name === 'STAR Architecture Story Defense');
+    assert.strictEqual(star.passed, false);
+  });
+
+  await t.test('Untouched starter code with null resultMetrics and TODOs fails assertions', () => {
+    const res = evaluateSystemDesignDrill(WEEK_6_DRILL.initialCode);
+    assert.strictEqual(res.passed, false);
+  });
+
+  for (const invalidKey of ['update', 'candidate', 'random']) {
+    await t.test(`Non-temporal partitionKey "${invalidKey}" is rejected`, () => {
+      const spec = JSON.parse(WEEK_6_DRILL.solutionCode);
+      spec.architecture.storage.partitionKey = invalidKey;
+      const res = evaluateSystemDesignDrill(JSON.stringify(spec));
+      assert.strictEqual(res.passed, false);
+      const pk = res.assertionResults.find((a) => a.name === 'Time-Series Partition Key');
+      assert.strictEqual(pk.passed, false);
+      assert.match(pk.message, /Missing composite time-series partition key/);
+    });
+  }
+
+  await t.test('Positive: hint example partitionKey "station_code_date" passes', () => {
+    const spec = JSON.parse(WEEK_6_DRILL.solutionCode);
+    spec.architecture.storage.partitionKey = 'station_code_date';
+    const res = evaluateSystemDesignDrill(JSON.stringify(spec));
+    assert.strictEqual(res.passed, true);
+    const pk = res.assertionResults.find((a) => a.name === 'Time-Series Partition Key');
+    assert.strictEqual(pk.passed, true);
   });
 
   await t.test('Valid architecture specification passes all assertions', () => {
@@ -709,20 +895,22 @@ class ObservationApiController extends Controller {
     public function index(Request $request): JsonResponse {
         $cursor = $request->input('cursor');
         if ($cursor !== null) {
-            $decoded = base64_decode($cursor, true);
-            if ($decoded === false || !str_contains($decoded, ':')) {
+            $cursorData = json_decode(base64_decode($cursor, true), true);
+            if (!is_array($cursorData)) {
                 return response()->json([
                     'type' => 'https://api.syscraft.io/errors/invalid-cursor',
                     'title' => 'Invalid Pagination Cursor',
                     'status' => 400,
+                    'detail' => 'The cursor parameter is malformed or unparseable.',
+                    'instance' => '/api/observations',
                 ], 400, ['Content-Type' => 'application/problem+json']);
             }
         }
         $query = WeatherObservation::query()
-            ->where('recorded_at', '<', $cursor)
+            ->where('recorded_at', '<', $cursorData['recorded_at'])
             ->orderBy('recorded_at', 'desc')
             ->orderBy('id', 'desc');
-        return response()->json(['data' => $query->limit(20)->get(), 'next_cursor' => base64_encode('x:1')]);
+        return response()->json(['data' => $query->limit(20)->get(), 'next_cursor' => base64_encode(json_encode(['recorded_at' => '2026', 'id' => 1]))]);
     }
 }`;
     const res = evaluateCursorPaginationDrill(seekWithoutTieBreaker);
@@ -730,6 +918,465 @@ class ObservationApiController extends Controller {
     const seekAssertion = res.assertionResults.find((a) => a.name === 'Seek-based Composite Key Traversal');
     assert.strictEqual(seekAssertion.passed, false);
     assert.match(seekAssertion.message, /lacks equality tie-breaker/);
+  });
+
+  await t.test('Column names appearing without valid orderBy calls fail', () => {
+    const noOrderByCode = `<?php
+namespace App\\Http\\Controllers\\Api;
+use App\\Models\\WeatherObservation;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class ObservationApiController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $cursorData = json_decode(base64_decode($request->input('cursor')), true);
+        $col1 = 'recorded_at';
+        $col2 = 'id';
+        $query = WeatherObservation::query()->where('recorded_at', '<', '2026');
+        return response()->json([]);
+    }
+}`;
+    const res = evaluateCursorPaginationDrill(noOrderByCode);
+    assert.strictEqual(res.passed, false, 'Missing orderBy calls must fail');
+    const seekAssertion = res.assertionResults.find((a) => a.name === 'Seek-based Composite Key Traversal');
+    assert.strictEqual(seekAssertion.passed, false);
+    assert.match(seekAssertion.message, /must order deterministically/i);
+  });
+
+  await t.test('Ascending ordering is rejected', () => {
+    const ascOrderCode = `<?php
+namespace App\\Http\\Controllers\\Api;
+use App\\Models\\WeatherObservation;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class ObservationApiController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $cursorData = json_decode(base64_decode($request->input('cursor')), true);
+        $query = WeatherObservation::query()
+            ->orderBy('recorded_at', 'asc')
+            ->orderBy('id', 'desc');
+        return response()->json([]);
+    }
+}`;
+    const res = evaluateCursorPaginationDrill(ascOrderCode);
+    assert.strictEqual(res.passed, false, 'Ascending order must fail');
+    const seekAssertion = res.assertionResults.find((a) => a.name === 'Seek-based Composite Key Traversal');
+    assert.strictEqual(seekAssertion.passed, false);
+  });
+
+  await t.test('Reversed column ordering is rejected', () => {
+    const reversedOrderCode = `<?php
+namespace App\\Http\\Controllers\\Api;
+use App\\Models\\WeatherObservation;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class ObservationApiController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $cursorData = json_decode(base64_decode($request->input('cursor')), true);
+        $query = WeatherObservation::query()
+            ->orderBy('id', 'desc')
+            ->orderBy('recorded_at', 'desc');
+        return response()->json([]);
+    }
+}`;
+    const res = evaluateCursorPaginationDrill(reversedOrderCode);
+    assert.strictEqual(res.passed, false, 'Reversed order must fail');
+    const seekAssertion = res.assertionResults.find((a) => a.name === 'Seek-based Composite Key Traversal');
+    assert.strictEqual(seekAssertion.passed, false);
+  });
+
+  await t.test('orWhere with id < but missing recorded_at = is rejected', () => {
+    const missingEqualityCode = `<?php
+namespace App\\Http\\Controllers\\Api;
+use App\\Models\\WeatherObservation;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class ObservationApiController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $cursorData = json_decode(base64_decode($request->input('cursor')), true);
+        $query = WeatherObservation::query()
+            ->orderBy('recorded_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->where(function ($q) {
+                $q->where('recorded_at', '<', '2026-01-01')
+                  ->orWhere(function ($sub) {
+                      $sub->where('id', '<', 10);
+                  });
+            });
+        return response()->json([]);
+    }
+}`;
+    const res = evaluateCursorPaginationDrill(missingEqualityCode);
+    assert.strictEqual(res.passed, false, 'orWhere without recorded_at = must fail');
+    const seekAssertion = res.assertionResults.find((a) => a.name === 'Seek-based Composite Key Traversal');
+    assert.strictEqual(seekAssertion.passed, false);
+    assert.match(seekAssertion.message, /lacks equality tie-breaker/);
+  });
+
+  await t.test('RFC output missing detail or instance is rejected', () => {
+    const missingRfcFieldsCode = `<?php
+namespace App\\Http\\Controllers\\Api;
+use App\\Models\\WeatherObservation;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class ObservationApiController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $cursorData = json_decode(base64_decode($request->input('cursor')), true);
+        $query = WeatherObservation::query()
+            ->orderBy('recorded_at', 'desc')
+            ->orderBy('id', 'desc');
+        return response()->json([
+            'type' => 'https://api.syscraft.io/errors/invalid-cursor',
+            'title' => 'Invalid Cursor',
+            'status' => 400,
+        ], 400, ['Content-Type' => 'application/problem+json']);
+    }
+}`;
+    const res = evaluateCursorPaginationDrill(missingRfcFieldsCode);
+    const rfcAssertion = res.assertionResults.find((a) => a.name === 'RFC 9457 Problem Details Error Contract');
+    assert.strictEqual(rfcAssertion.passed, false);
+    assert.match(rfcAssertion.message, /RFC 9457 contract requires/);
+  });
+
+  await t.test('Cursor parsing based on explode is rejected', () => {
+    const explodeCode = `<?php
+namespace App\\Http\\Controllers\\Api;
+use App\\Models\\WeatherObservation;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class ObservationApiController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $cursor = $request->input('cursor');
+        if ($cursor !== null) {
+            $decoded = base64_decode($cursor, true);
+            [$cursorRecordedAt, $cursorId] = explode(':', $decoded, 2);
+        }
+        $query = WeatherObservation::query()
+            ->orderBy('recorded_at', 'desc')
+            ->orderBy('id', 'desc');
+        return response()->json([]);
+    }
+}`;
+    const res = evaluateCursorPaginationDrill(explodeCode);
+    const seekAssertion = res.assertionResults.find((a) => a.name === 'Seek-based Composite Key Traversal');
+    assert.strictEqual(seekAssertion.passed, false);
+    assert.match(seekAssertion.message, /without explode/);
+  });
+
+  await t.test('Ungrouped tie-breaker predicates without nested orWhere closure are rejected', () => {
+    const ungroupedTieBreakerCode = `<?php
+namespace App\\Http\\Controllers\\Api;
+use App\\Models\\WeatherObservation;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class ObservationApiController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $cursor = $request->input('cursor');
+        $cursorData = null;
+        if ($cursor) {
+            $cursorData = json_decode(base64_decode($cursor, true), true);
+            if (!is_array($cursorData) || !isset($cursorData['recorded_at'], $cursorData['id'])) {
+                return response()->json([
+                    'type' => 'https://api.syscraft.io/errors/invalid-cursor',
+                    'title' => 'Invalid Pagination Cursor',
+                    'status' => 400,
+                    'detail' => 'Malformed cursor',
+                    'instance' => '/api/observations',
+                ], 400, ['Content-Type' => 'application/problem+json']);
+            }
+        }
+        $query = WeatherObservation::query()
+            ->orderBy('recorded_at', 'desc')
+            ->orderBy('id', 'desc');
+        if ($cursorData) {
+            $query->where('recorded_at', '<', $cursorData['recorded_at'])
+                  ->orWhere('recorded_at', '=', $cursorData['recorded_at'])
+                  ->where('id', '<', (int)$cursorData['id']);
+        }
+        return response()->json(['data' => $query->limit(20)->get(), 'next_cursor' => null]);
+    }
+}`;
+    const res = evaluateCursorPaginationDrill(ungroupedTieBreakerCode);
+    assert.strictEqual(res.passed, false, 'Ungrouped tie-breaker predicate must be rejected');
+    const seekAssertion = res.assertionResults.find((a) => a.name === 'Seek-based Composite Key Traversal');
+    assert.strictEqual(seekAssertion.passed, false);
+    assert.match(seekAssertion.message, /Use an orWhere closure branch grouping/);
+  });
+
+  await t.test('Dead-code if (false) RFC 9457 response is rejected', () => {
+    const deadCodeRfc = `<?php
+namespace App\\Http\\Controllers\\Api;
+use App\\Models\\WeatherObservation;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class ObservationApiController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $cursor = $request->input('cursor');
+        $dummy = base64_decode("unrelated");
+        $dummyJson = json_decode($dummy, true);
+        if (false) {
+            return response()->json([
+                'type' => 'https://api.syscraft.io/errors/invalid-cursor',
+                'title' => 'Invalid Pagination Cursor',
+                'status' => 400,
+                'detail' => 'The cursor parameter is malformed or unparseable.',
+                'instance' => '/api/observations',
+            ], 400, ['Content-Type' => 'application/problem+json']);
+        }
+        $query = WeatherObservation::query()
+            ->orderBy('recorded_at', 'desc')
+            ->orderBy('id', 'desc');
+        if ($cursor) {
+            $query->where(function ($q) {
+                $q->where('recorded_at', '<', '2026-01-01')
+                  ->orWhere(function ($sub) {
+                      $sub->where('recorded_at', '=', '2026-01-01')
+                          ->where('id', '<', 999);
+                  });
+            });
+        }
+        $observations = $query->limit(20)->get();
+        $last = $observations->last();
+        $nextCursor = $last ? base64_encode(json_encode(['recorded_at' => $last->recorded_at, 'id' => $last->id])) : null;
+        return response()->json(['data' => $observations, 'next_cursor' => $nextCursor]);
+    }
+}`;
+    const res = evaluateCursorPaginationDrill(deadCodeRfc);
+    assert.strictEqual(res.passed, false, 'Dead-code RFC 9457 response must fail');
+    const rfcAssertion = res.assertionResults.find((a) => a.name === 'RFC 9457 Problem Details Error Contract');
+    assert.strictEqual(rfcAssertion.passed, false);
+  });
+
+  await t.test('Seek predicate using hardcoded bounds instead of cursor variables is rejected', () => {
+    const hardcodedSeekCode = WEEK_2_DRILL.solutionCode.replace(
+      "$q->where('recorded_at', '<', $cursorRecordedAt)",
+      "$q->where('recorded_at', '<', '2026-01-01')"
+    );
+    const res = evaluateCursorPaginationDrill(hardcodedSeekCode);
+    assert.strictEqual(res.passed, false, 'Hardcoded seek bounds must fail');
+    const seekAssertion = res.assertionResults.find((a) => a.name === 'Seek-based Composite Key Traversal');
+    assert.strictEqual(seekAssertion.passed, false);
+  });
+
+  await t.test('Unconnected seek variables from request query rather than decoded cursor are rejected', () => {
+    const unlinkedSeekCode = WEEK_2_DRILL.solutionCode
+      .replace(
+        "$cursorRecordedAt = $cursorData['recorded_at'];",
+        "$cursorRecordedAt = $request->input('recorded_at');"
+      )
+      .replace(
+        "$cursorId = (int)$cursorData['id'];",
+        "$cursorId = (int)$request->input('id');"
+      );
+    const res = evaluateCursorPaginationDrill(unlinkedSeekCode);
+    assert.strictEqual(res.passed, false, 'Seek variables not derived from decoded cursor must fail');
+    const seekAssertion = res.assertionResults.find((a) => a.name === 'Seek-based Composite Key Traversal');
+    assert.strictEqual(seekAssertion.passed, false);
+    assert.match(seekAssertion.message, /must derive from the decoded cursor/i);
+  });
+
+  await t.test('Valid cursor pagination using orderByDesc() passes', () => {
+    const descCode = WEEK_2_DRILL.solutionCode
+      .replace("->orderBy('recorded_at', 'desc')", "->orderByDesc('recorded_at')")
+      .replace("->orderBy('id', 'desc')", "->orderByDesc('id')");
+    const res = evaluateCursorPaginationDrill(descCode);
+    assert.strictEqual(res.passed, true, 'orderByDesc syntax must pass all assertions');
+    for (const a of res.assertionResults) {
+      assert.strictEqual(a.passed, true, `Assertion "${a.name}" must pass`);
+    }
+  });
+
+  await t.test('Cursor decoding omitting recorded_at or id validation is rejected', () => {
+    const omittedRecordedAtCode = WEEK_2_DRILL.solutionCode
+      .replace("!isset($cursorData['recorded_at']) ||", '')
+      .replace("!is_string($cursorData['recorded_at']) ||", '')
+      .replace("$cursorData['recorded_at'] === '' ||", '');
+    const res = evaluateCursorPaginationDrill(omittedRecordedAtCode);
+    assert.strictEqual(res.passed, false, 'Omitting recorded_at validation must fail');
+    const rfcAssertion = res.assertionResults.find((a) => a.name === 'RFC 9457 Problem Details Error Contract');
+    assert.strictEqual(rfcAssertion.passed, false);
+    assert.match(rfcAssertion.message, /verify presence of recorded_at and id fields/);
+
+    const omittedIdCode = WEEK_2_DRILL.solutionCode
+      .replace("!isset($cursorData['id']) ||", '')
+      .replace("!is_numeric($cursorData['id'])", 'false');
+    const resId = evaluateCursorPaginationDrill(omittedIdCode);
+    assert.strictEqual(resId.passed, false, 'Omitting id validation must fail');
+    const rfcAssertionId = resId.assertionResults.find((a) => a.name === 'RFC 9457 Problem Details Error Contract');
+    assert.strictEqual(rfcAssertionId.passed, false);
+    assert.match(rfcAssertionId.message, /verify presence of recorded_at and id fields/);
+  });
+
+  await t.test('Cursor validation on unrelated variable is rejected', () => {
+    const unrelatedValidationCode = WEEK_2_DRILL.solutionCode
+      .replace(
+        "!isset($cursorData['recorded_at']) ||",
+        "!isset($unrelated['recorded_at']) ||"
+      )
+      .replace(
+        "!is_string($cursorData['recorded_at']) ||",
+        "!is_string($unrelated['recorded_at']) ||"
+      )
+      .replace(
+        "$cursorData['recorded_at'] === '' ||",
+        "$unrelated['recorded_at'] === '' ||"
+      );
+    const res = evaluateCursorPaginationDrill(unrelatedValidationCode);
+    assert.strictEqual(res.passed, false, 'Validation not targeting decoded cursor must fail');
+    const rfcAssertion = res.assertionResults.find((a) => a.name === 'RFC 9457 Problem Details Error Contract');
+    assert.strictEqual(rfcAssertion.passed, false);
+    assert.match(rfcAssertion.message, /verify presence of recorded_at and id fields/);
+  });
+
+  await t.test('Next-cursor JSON payload with arbitrary keys is rejected', () => {
+    const arbitraryPayloadCode = WEEK_2_DRILL.solutionCode.replace(
+      `            $nextCursor = base64_encode(json_encode([
+                'recorded_at' => $last->recorded_at,
+                'id' => $last->id,
+            ], JSON_THROW_ON_ERROR));`,
+      `            $nextCursor = base64_encode(json_encode([
+                'foo' => 'bar',
+            ]));`
+    );
+    const res = evaluateCursorPaginationDrill(arbitraryPayloadCode);
+    assert.strictEqual(res.passed, false, 'Next cursor with arbitrary payload keys must fail');
+    const tokenAssertion = res.assertionResults.find((a) => a.name === 'Opaque base64 Cursor Token Generation');
+    assert.strictEqual(tokenAssertion.passed, false);
+    assert.match(tokenAssertion.message, /must package both recorded_at and id/i);
+  });
+
+  await t.test('Next-cursor JSON payload with hardcoded values not derived from last row is rejected', () => {
+    const hardcodedPayloadCode = WEEK_2_DRILL.solutionCode.replace(
+      `            $nextCursor = base64_encode(json_encode([
+                'recorded_at' => $last->recorded_at,
+                'id' => $last->id,
+            ], JSON_THROW_ON_ERROR));`,
+      `            $nextCursor = base64_encode(json_encode([
+                'recorded_at' => 'static-time',
+                'id' => 123,
+            ]));`
+    );
+    const res = evaluateCursorPaginationDrill(hardcodedPayloadCode);
+    assert.strictEqual(res.passed, false, 'Next cursor with hardcoded values not derived from last row must fail');
+    const tokenAssertion = res.assertionResults.find((a) => a.name === 'Opaque base64 Cursor Token Generation');
+    assert.strictEqual(tokenAssertion.passed, false);
+    assert.match(tokenAssertion.message, /must derive from the last returned row/i);
+  });
+
+  await t.test('Unconnected json_decode not consuming strict base64_decode is rejected', () => {
+    const unlinkedBase64Code = WEEK_2_DRILL.solutionCode.replace(
+      "$decoded = base64_decode($cursor, true);",
+      "$unused = base64_decode($cursor, true);\n            $decoded = '{\"recorded_at\":\"2026-01-01\",\"id\":1}';"
+    );
+    const res = evaluateCursorPaginationDrill(unlinkedBase64Code);
+    assert.strictEqual(res.passed, false, 'json_decode not consuming strict base64_decode($cursor, true) must fail');
+    const seekAssertion = res.assertionResults.find((a) => a.name === 'Seek-based Composite Key Traversal');
+    assert.strictEqual(seekAssertion.passed, false);
+    assert.match(seekAssertion.message, /strict base64_decode/i);
+  });
+
+  await t.test('Next-cursor derived from unrelated collection rather than returned observations is rejected', () => {
+    const unrelatedCollectionCode = WEEK_2_DRILL.solutionCode.replace(
+      "$observations = $query->limit($limit)->get();",
+      "$observations = $query->limit($limit)->get();\n        $other = WeatherObservation::query()->limit(1)->get();"
+    ).replace(
+      "$last = $observations->last();",
+      "$last = $other->last();"
+    );
+    const res = evaluateCursorPaginationDrill(unrelatedCollectionCode);
+    assert.strictEqual(res.passed, false, 'Next cursor derived from collection not returned in response must fail');
+    const tokenAssertion = res.assertionResults.find((a) => a.name === 'Opaque base64 Cursor Token Generation');
+    assert.strictEqual(tokenAssertion.passed, false);
+    assert.match(tokenAssertion.message, /returned in the response/i);
+  });
+
+  await t.test('Harmless earlier json_encode call does not break next-cursor evaluation', () => {
+    const earlierJsonCode = WEEK_2_DRILL.solutionCode.replace(
+      "public function index(Request $request): JsonResponse\n    {",
+      "public function index(Request $request): JsonResponse\n    {\n        $audit = json_encode(['action' => 'list_observations']);"
+    );
+    const res = evaluateCursorPaginationDrill(earlierJsonCode);
+    assert.strictEqual(res.passed, true, 'Earlier json_encode call must not cause false failure');
+    const tokenAssertion = res.assertionResults.find((a) => a.name === 'Opaque base64 Cursor Token Generation');
+    assert.strictEqual(tokenAssertion.passed, true);
+  });
+
+  await t.test('base64_decode decoding static string rather than request cursor input is rejected', () => {
+    const staticBase64Code = WEEK_2_DRILL.solutionCode.replace(
+      "$decoded = base64_decode($cursor, true);",
+      "$decoded = base64_decode('eyJmb28iOiJiYXIifQ==', true);"
+    );
+    const res = evaluateCursorPaginationDrill(staticBase64Code);
+    assert.strictEqual(res.passed, false, 'base64_decode on static string must fail');
+    const seekAssertion = res.assertionResults.find((a) => a.name === 'Seek-based Composite Key Traversal');
+    assert.strictEqual(seekAssertion.passed, false);
+    assert.match(seekAssertion.message, /strict base64_decode/i);
+  });
+
+  await t.test('Positive: Next-cursor payload constructed via intermediate array variable passes', () => {
+    const intermediatePayloadCode = WEEK_2_DRILL.solutionCode.replace(
+      `            $nextCursor = base64_encode(json_encode([
+                'recorded_at' => $last->recorded_at,
+                'id' => $last->id,
+            ], JSON_THROW_ON_ERROR));`,
+      `            $cursorPayload = [
+                'recorded_at' => $last->recorded_at,
+                'id' => $last->id,
+            ];
+            $nextCursor = base64_encode(json_encode($cursorPayload));`
+    );
+    const res = evaluateCursorPaginationDrill(intermediatePayloadCode);
+    assert.strictEqual(res.passed, true, 'Intermediate payload array variable must pass');
+    const tokenAssertion = res.assertionResults.find((a) => a.name === 'Opaque base64 Cursor Token Generation');
+    assert.strictEqual(tokenAssertion.passed, true);
+  });
+
+  await t.test('RFC 9457 enclosed in if (1 === 0) is rejected as dead-code', () => {
+    const deadCodeOneEqualsZero = WEEK_2_DRILL.solutionCode.replace(
+      /if\s*\(\s*!is_array\(\$cursorData\)[\s\S]*?\)\s*\{/,
+      'if (1 === 0) {'
+    );
+    assert.notStrictEqual(deadCodeOneEqualsZero, WEEK_2_DRILL.solutionCode, 'Replacement must modify code');
+    const res = evaluateCursorPaginationDrill(deadCodeOneEqualsZero);
+    assert.strictEqual(res.passed, false, 'RFC 9457 in if (1 === 0) must fail');
+    const rfcAssertion = res.assertionResults.find((a) => a.name === 'RFC 9457 Problem Details Error Contract');
+    assert.strictEqual(rfcAssertion.passed, false);
+    assert.match(rfcAssertion.message, /dead-code branch/i);
+  });
+
+  await t.test('RFC 9457 enclosed in outer false branch is rejected as dead-code', () => {
+    const nestedDeadCode = WEEK_2_DRILL.solutionCode.replace(
+      /if\s*\(\s*!is_array\(\$cursorData\)[\s\S]*?\)\s*\{/,
+      'if (false) { if (true) {'
+    ).replace(
+      "['Content-Type' => 'application/problem+json']);\n            }",
+      "['Content-Type' => 'application/problem+json']);\n            } }"
+    );
+    assert.notStrictEqual(nestedDeadCode, WEEK_2_DRILL.solutionCode, 'Replacement must modify code');
+    const res = evaluateCursorPaginationDrill(nestedDeadCode);
+    assert.strictEqual(res.passed, false, 'RFC 9457 inside outer if (false) branch must fail');
+    const rfcAssertion = res.assertionResults.find((a) => a.name === 'RFC 9457 Problem Details Error Contract');
+    assert.strictEqual(rfcAssertion.passed, false);
+    assert.match(rfcAssertion.message, /dead-code branch/i);
+  });
+
+  await t.test('Unrelated metadata json_decode and base64_decode preceding cursor logic does not break evaluation', () => {
+    const precedingDecodeCode = WEEK_2_DRILL.solutionCode.replace(
+      "public function index(Request $request): JsonResponse\n    {",
+      "public function index(Request $request): JsonResponse\n    {\n        $config = json_decode('{\"version\": 2}', true);\n        $metaToken = base64_decode('Y29uZmln', true);"
+    );
+    const res = evaluateCursorPaginationDrill(precedingDecodeCode);
+    assert.strictEqual(res.passed, true, 'Preceding unrelated decode operations must not break valid cursor evaluation');
+    for (const a of res.assertionResults) {
+      assert.strictEqual(a.passed, true, `Assertion "${a.name}" must pass`);
+    }
   });
 
   await t.test('Valid remediated cursor pagination passes all assertions', () => {
@@ -844,9 +1491,655 @@ class ProcessTelemetryBatchJob {
     assert.strictEqual(idempAssertion.passed, false);
   });
 
-  await t.test('Valid resilient queue job passes all assertions', () => {
+  await t.test('Submission where processed_batches appears only in a string fails', () => {
+    const stringLedgerCode = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        if (!$lock->get()) return;
+        try {
+            $table = 'processed_batches';
+            DB::table('weather_observations')->insert($this->telemetryBatch);
+        } finally {
+            $lock->release();
+        }
+    }
+    public function failed(\\Throwable $e): void {
+        DB::table('dead_letter_jobs')->insert(['idempotency_key' => $this->idempotencyKey, 'payload' => '', 'exception' => '', 'failed_at' => '']);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(stringLedgerCode);
+    assert.strictEqual(res.passed, false);
+    const idempAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempAssertion.passed, false);
+  });
+
+  await t.test('Ledger claim placed after observation writes is rejected', () => {
+    const invertedOrderCode = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        if (!$lock->get()) return;
+        try {
+            DB::transaction(function () {
+                DB::table('weather_observations')->insert($this->telemetryBatch);
+                DB::table('processed_batches')->insert(['idempotency_key' => $this->idempotencyKey]);
+            });
+        } finally {
+            $lock->release();
+        }
+    }
+    public function failed(\\Throwable $e): void {
+        DB::table('dead_letter_jobs')->insert(['idempotency_key' => $this->idempotencyKey, 'payload' => '', 'exception' => '', 'failed_at' => '']);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(invertedOrderCode);
+    assert.strictEqual(res.passed, false);
+    const idempAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempAssertion.passed, false);
+    assert.match(idempAssertion.message, /must precede observation writes/);
+  });
+
+  await t.test('Ledger claim and observation writes outside shared transaction are rejected', () => {
+    const noTxnCode = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        if (!$lock->get()) return;
+        try {
+            DB::table('processed_batches')->insert(['idempotency_key' => $this->idempotencyKey]);
+            DB::table('weather_observations')->insert($this->telemetryBatch);
+        } finally {
+            $lock->release();
+        }
+    }
+    public function failed(\\Throwable $e): void {
+        DB::table('dead_letter_jobs')->insert(['idempotency_key' => $this->idempotencyKey, 'payload' => '', 'exception' => '', 'failed_at' => '']);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(noTxnCode);
+    assert.strictEqual(res.passed, false);
+    const idempAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempAssertion.passed, false);
+    assert.match(idempAssertion.message, /within a DB::transaction/i);
+  });
+
+  await t.test('Lock release outside finally block is rejected', () => {
+    const noFinallyCode = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        if (!$lock->get()) return;
+        DB::transaction(function () {
+            DB::table('processed_batches')->insert(['idempotency_key' => $this->idempotencyKey]);
+            DB::table('weather_observations')->insert($this->telemetryBatch);
+        });
+        $lock->release();
+    }
+    public function failed(\\Throwable $e): void {
+        DB::table('dead_letter_jobs')->insert(['idempotency_key' => $this->idempotencyKey, 'payload' => '', 'exception' => '', 'failed_at' => '']);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(noFinallyCode);
+    assert.strictEqual(res.passed, false);
+    const idempAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempAssertion.passed, false);
+    assert.match(idempAssertion.message, /released inside a finally block/);
+  });
+
+  await t.test('failed() calling only Log::error is rejected', () => {
+    const logOnlyCode = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+use Illuminate\\Support\\Facades\\Log;
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        if (!$lock->get()) return;
+        try {
+            DB::transaction(function () {
+                DB::table('processed_batches')->insert(['idempotency_key' => $this->idempotencyKey]);
+                DB::table('weather_observations')->insert($this->telemetryBatch);
+            });
+        } finally {
+            $lock->release();
+        }
+    }
+    public function failed(\\Throwable $e): void {
+        Log::error("Job failed permanently", ['error' => $e->getMessage()]);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(logOnlyCode);
+    assert.strictEqual(res.passed, false);
+    const dlqAssertion = res.assertionResults.find((a) => a.name === 'Dead-Letter Queue Isolation (failed)');
+    assert.strictEqual(dlqAssertion.passed, false);
+    assert.match(dlqAssertion.message, /logging alone is insufficient/);
+  });
+
+  await t.test('failed() inserting into another table is rejected', () => {
+    const wrongTableCode = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        if (!$lock->get()) return;
+        try {
+            DB::transaction(function () {
+                DB::table('processed_batches')->insert(['idempotency_key' => $this->idempotencyKey]);
+                DB::table('weather_observations')->insert($this->telemetryBatch);
+            });
+        } finally {
+            $lock->release();
+        }
+    }
+    public function failed(\\Throwable $e): void {
+        DB::table('failed_jobs')->insert(['idempotency_key' => $this->idempotencyKey, 'payload' => '', 'exception' => '', 'failed_at' => '']);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(wrongTableCode);
+    assert.strictEqual(res.passed, false);
+    const dlqAssertion = res.assertionResults.find((a) => a.name === 'Dead-Letter Queue Isolation (failed)');
+    assert.strictEqual(dlqAssertion.passed, false);
+  });
+
+  await t.test('failed() missing one of the 4 required DLQ fields is rejected', () => {
+    const missingFieldCode = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        if (!$lock->get()) return;
+        try {
+            DB::transaction(function () {
+                DB::table('processed_batches')->insert(['idempotency_key' => $this->idempotencyKey]);
+                DB::table('weather_observations')->insert($this->telemetryBatch);
+            });
+        } finally {
+            $lock->release();
+        }
+    }
+    public function failed(\\Throwable $e): void {
+        DB::table('dead_letter_jobs')->insert([
+            'idempotency_key' => $this->idempotencyKey,
+            'payload' => '',
+            'exception' => '',
+        ]);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(missingFieldCode);
+    assert.strictEqual(res.passed, false);
+    const dlqAssertion = res.assertionResults.find((a) => a.name === 'Dead-Letter Queue Isolation (failed)');
+    assert.strictEqual(dlqAssertion.passed, false);
+    assert.match(dlqAssertion.message, /must contain idempotency_key, payload, exception, and failed_at/);
+  });
+
+  await t.test('Missing duplicate-claim handling in handle() fails assertions', () => {
+    const rawInsertWithoutDuplicateHandling = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function __construct(public array $telemetryBatch, public string $idempotencyKey) {}
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        $lock->block(5);
+        try {
+            DB::transaction(function () {
+                DB::table('processed_batches')->insert([
+                    'idempotency_key' => $this->idempotencyKey,
+                ]);
+                foreach ($this->telemetryBatch as $reading) {
+                    DB::table('weather_observations')->insertOrIgnore($reading);
+                }
+            });
+        } finally {
+            $lock->release();
+        }
+    }
+    public function failed(\\Throwable $exception): void {
+        DB::table('dead_letter_jobs')->insert([
+            'idempotency_key' => $this->idempotencyKey,
+            'payload' => '',
+            'exception' => '',
+            'failed_at' => '',
+        ]);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(rawInsertWithoutDuplicateHandling);
+    assert.strictEqual(res.passed, false, 'Raw insert without duplicate claim handling must fail');
+    const idempotencyAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempotencyAssertion.passed, false);
+    assert.match(idempotencyAssertion.message, /Duplicate claims on processed_batches must be handled atomically/);
+  });
+
+  await t.test('Catch block mentioning duplicate but rethrowing fails duplicate-claim check', () => {
+    const rethrowCode = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+use Illuminate\\Support\\Facades\\Log;
+
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function __construct(public array $telemetryBatch, public string $idempotencyKey) {}
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        $lock->block(5);
+        try {
+            DB::transaction(function () {
+                DB::table('processed_batches')->insert([
+                    'idempotency_key' => $this->idempotencyKey,
+                ]);
+                foreach ($this->telemetryBatch as $reading) {
+                    DB::table('weather_observations')->insertOrIgnore($reading);
+                }
+            });
+        } catch (\\Throwable $e) {
+            Log::error("Caught duplicate unique key constraint: " . $e->getMessage());
+            throw $e;
+        } finally {
+            $lock->release();
+        }
+    }
+    public function failed(\\Throwable $exception): void {
+        DB::table('dead_letter_jobs')->insert([
+            'idempotency_key' => $this->idempotencyKey,
+            'payload' => '',
+            'exception' => '',
+            'failed_at' => '',
+        ]);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(rethrowCode);
+    assert.strictEqual(res.passed, false, 'Rethrowing catch block must fail');
+    const idempotencyAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempotencyAssertion.passed, false);
+    assert.match(idempotencyAssertion.message, /Duplicate claims on processed_batches must be handled atomically/);
+  });
+
+  await t.test('Race-prone check-then-act exists() before insert fails duplicate-claim check', () => {
+    const existsCheckCode = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function __construct(public array $telemetryBatch, public string $idempotencyKey) {}
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        $lock->block(5);
+        if (DB::table('processed_batches')->where('idempotency_key', $this->idempotencyKey)->exists()) {
+            $lock->release();
+            return;
+        }
+        try {
+            DB::transaction(function () {
+                DB::table('processed_batches')->insert([
+                    'idempotency_key' => $this->idempotencyKey,
+                ]);
+                foreach ($this->telemetryBatch as $reading) {
+                    DB::table('weather_observations')->insertOrIgnore($reading);
+                }
+            });
+        } finally {
+            $lock->release();
+        }
+    }
+    public function failed(\\Throwable $exception): void {
+        DB::table('dead_letter_jobs')->insert([
+            'idempotency_key' => $this->idempotencyKey,
+            'payload' => '',
+            'exception' => '',
+            'failed_at' => '',
+        ]);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(existsCheckCode);
+    assert.strictEqual(res.passed, false, 'Check-then-act exists() must fail');
+    const idempotencyAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempotencyAssertion.passed, false);
+    assert.match(idempotencyAssertion.message, /Duplicate claims on processed_batches must be handled atomically/);
+  });
+
+  await t.test('Unconditional insertOrIgnore without capturing result and returning fails', () => {
+    const unconditionalInsertOrIgnore = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function __construct(public array $telemetryBatch, public string $idempotencyKey) {}
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        $lock->block(5);
+        try {
+            DB::transaction(function () {
+                DB::table('processed_batches')->insertOrIgnore([
+                    'idempotency_key' => $this->idempotencyKey,
+                ]);
+                foreach ($this->telemetryBatch as $reading) {
+                    DB::table('weather_observations')->insertOrIgnore($reading);
+                }
+            });
+        } finally {
+            $lock->release();
+        }
+    }
+    public function failed(\\Throwable $exception): void {
+        DB::table('dead_letter_jobs')->insert([
+            'idempotency_key' => $this->idempotencyKey,
+            'payload' => '',
+            'exception' => '',
+            'failed_at' => '',
+        ]);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(unconditionalInsertOrIgnore);
+    assert.strictEqual(res.passed, false, 'Unconditional insertOrIgnore without return check must fail');
+    const idempotencyAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempotencyAssertion.passed, false);
+    assert.match(idempotencyAssertion.message, /Duplicate claims on processed_batches must be handled atomically/);
+  });
+
+  await t.test('Negative: insertOrIgnore() with constant condition if (0) { return; } is rejected', () => {
+    const code = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function __construct(public array $telemetryBatch, public string $idempotencyKey) {}
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        $lock->block(5);
+        try {
+            DB::transaction(function () {
+                DB::table('processed_batches')->insertOrIgnore([
+                    'idempotency_key' => $this->idempotencyKey,
+                ]);
+
+                if (0) {
+                    return;
+                }
+
+                foreach ($this->telemetryBatch as $reading) {
+                    DB::table('weather_observations')->insertOrIgnore($reading);
+                }
+            });
+        } finally {
+            $lock->release();
+        }
+    }
+    public function failed(\\Throwable $exception): void {
+        DB::table('dead_letter_jobs')->insert([
+            'idempotency_key' => $this->idempotencyKey,
+            'payload' => '',
+            'exception' => '',
+            'failed_at' => '',
+        ]);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(code);
+    assert.strictEqual(res.passed, false);
+    const idempotencyAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempotencyAssertion.passed, false);
+    assert.match(idempotencyAssertion.message, /Duplicate claims on processed_batches must be handled atomically/);
+  });
+
+  await t.test('Negative: insertOrIgnore() assigned to $result but checking if ($differentVariable === 0) is rejected', () => {
+    const code = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function __construct(public array $telemetryBatch, public string $idempotencyKey) {}
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        $lock->block(5);
+        try {
+            DB::transaction(function () {
+                $result = DB::table('processed_batches')->insertOrIgnore([
+                    'idempotency_key' => $this->idempotencyKey,
+                ]);
+
+                if ($differentVariable === 0) {
+                    return;
+                }
+
+                foreach ($this->telemetryBatch as $reading) {
+                    DB::table('weather_observations')->insertOrIgnore($reading);
+                }
+            });
+        } finally {
+            $lock->release();
+        }
+    }
+    public function failed(\\Throwable $exception): void {
+        DB::table('dead_letter_jobs')->insert([
+            'idempotency_key' => $this->idempotencyKey,
+            'payload' => '',
+            'exception' => '',
+            'failed_at' => '',
+        ]);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(code);
+    assert.strictEqual(res.passed, false);
+    const idempotencyAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempotencyAssertion.passed, false);
+    assert.match(idempotencyAssertion.message, /Duplicate claims on processed_batches must be handled atomically/);
+  });
+
+  await t.test('Negative: insertOrIgnore() checking $result === 0 but missing early return in if body is rejected', () => {
+    const code = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+use Illuminate\\Support\\Facades\\Log;
+
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function __construct(public array $telemetryBatch, public string $idempotencyKey) {}
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        $lock->block(5);
+        try {
+            DB::transaction(function () {
+                $result = DB::table('processed_batches')->insertOrIgnore([
+                    'idempotency_key' => $this->idempotencyKey,
+                ]);
+
+                if ($result === 0) {
+                    Log::info('duplicate');
+                }
+
+                foreach ($this->telemetryBatch as $reading) {
+                    DB::table('weather_observations')->insertOrIgnore($reading);
+                }
+            });
+        } finally {
+            $lock->release();
+        }
+    }
+    public function failed(\\Throwable $exception): void {
+        DB::table('dead_letter_jobs')->insert([
+            'idempotency_key' => $this->idempotencyKey,
+            'payload' => '',
+            'exception' => '',
+            'failed_at' => '',
+        ]);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(code);
+    assert.strictEqual(res.passed, false);
+    const idempotencyAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempotencyAssertion.passed, false);
+    assert.match(idempotencyAssertion.message, /Duplicate claims on processed_batches must be handled atomically/);
+  });
+
+  await t.test('Negative: insertOrIgnore() duplicate check placed after weather_observations writes is rejected', () => {
+    const code = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\Cache;
+use Illuminate\\Support\\Facades\\DB;
+
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function __construct(public array $telemetryBatch, public string $idempotencyKey) {}
+    public function handle(): void {
+        $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
+        $lock->block(5);
+        try {
+            DB::transaction(function () {
+                $result = DB::table('processed_batches')->insertOrIgnore([
+                    'idempotency_key' => $this->idempotencyKey,
+                ]);
+
+                foreach ($this->telemetryBatch as $reading) {
+                    DB::table('weather_observations')->insertOrIgnore($reading);
+                }
+
+                if ($result === 0) {
+                    return;
+                }
+            });
+        } finally {
+            $lock->release();
+        }
+    }
+    public function failed(\\Throwable $exception): void {
+        DB::table('dead_letter_jobs')->insert([
+            'idempotency_key' => $this->idempotencyKey,
+            'payload' => '',
+            'exception' => '',
+            'failed_at' => '',
+        ]);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(code);
+    assert.strictEqual(res.passed, false);
+    const idempotencyAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempotencyAssertion.passed, false);
+    assert.match(idempotencyAssertion.message, /Duplicate claims on processed_batches must be handled atomically/);
+  });
+
+  const invalidLedgerPayloads = [
+    {
+      name: 'fake var in processed_at',
+      payload: "'idempotency_key' => 'constant', 'processed_at' => $fakeIdempotencyKey,",
+    },
+    {
+      name: 'real key in wrong column',
+      payload: "'idempotency_key' => 'constant', 'processed_at' => $this->idempotencyKey,",
+    },
+    {
+      name: 'foreign object',
+      payload: "'idempotency_key' => $other->idempotencyKey, 'processed_at' => now()->toIso8601String(),",
+    },
+    {
+      name: 'duplicate key entry',
+      payload: "'idempotency_key' => $this->idempotencyKey, 'idempotency_key' => 'constant', 'processed_at' => now()->toIso8601String(),",
+    },
+  ];
+
+  for (const { name, payload } of invalidLedgerPayloads) {
+    await t.test(`Negative: processed_batches insertOrIgnore with ${name} is rejected`, () => {
+      const targetPattern = "'idempotency_key' => $this->idempotencyKey,\n                    'processed_at' => now()->toIso8601String(),";
+      assert.ok(WEEK_5_DRILL.solutionCode.includes(targetPattern), 'Target pattern must exist in solution code');
+      const code = WEEK_5_DRILL.solutionCode.replace(targetPattern, payload);
+      const res = evaluateQueueDlqDrill(code);
+      assert.strictEqual(res.passed, false);
+      const idempotencyAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+      assert.strictEqual(idempotencyAssertion.passed, false);
+      assert.match(idempotencyAssertion.message, /must store \$this->idempotencyKey/);
+    });
+  }
+
+  await t.test('Negative: lock variable not acquired before transaction is rejected', () => {
+    const code = WEEK_5_DRILL.solutionCode.replace(
+      'if (!$lock->get()) {',
+      'if (!$unrelated->get()) {'
+    );
+    const res = evaluateQueueDlqDrill(code);
+    assert.strictEqual(res.passed, false);
+    const idempotencyAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempotencyAssertion.passed, false);
+    assert.match(idempotencyAssertion.message, /Atomic concurrency lock.*must be acquired before database transaction/);
+  });
+
+  await t.test('Negative: lock variable not released in finally block is rejected', () => {
+    const code = WEEK_5_DRILL.solutionCode.replace(
+      '$lock->release();',
+      '$unrelated->release();'
+    );
+    const res = evaluateQueueDlqDrill(code);
+    assert.strictEqual(res.passed, false);
+    const idempotencyAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempotencyAssertion.passed, false);
+    assert.match(idempotencyAssertion.message, /Atomic concurrency lock must be released inside a finally block/);
+  });
+
+  await t.test('Positive: $affected = insertOrIgnore(...) with if ($affected === 0) { return; } passes', () => {
     const res = evaluateQueueDlqDrill(WEEK_5_DRILL.solutionCode);
-    assert.strictEqual(res.passed, true, 'Valid resilient queue job must pass all assertions');
+    assert.strictEqual(res.passed, true, 'Reference solution with $affected === 0 must pass');
+    for (const a of res.assertionResults) {
+      assert.strictEqual(a.passed, true, `Assertion "${a.name}" must pass`);
+    }
+  });
+
+  await t.test('Positive: $affected = insertOrIgnore(...) with if (!$affected) { return; } passes', () => {
+    const code = WEEK_5_DRILL.solutionCode.replace(
+      'if ($affected === 0) {',
+      'if (!$affected) {'
+    );
+    const res = evaluateQueueDlqDrill(code);
+    assert.strictEqual(res.passed, true, 'Alternative check with if (!$affected) { return; } must pass');
     for (const a of res.assertionResults) {
       assert.strictEqual(a.passed, true, `Assertion "${a.name}" must pass`);
     }

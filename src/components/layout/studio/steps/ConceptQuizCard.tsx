@@ -88,7 +88,7 @@ export const ConceptQuizCard: React.FC<ConceptQuizCardProps> = ({
             </Tag>
           ) : (
             <Tag variant="default" size="small">
-              Optional Check
+              Prerequisite Check
             </Tag>
           )}
         </div>
