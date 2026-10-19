@@ -16,6 +16,7 @@ export const WEEK_6_DRILL: DrillDefinition = {
       'Time-Series Partitioning: Database writes are partitioned across immutable time chunks (e.g. PARTITION BY RANGE (recorded_at::date)) to prevent B-Tree index thrashing and enable fast table drop archiving.',
       'Replication Lag & Read-Your-Writes: During write bursts, read replicas lag behind primary databases. Prevent read-after-write anomalies by routing authenticated mutation reads to the primary database while serving public reads from cached replicas with max-age headers.',
       'Backpressure & Drop Policies: When sensor ingestion exceeds buffer capacity, the gateway sheds non-critical metrics and applies exponential backoff rather than crashing the cluster.',
+      'Capacity Sizing Math: 100,000 events/sec ÷ 1,000 events/batch = 100 batches/sec. At 20 batches/sec per worker, 5 nominal workers are required. Concurrency of 64 workers provides 12.8× capacity headroom for peak bursts.',
       'STAR Framework Defense: Articulate Situation, Task, Action, and Result with quantifiable metrics (e.g. 99.99% ingestion SLA, <50ms p95 latency).',
     ],
     quiz: {
@@ -45,6 +46,7 @@ export const WEEK_6_DRILL: DrillDefinition = {
   hints: [
     "Replace the 'TODO' in backpressureStrategy with a strategy such as 'exponential backoff with non-critical metric shedding' or 'buffer spilling to object store'.",
     "Replace the 'TODO' in partitionKey with a composite partition key such as 'station_code_date' or '(recorded_date, station_id)'.",
+    "Ensure batchSize is numeric and set to 1000 to match the worked throughput calculation.",
     "Ensure all STAR story fields in the architecture specification or StarStoryBuilder have concrete metrics without 'TODO'.",
   ],
   initialCode: `{
@@ -59,7 +61,7 @@ export const WEEK_6_DRILL: DrillDefinition = {
     },
     "workers": {
       "concurrency": 64,
-      "batchSize": 500,
+      "batchSize": 1000,
       "deadLetterQueue": true
     },
     "storage": {
@@ -73,7 +75,11 @@ export const WEEK_6_DRILL: DrillDefinition = {
       "situation": "Unprecedented typhoon caused 500k req/sec sensor burst, saturating network buffers.",
       "task": "Prevent ingestion cluster collapse and maintain zero telemetry loss for tier-1 stations.",
       "action": "TODO: Document architectural action taken (e.g. scale Redis shards, enable HTTP 429 Retry-After, batch 1000-row inserts)",
-      "result": "TODO: Document measurable outcome achieved (e.g. 99.995% uptime, eliminated DB connection exhaustion, <50ms p95 latency)"
+      "result": "TODO: Document measurable outcome achieved (e.g. 99.995% uptime, eliminated DB connection exhaustion, <50ms p95 latency)",
+      "resultMetrics": {
+        "uptimePercent": 99.995,
+        "p95LatencyMs": 34
+      }
     }
   }
 }
@@ -90,7 +96,7 @@ export const WEEK_6_DRILL: DrillDefinition = {
     },
     "workers": {
       "concurrency": 64,
-      "batchSize": 500,
+      "batchSize": 1000,
       "deadLetterQueue": true
     },
     "storage": {
@@ -104,7 +110,11 @@ export const WEEK_6_DRILL: DrillDefinition = {
       "situation": "Unprecedented typhoon caused 500k req/sec sensor burst, saturating network buffers.",
       "task": "Prevent ingestion cluster collapse and maintain zero telemetry loss for tier-1 stations.",
       "action": "Scaled Redis partition shards from 16 to 64, activated client backpressure headers (429 with Retry-After), and batched database writes in 1,000-row multi-value INSERT statements.",
-      "result": "Maintained 99.995% ingestion uptime, eliminated database connection exhaustion, and achieved p95 ingestion latency of 34ms."
+      "result": "Maintained 99.995% ingestion uptime, eliminated database connection exhaustion, and achieved p95 ingestion latency of 34ms.",
+      "resultMetrics": {
+        "uptimePercent": 99.995,
+        "p95LatencyMs": 34
+      }
     }
   }
 }
@@ -114,6 +124,7 @@ export const WEEK_6_DRILL: DrillDefinition = {
     expectedAssertions: [
       'Valid JSON architecture specification',
       'Buffer backpressure strategy defined',
+      'Worker batch size aligned with worked sizing calculation (1000 events/batch)',
       'Time-series partition key specified',
       'STAR interview story actions and measurable results documented',
     ],
@@ -168,22 +179,38 @@ export function evaluateSystemDesignDrill(code: string): {
       assertionResults: [
         { name: 'JSON Syntax Valid', passed: false, message: 'Code contains invalid JSON syntax or structure.' },
         { name: 'Backpressure Strategy', passed: false, message: 'Unchecked due to syntax error.' },
+        { name: 'Worker Batch Size Alignment', passed: false, message: 'Unchecked due to syntax error.' },
         { name: 'Partition Key Specification', passed: false, message: 'Unchecked due to syntax error.' },
         { name: 'STAR Story Defense', passed: false, message: 'Unchecked due to syntax error.' },
       ],
     };
   }
 
-  const isNonEmptyStringWithoutTodo = (val: unknown): val is string => {
-    return typeof val === 'string' && val.trim().length > 0 && !val.includes('TODO');
+  const isMeaningfulStringWithoutTodo = (val: unknown, minLen = 10): val is string => {
+    return typeof val === 'string' && val.trim().length >= minLen && !val.includes('TODO');
   };
 
-  const hasBackpressure = isNonEmptyStringWithoutTodo(parsed.architecture?.buffer?.backpressureStrategy);
-  const hasPartitionKey = isNonEmptyStringWithoutTodo(parsed.architecture?.storage?.partitionKey);
-  const hasStarAction = isNonEmptyStringWithoutTodo(parsed.starStories?.spikeDefense?.action);
-  const hasStarResult = isNonEmptyStringWithoutTodo(parsed.starStories?.spikeDefense?.result);
+  const hasBackpressure = isMeaningfulStringWithoutTodo(parsed.architecture?.buffer?.backpressureStrategy, 10);
+  const hasPartitionKey = isMeaningfulStringWithoutTodo(parsed.architecture?.storage?.partitionKey, 5);
+  const hasStarAction = isMeaningfulStringWithoutTodo(parsed.starStories?.spikeDefense?.action, 20);
+  const hasStarResult = isMeaningfulStringWithoutTodo(parsed.starStories?.spikeDefense?.result, 20);
 
-  const passed = Boolean(hasBackpressure && hasPartitionKey && hasStarAction && hasStarResult);
+  const batchSize = parsed.architecture?.workers?.batchSize;
+  const hasValidBatchSize = typeof batchSize === 'number' && batchSize === 1000;
+
+  const metrics = parsed.starStories?.spikeDefense?.resultMetrics;
+  const hasValidMetrics = Boolean(
+    metrics &&
+    typeof metrics === 'object' &&
+    typeof metrics.uptimePercent === 'number' &&
+    metrics.uptimePercent >= 99.0 &&
+    typeof metrics.p95LatencyMs === 'number' &&
+    metrics.p95LatencyMs <= 50
+  );
+
+  const starDefensePassed = Boolean(hasStarAction && hasStarResult && hasValidMetrics);
+
+  const passed = Boolean(hasBackpressure && hasValidBatchSize && hasPartitionKey && starDefensePassed);
 
   return {
     passed,
@@ -200,7 +227,14 @@ export function evaluateSystemDesignDrill(code: string): {
         passed: Boolean(hasBackpressure),
         message: hasBackpressure
           ? `Defined: ${parsed.architecture.buffer.backpressureStrategy}`
-          : 'Missing backpressure mitigation strategy in buffer configuration.',
+          : 'Missing backpressure mitigation strategy in buffer configuration (min 10 characters without TODO).',
+      },
+      {
+        name: 'Worker Batch Size Alignment',
+        passed: Boolean(hasValidBatchSize),
+        message: hasValidBatchSize
+          ? 'Configured batchSize is 1000 events, aligned with 100 batches/sec capacity calculation.'
+          : `Invalid batchSize (${batchSize}); must be numeric 1000 to match worked sizing calculations.`,
       },
       {
         name: 'Time-Series Partition Key',
@@ -211,10 +245,10 @@ export function evaluateSystemDesignDrill(code: string): {
       },
       {
         name: 'STAR Architecture Story Defense',
-        passed: Boolean(hasStarAction && hasStarResult),
-        message: (hasStarAction && hasStarResult)
-          ? 'STAR defense actions and quantifiable outcomes defined.'
-          : 'Incomplete STAR story: Please detail the architectural Action taken and measurable Result achieved.',
+        passed: starDefensePassed,
+        message: starDefensePassed
+          ? `STAR defense actions and quantifiable outcomes defined (uptime: ${metrics?.uptimePercent}%, p95: ${metrics?.p95LatencyMs}ms).`
+          : 'Incomplete STAR story: Please detail architectural Action (>=20 chars), measurable Result (>=20 chars), and valid resultMetrics (uptimePercent >= 99.0, p95LatencyMs <= 50).',
       },
     ],
   };

@@ -13,8 +13,9 @@ export const WEEK_5_DRILL: DrillDefinition = {
     diagramType: 'queue',
     keyPoints: [
       'Worker Starvation: Without max tries ($tries), a job that consistently throws an uncaught exception will re-queue infinitely, consuming worker CPU and starving legitimate jobs.',
+      'Configuration Precedence: Job-level properties ($tries and $backoff) declared on the Job class take precedence over queue worker daemon CLI flags (e.g. php artisan queue:work --tries=3).',
       'Exponential Backoff: Immediate retries cause thundering herds on recovering databases; $backoff = [10, 60, 300] allows downstream dependencies to recover gracefully.',
-      'Idempotency Keys: Network acknowledgments can fail after successful database commits; workers must check an idempotency key (or atomic lock) before mutating state.',
+      'Durable Idempotency vs. Transient Locks: Cache::lock() guards against concurrent in-flight execution races, but once released, subsequent re-deliveries will re-acquire the lock. Durable idempotency requires an atomic insert/claim into a database table (e.g. processed_batches with unique idempotency_key inside DB::transaction) or insertOrIgnore on unique domain columns.',
       'Dead-Letter Queue (DLQ): After exhausting retry budgets, poison messages must be logged and inserted into dead_letter_jobs (idempotency_key, payload, exception, failed_at) for inspection without halting the worker pool.',
       'Timeouts vs Reservation: Queue worker retry_after (in queue config) must ALWAYS exceed job $timeout. If retry_after is shorter, the queue broker will re-assign a running job to a second worker, causing duplicate execution.',
       'At-Least-Once Delivery: Queue systems guarantee message delivery at least once; job handlers must always be architected as idempotent operations.',
@@ -122,7 +123,7 @@ class ProcessTelemetryBatchJob implements ShouldQueue
 
     public function handle(): void
     {
-        // Idempotency guard: prevent duplicate batch execution
+        // Concurrency lock + durable ledger guard
         $lock = Cache::lock("telemetry_batch:{$this->idempotencyKey}", 120);
 
         if (!$lock->get()) {
@@ -132,10 +133,21 @@ class ProcessTelemetryBatchJob implements ShouldQueue
 
         try {
             DB::transaction(function () {
+                DB::table('processed_batches')->insert([
+                    'idempotency_key' => $this->idempotencyKey,
+                    'processed_at' => now()->toIso8601String(),
+                ]);
+
                 foreach ($this->telemetryBatch as $reading) {
                     DB::table('weather_observations')->insertOrIgnore($reading);
                 }
             });
+        } catch (\\Throwable $e) {
+            if (str_contains($e->getMessage(), 'processed_batches') || str_contains($e->getMessage(), 'duplicate') || str_contains($e->getMessage(), 'UNIQUE')) {
+                Log::info("Batch already processed in durable ledger: {$this->idempotencyKey}");
+                return;
+            }
+            throw $e;
         } finally {
             $lock->release();
         }
@@ -206,9 +218,18 @@ function stripPhpCommentsAndInertStrings(code: string): string {
     'telemetry_batch',
     'dead_letter_jobs',
     'weather_observations',
+    'processed_batches',
+    'processed_at',
+    'idempotency_key',
     'idempotencyKey',
     'failed',
     'handle',
+    'duplicate',
+    'UNIQUE',
+    'payload',
+    'exception',
+    'failed_at',
+    'insertOrIgnore',
   ]);
 
   while (i < len) {
@@ -404,12 +425,27 @@ export function evaluateQueueDlqDrill(code: string): {
   let idempotencyMessage = 'Failed: Missing idempotency lock or key verification in handle() before database write.';
 
   if (handleBody) {
-    const hasLock = /Cache::lock\s*\(/.test(handleBody) || /->\s*lock\s*\(/.test(handleBody) || handleBody.includes('insertOrIgnore');
     const referencesKey = handleBody.includes('idempotencyKey');
+    const hasLock =
+      (/Cache::lock\s*\(/.test(handleBody) || /->\s*lock\s*\(/.test(handleBody)) &&
+      (/->\s*get\s*\(/.test(handleBody) || /->\s*block\s*\(/.test(handleBody));
+    const hasLedger = handleBody.includes('processed_batches') && handleBody.includes('insert');
+    const hasTransaction = handleBody.includes('transaction');
+    const hasRelease = /->\s*release\s*\(/.test(handleBody);
 
-    if (hasLock || referencesKey) {
+    if (!referencesKey) {
+      idempotencyMessage = 'Failed: Missing references to $this->idempotencyKey in handle() concurrency guard.';
+    } else if (!hasLock) {
+      idempotencyMessage = 'Failed: Missing atomic concurrency lock (Cache::lock with ->get() or ->block()) on the idempotency key.';
+    } else if (!hasLedger) {
+      idempotencyMessage = 'Failed: Missing durable idempotency ledger claim in processed_batches table before inserting observations.';
+    } else if (!hasTransaction) {
+      idempotencyMessage = 'Failed: Database mutations and processed_batches ledger write must be atomic within a DB::transaction.';
+    } else if (!hasRelease) {
+      idempotencyMessage = 'Failed: Atomic concurrency lock must be released in a finally block.';
+    } else {
       hasIdempotency = true;
-      idempotencyMessage = 'Passed: Idempotency protection enforced before database mutation.';
+      idempotencyMessage = 'Passed: Durable idempotency enforced with atomic concurrency lock, processed_batches claim, and shared transaction.';
     }
   }
 

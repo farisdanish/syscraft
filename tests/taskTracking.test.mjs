@@ -19,6 +19,10 @@ import {
   WEEK_6_DRILL 
 } from '../dist-test/drills/week6-system-design.js';
 import { 
+  evaluateLaravelDrill, 
+  WEEK_1_DRILL 
+} from '../dist-test/drills/week1-internals.js';
+import { 
   evaluateCursorPaginationDrill, 
   WEEK_2_DRILL 
 } from '../dist-test/drills/week2-api-pagination.js';
@@ -445,9 +449,206 @@ test('Week 6 System Design Evaluator & Type Safety Invariants', async (t) => {
     assert.strictEqual(res.assertionResults[3].passed, false);
   });
 
+  await t.test('Worker batchSize mismatch or omission fails assertion', () => {
+    const wrongBatchSpec = JSON.stringify({
+      architecture: {
+        buffer: { backpressureStrategy: 'dynamic token bucket' },
+        workers: { concurrency: 64, batchSize: 500, deadLetterQueue: true },
+        storage: { partitionKey: 'recorded_at::date' },
+      },
+      starStories: {
+        spikeDefense: { action: 'Scaled shards', result: '99.99% uptime' },
+      },
+    });
+    const res = evaluateSystemDesignDrill(wrongBatchSpec);
+    assert.strictEqual(res.passed, false);
+    const batchAssertion = res.assertionResults.find((a) => a.name === 'Worker Batch Size Alignment');
+    assert.strictEqual(batchAssertion.passed, false);
+  });
+
+  await t.test('One-character filler strings or missing resultMetrics fail assertions', () => {
+    const fillerSpec = JSON.stringify({
+      architecture: {
+        buffer: { backpressureStrategy: 'a' },
+        workers: { batchSize: 1000 },
+        storage: { partitionKey: 'b' },
+      },
+      starStories: {
+        spikeDefense: {
+          action: 'c',
+          result: 'd',
+        },
+      },
+    });
+    const res = evaluateSystemDesignDrill(fillerSpec);
+    assert.strictEqual(res.passed, false, 'Filler strings without metrics must fail');
+    const starAssertion = res.assertionResults.find((a) => a.name === 'STAR Architecture Story Defense');
+    assert.strictEqual(starAssertion.passed, false);
+  });
+
   await t.test('Valid architecture specification passes all assertions', () => {
     const res = evaluateSystemDesignDrill(WEEK_6_DRILL.solutionCode);
     assert.strictEqual(res.passed, true);
+    for (const a of res.assertionResults) {
+      assert.strictEqual(a.passed, true, `Assertion "${a.name}" must pass`);
+    }
+  });
+});
+
+test('Week 1 Laravel Internals & Eager Loading Evaluator Invariants', async (t) => {
+  await t.test('Untouched starter code with Post::all() fails assertions', () => {
+    const res = evaluateLaravelDrill(WEEK_1_DRILL.initialCode);
+    assert.strictEqual(res.passed, false, 'Untouched starter code must fail');
+    assert.strictEqual(res.queriesExecuted, 51);
+    const budgetAssertion = res.assertionResults.find((a) => a.name === 'Query budget satisfied');
+    assert.strictEqual(budgetAssertion.passed, false);
+  });
+
+  await t.test('Comment-only bypass attempts are rejected', () => {
+    const commentExploit = `<?php
+namespace App\\Http\\Controllers;
+class PostController extends Controller {
+    public function index(Request $request): JsonResponse {
+        // Post::with(['author', 'comments'])->get();
+        // $post->author->name;
+        // $post->comments->count();
+        $posts = Post::all();
+        return response()->json([]);
+    }
+}`;
+    const res = evaluateLaravelDrill(commentExploit);
+    assert.strictEqual(res.passed, false, 'Comment-only bypass must fail');
+  });
+
+  await t.test('String, heredoc, and backtick bypass attempts are rejected', () => {
+    const stringExploit = `<?php
+namespace App\\Http\\Controllers;
+class PostController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $msg = 'Post::with(["author", "comments"])->get();';
+        $doc = <<<EOT
+Post::with(['author', 'comments'])->get();
+author comments
+EOT;
+        $cmd = \`Post::with(['author', 'comments'])->get();\`;
+        $posts = Post::all();
+        return response()->json([]);
+    }
+}`;
+    const res = evaluateLaravelDrill(stringExploit);
+    assert.strictEqual(res.passed, false, 'String, heredoc, and backtick exploits must fail');
+  });
+
+  await t.test('Comma-separated relation arguments without array are rejected', () => {
+    const invalidSyntaxCode = `<?php
+namespace App\\Http\\Controllers;
+use App\\Models\\Post;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class PostController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $posts = Post::with('author', 'comments')->get();
+        $data = $posts->map(function ($post) {
+            return [
+                'id' => $post->id,
+                'title' => $post->title,
+                'author' => $post->author->name,
+                'comments_count' => $post->comments->count(),
+            ];
+        });
+        return response()->json($data);
+    }
+}`;
+    const res = evaluateLaravelDrill(invalidSyntaxCode);
+    assert.strictEqual(res.passed, false, 'with("author", "comments") without array must fail');
+    assert.match(res.assertionResults[0].message, /Syntax error: Eloquent with\(\) does not accept multiple relationship names/);
+  });
+
+  await t.test('Chaining withCount but reading $post->comments->count() triggers per-row lazy load warning and fails', () => {
+    const mixedCode = `<?php
+namespace App\\Http\\Controllers;
+use App\\Models\\Post;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class PostController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $posts = Post::with('author')->withCount('comments')->get();
+        $data = $posts->map(function ($post) {
+            return [
+                'id' => $post->id,
+                'title' => $post->title,
+                'author' => $post->author->name,
+                'comments_count' => $post->comments->count(),
+            ];
+        });
+        return response()->json($data);
+    }
+}`;
+    const res = evaluateLaravelDrill(mixedCode);
+    assert.strictEqual(res.passed, false, 'Accessing ->comments->count() with withCount must fail');
+    const commentsAssertion = res.assertionResults.find((a) => a.name === 'Comments relation eager loaded or aggregated');
+    assert.strictEqual(commentsAssertion.passed, false);
+    assert.match(commentsAssertion.message, /Calling \$post->comments->count\(\) still triggers lazy relation queries/);
+  });
+
+  await t.test('Chaining withCount and reading $post->comments_count passes with query count 2', () => {
+    const withCountCode = `<?php
+namespace App\\Http\\Controllers;
+use App\\Models\\Post;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class PostController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $posts = Post::with('author')->withCount('comments')->get();
+        $data = $posts->map(function ($post) {
+            return [
+                'id' => $post->id,
+                'title' => $post->title,
+                'author' => $post->author->name,
+                'comments_count' => $post->comments_count,
+            ];
+        });
+        return response()->json($data);
+    }
+}`;
+    const res = evaluateLaravelDrill(withCountCode);
+    assert.strictEqual(res.passed, true, 'Proper withCount usage must pass');
+    assert.strictEqual(res.queriesExecuted, 2, 'Budget should be 2 queries');
+  });
+
+  await t.test('Eager loading with double quotes and column selection passes assertions', () => {
+    const colSelectionCode = `<?php
+namespace App\\Http\\Controllers;
+use App\\Models\\Post;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class PostController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $posts = Post::with(["author:id,name", "comments"])->get();
+        $data = $posts->map(function ($post) {
+            return [
+                'id' => $post->id,
+                'title' => $post->title,
+                'author' => $post->author->name,
+                'comments_count' => $post->comments->count(),
+            ];
+        });
+        return response()->json($data);
+    }
+}`;
+    const res = evaluateLaravelDrill(colSelectionCode);
+    assert.strictEqual(res.passed, true, 'Double quotes and column selection must pass');
+    assert.strictEqual(res.queriesExecuted, 3);
+  });
+
+  await t.test('Standard eager loading solution passes all assertions with query count 3', () => {
+    const res = evaluateLaravelDrill(WEEK_1_DRILL.solutionCode);
+    assert.strictEqual(res.passed, true, 'Valid solution must pass');
+    assert.strictEqual(res.queriesExecuted, 3);
     for (const a of res.assertionResults) {
       assert.strictEqual(a.passed, true, `Assertion "${a.name}" must pass`);
     }
@@ -495,6 +696,40 @@ EOT;
 }`;
     const res = evaluateCursorPaginationDrill(stringExploit);
     assert.strictEqual(res.passed, false, 'String, heredoc, and backtick exploits must fail');
+  });
+
+  await t.test('Query filtering only recorded_at < $cursor without tie-breaker branch fails', () => {
+    const seekWithoutTieBreaker = `<?php
+namespace App\\Http\\Controllers\\Api;
+use App\\Models\\WeatherObservation;
+use Illuminate\\Http\\Request;
+use Illuminate\\Http\\JsonResponse;
+
+class ObservationApiController extends Controller {
+    public function index(Request $request): JsonResponse {
+        $cursor = $request->input('cursor');
+        if ($cursor !== null) {
+            $decoded = base64_decode($cursor, true);
+            if ($decoded === false || !str_contains($decoded, ':')) {
+                return response()->json([
+                    'type' => 'https://api.syscraft.io/errors/invalid-cursor',
+                    'title' => 'Invalid Pagination Cursor',
+                    'status' => 400,
+                ], 400, ['Content-Type' => 'application/problem+json']);
+            }
+        }
+        $query = WeatherObservation::query()
+            ->where('recorded_at', '<', $cursor)
+            ->orderBy('recorded_at', 'desc')
+            ->orderBy('id', 'desc');
+        return response()->json(['data' => $query->limit(20)->get(), 'next_cursor' => base64_encode('x:1')]);
+    }
+}`;
+    const res = evaluateCursorPaginationDrill(seekWithoutTieBreaker);
+    assert.strictEqual(res.passed, false, 'Seek without tie-breaker must fail');
+    const seekAssertion = res.assertionResults.find((a) => a.name === 'Seek-based Composite Key Traversal');
+    assert.strictEqual(seekAssertion.passed, false);
+    assert.match(seekAssertion.message, /lacks equality tie-breaker/);
   });
 
   await t.test('Valid remediated cursor pagination passes all assertions', () => {
@@ -586,6 +821,27 @@ EOT;
 }`;
     const res = evaluateQueueDlqDrill(stringExploit);
     assert.strictEqual(res.passed, false, 'String, heredoc, and backtick exploits must fail');
+  });
+
+  await t.test('Bypass with bare idempotencyKey reference and insertOrIgnore without lock or ledger is rejected', () => {
+    const fakeIdempotencyCode = `<?php
+namespace App\\Jobs;
+use Illuminate\\Support\\Facades\\DB;
+class ProcessTelemetryBatchJob {
+    public int $tries = 3;
+    public array $backoff = [10, 60, 300];
+    public function handle(): void {
+        $this->idempotencyKey;
+        DB::table('weather_observations')->insertOrIgnore($this->telemetryBatch);
+    }
+    public function failed(\\Throwable $e): void {
+        DB::table('dead_letter_jobs')->insert([]);
+    }
+}`;
+    const res = evaluateQueueDlqDrill(fakeIdempotencyCode);
+    assert.strictEqual(res.passed, false, 'Bare idempotencyKey reference without lock/ledger must fail');
+    const idempAssertion = res.assertionResults.find((a) => a.name === 'Idempotency Lock Enforcement');
+    assert.strictEqual(idempAssertion.passed, false);
   });
 
   await t.test('Valid resilient queue job passes all assertions', () => {

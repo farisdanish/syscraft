@@ -16,8 +16,8 @@ export const WEEK_2_DRILL: DrillDefinition = {
       'Seek-Based Cursors: Querying WHERE (recorded_at, id) < (:cursor_at, :cursor_id) jumps directly to the index boundary via B-Tree seek without scanning skipped rows.',
       'Eloquent Implementation: Because SQL row constructor syntax (a, b) < (c, d) is not supported across all drivers, implement it in query builder via: where("recorded_at", "<", $cAt)->orWhere(function ($q) use ($cAt, $cId) { $q->where("recorded_at", "=", $cAt)->where("id", "<", $cId); }).',
       'Concurrency Stability: Rows inserted before or after the cursor do not shift the current page offset; data never duplicates or disappears.',
-      'Opaque Tokens: Never expose raw IDs in URLs. Encode cursors as base64 strings: base64_encode("$recorded_at:$id"), and check count === $limit before setting next_cursor.',
-      'RFC 9457 Problem Details: When a cursor is malformed, return HTTP 400 with Content-Type: application/problem+json containing keys: type, title, status, detail, instance.',
+      'Opaque Tokens: Never expose raw IDs or schema internals directly in URLs. Encode cursors as base64 strings (e.g. base64_encode("$recorded_at:$id")) to keep them opaque and decoupled from client assumptions. Note that base64 is encoding/obfuscation, not tamper-proofing; production tamper prevention requires an HMAC signature or authenticated encryption.',
+      'RFC 9457 Problem Details: When a cursor is malformed, return HTTP 400 with Content-Type: application/problem+json. Under RFC 9457, all members (type, title, status, detail, instance) are technically optional (type defaults to "about:blank"), but SysCraft\'s API contract mandates these standard keys for machine-readable client diagnostics.',
     ],
     quiz: {
       question: 'Why does OFFSET 100000 degrade database query performance even when the query uses an index on id?',
@@ -177,11 +177,11 @@ class ObservationApiController extends Controller
       },
       {
         dimension: 'clarity',
-        prompt: 'Explained opaque token encoding: why passing base64 tokens protects schema internals and prevents client tampering.',
+        prompt: 'Explained opaque token encoding: how base64 hides internal column names and schema representations from clients, and accurately noted that base64 alone is obfuscation rather than cryptographic tamper-proofing (which requires HMAC or encryption).',
       },
       {
         dimension: 'challenge',
-        prompt: 'Answered follow-up: "Why does RFC 9457 require type, title, and status? How does application/problem+json differ from ad-hoc error JSON?"',
+        prompt: 'Answered follow-up: "Are RFC 9457 members required or optional in the RFC specification? Why does application/problem+json specify type (and its about:blank default) and status matching the HTTP response?"',
       },
     ],
   },
@@ -400,13 +400,34 @@ export function evaluateCursorPaginationDrill(code: string): {
   let seekMessage = 'Failed: Missing seek comparison on composite keys (recorded_at, id).';
 
   if (indexBody) {
-    const hasRecordedAtFilter = indexBody.includes('recorded_at') && (indexBody.includes('<') || indexBody.includes('where'));
-    const hasIdFilter = indexBody.includes('id');
+    const hasDeterministicOrder =
+      indexBody.includes('orderBy') &&
+      indexBody.includes('recorded_at') &&
+      indexBody.includes('id');
     const hasBase64Decode = /base64_decode\s*\(/.test(indexBody);
 
-    if (hasRecordedAtFilter && hasIdFilter && hasBase64Decode) {
+    const hasTupleComparison = /whereRaw\s*\([^)]*recorded_at[^)]*id[^)]*</i.test(indexBody);
+    const hasIdComparisonInWhere =
+      /where\s*\(\s*['"]id['"]\s*,\s*['"]<['"]/.test(indexBody) ||
+      /where\s*\(\s*\[\s*['"]id['"]\s*,\s*['"]<['"]/.test(indexBody) ||
+      /id\s*<\s*\$cursorId/.test(indexBody);
+    const hasTieBreakerBranch =
+      (/orWhere\s*\(/.test(indexBody) || /orWhereRaw\s*\(/.test(indexBody)) &&
+      indexBody.includes('recorded_at') &&
+      hasIdComparisonInWhere;
+
+    const hasCompositeSeek = hasTupleComparison || hasTieBreakerBranch;
+
+    if (!hasDeterministicOrder) {
+      seekMessage = 'Failed: Missing deterministic orderBy clauses for both recorded_at and id.';
+    } else if (!hasBase64Decode) {
+      seekMessage = 'Failed: Missing base64_decode() invocation to parse opaque cursor.';
+    } else if (!hasCompositeSeek) {
+      seekMessage =
+        'Failed: Seek predicate lacks equality tie-breaker for duplicate timestamps. Use an orWhere branch (recorded_at = ? AND id < ?) or tuple comparison (recorded_at, id) < (?, ?).';
+    } else {
       hasSeekPredicate = true;
-      seekMessage = 'Passed: Deterministic seek predicate implemented on composite keys (recorded_at, id).';
+      seekMessage = 'Passed: Deterministic seek predicate implemented on composite keys (recorded_at, id) with tie-breaker ordering.';
     }
   }
 
