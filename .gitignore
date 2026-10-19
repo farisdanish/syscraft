@@ -29,3 +29,6 @@ logs/
 .DS_Store
 Thumbs.db
 .sisyphus/
+
+# Local service processes and logs
+.syscraft/

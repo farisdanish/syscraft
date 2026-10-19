@@ -178,6 +178,19 @@ Stack Adapters (Modular Plugins)
 * Node.js v20.x or v22.x LTS
 * Docker Engine & Docker Compose v2.20+ (for Tier 3 exercises)
 
+### Start and stop all services (WSL/Linux)
+
+Load your Node environment (for NVM: `source ~/.nvm/nvm.sh`), enable Docker Desktop integration for your WSL distribution, and install dependencies once with `npm ci`. Commands below run from the repository root:
+
+```bash
+npm run start:all
+npm run stop:all
+```
+
+Start runs PostgreSQL, the bridge, and Vite in the background, building the PHP runner image if missing. Open http://localhost:5173 after readiness succeeds. The runner itself runs only during exercises. Logs are in `.syscraft/bridge.log` and `.syscraft/vite.log`.
+
+Stop preserves PostgreSQL data by stopping its container without removing it. Do not remove that container if you need its data. Repeated commands are safe; occupied ports or an independently started PostgreSQL require stopping their owner first. A failed startup rolls back services it started. If cleanup fails, retry `npm run stop:all`. A lock prevents concurrent lifecycle commands; runtime state and logs are local and ignored by Git.
+
 ### 1. Start the Studio Development Server
 
 ```bash
