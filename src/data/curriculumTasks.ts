@@ -96,7 +96,7 @@ export const CURRICULUM_TASKS: CurriculumTask[] = [
     estimatedMinutes: 25,
     statusActiveInMvp: true,
     description: 'Enforce multi-tenant model policy gates, defend against session fixation via session regeneration, and prevent IDOR vulnerability.',
-    topics: ['Policy Authorization', 'Session Regeneration', 'Role-Based Access Control', 'Timed Sprint'],
+    topics: ['Policy Authorization', 'Session Regeneration', 'Multi-Tenancy Isolation', 'IDOR Prevention'],
     trackDomain: 'security',
   },
 ];

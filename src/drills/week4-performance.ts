@@ -15,7 +15,7 @@ export const WEEK_4_DRILL: DrillDefinition = {
       'Sequential Scan: The database reads every single page and row in the table (O(N) cost).',
       'B-Tree Index: Balanced tree structure allowing O(log N) logarithmic binary seek directly to matching key boundaries.',
       'Leftmost Prefix Rule: An index on (A, B) accelerates queries on (A) or (A, B), but CANNOT accelerate queries filtering only on (B).',
-      'Covering Index: When an index contains all selected columns, the database avoids reading the main table pages entirely.',
+      'Covering Index Architectures: An index is covering when it satisfies all projected and filtered columns without table heap lookups. In SQLite, this is achieved by appending selected columns to the compound index key: (station_code, recorded_at, temperature_c). In PostgreSQL, the INCLUDE clause: CREATE INDEX ... (station_code, recorded_at) INCLUDE (temperature_c) attaches non-key payload columns to leaf pages without swelling branch nodes or affecting index B-Tree ordering.',
       'Reading EXPLAIN Plans: SQLite reports SCAN TABLE for full heap scans and SEARCH TABLE ... USING INDEX for indexed seeks. "USE TEMP B-TREE FOR ORDER BY" means the index does not satisfy sorting and requires an expensive temporary sort.',
       'Planner Economics: Query planners avoid index seeks when match rate is high (>20% of rows). Scanning pages sequentially is faster than random index lookups for high percentages.',
     ],
@@ -84,7 +84,7 @@ export const WEEK_4_DRILL: DrillDefinition = {
       },
       {
         dimension: 'tradeoff',
-        prompt: 'Articulated the write penalty: Every additional index slows down INSERT, UPDATE, and DELETE operations and consumes disk/memory buffer space.',
+        prompt: 'Articulated the write penalty: Every additional index slows down INSERT, UPDATE, and DELETE operations. Contrasted covering index implementation across engines: SQLite appends payload columns into the key sort order, whereas PostgreSQL INCLUDE stores non-key attributes only on leaf pages to keep branch pages compact.',
       },
       {
         dimension: 'failure',

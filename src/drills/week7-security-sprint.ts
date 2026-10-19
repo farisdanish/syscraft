@@ -14,9 +14,9 @@ export const WEEK_7_DRILL: DrillDefinition = {
     keyPoints: [
       'Session Fixation: Attackers establish a known session ID prior to login. Without $request->session()->regenerate(), the victim authenticates the attacker-controlled session.',
       'Policy Authorization: Authentication confirms WHO the user is; Authorization confirms WHAT they can do. Controllers enforce $this->authorize("update", $record), which delegates to RecordPolicy::update(User $user, Record $record): bool { return $user->id === $record->user_id; }.',
-      'Multi-Tenancy Isolation: Users must strictly be restricted to records belonging to their tenant or user ID ($user->id === $record->user_id).',
-      'Timing Attack Mechanics: Standard string comparison (===) aborts at the first non-matching byte, leaking character match positions via CPU timing variations. hash_equals() performs constant-time comparison across the entire string length.',
-      'Zero-Trust Role Gating: Administrative privileges must be validated via explicit role checks ($user->hasRole("admin")) or policy before() callbacks.',
+      'Multi-Tenancy Isolation: Users must strictly be restricted to records belonging to their tenant or user ID ($user->id === $record->user_id) to eliminate Insecure Direct Object References (IDOR).',
+      'Authenticated Multi-Tenant Truth Table: (1) Tenant A on Record A -> HTTP 200 Authorized, (2) Tenant B on Record A -> HTTP 403 Forbidden, (3) Unauthenticated Guest -> HTTP 401 Unauthorized.',
+      'Defense-in-Depth Layering: Robust web security couples transport protections (SameSite cookies, CSRF tokens) with application state defense (session ID invalidation on login, strict policy gates on mutations).',
     ],
     quiz: {
       question: 'Why must session()->regenerate() be called immediately upon successful user authentication?',
@@ -93,6 +93,13 @@ class AuthController extends Controller
      * Vulnerability 2 (Privilege Escalation / IDOR):
      * The update endpoint mutates any record without verifying tenant authorization!
      * Remediate by enforcing policy authorization: $this->authorize('update', $record);
+     *
+     * BACKING POLICY CONTRACT (app/Policies/RecordPolicy.php):
+     * class RecordPolicy {
+     *     public function update(User $user, Record $record): bool {
+     *         return $user->id === $record->user_id;
+     *     }
+     * }
      */
     public function updateRecord(Request $request, Record $record): JsonResponse
     {
@@ -196,11 +203,11 @@ class AuthController extends Controller
       },
       {
         dimension: 'clarity',
-        prompt: 'Spoke fluently, concisely, and defended defense-in-depth principles (session invalidation, CSRF tokens, strict cookies, RBAC) within the time limit.',
+        prompt: 'Spoke fluently, concisely, and defended defense-in-depth principles (session invalidation, CSRF tokens, strict cookies, policy gates) within the time limit.',
       },
       {
         dimension: 'challenge',
-        prompt: 'Answered follow-up: "How do you defend against timing attacks when verifying authentication tokens or comparing webhook signatures in PHP? (Answer: hash_equals())"',
+        prompt: 'Answered follow-up: "Why must authorization checks happen before database mutations, and how does the policy gate verify multi-tenant isolation? (Answer: Checking $user->id === $record->user_id inside RecordPolicy prevents Insecure Direct Object References (IDOR) before data is altered)."',
       },
     ],
   },
@@ -449,10 +456,10 @@ export function evaluateSecuritySprintDrill(code: string): {
           : 'Failed: Unauthorized requests are permitted to mutate foreign tenant data.',
       },
       {
-        name: 'PostgreSQL 16.4 State Consistency',
+        name: 'Multi-Tenant Security Gate Verification',
         passed,
         message: passed
-          ? 'Passed: Verified against PostgreSQL 16.4 isolation model.'
+          ? 'Passed: Simulation verified: multi-tenant policy check enforced before record mutation.'
           : 'Failed: Security assertions not satisfied.',
       },
     ],

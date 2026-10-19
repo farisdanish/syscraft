@@ -175,10 +175,162 @@ namespace App\Models {
     }
 }
 
+namespace Illuminate\Support {
+    abstract class ServiceProvider {
+        protected $app;
+        public function __construct($app) {
+            $this->app = $app;
+        }
+        public function register(): void {}
+        public function boot(): void {}
+    }
+}
+
+namespace Illuminate\Container {
+    use Closure;
+    use ReflectionClass;
+    use Exception;
+
+    class Container {
+        private static ?Container $instance = null;
+        private array $bindings = [];
+        private array $instances = [];
+
+        public static function getInstance(): Container {
+            if (self::$instance === null) {
+                self::$instance = new self();
+            }
+            return self::$instance;
+        }
+
+        public static function setInstance(?Container $container): void {
+            self::$instance = $container;
+        }
+
+        public function bind(string $abstract, $concrete = null, bool $shared = false): void {
+            if ($concrete === null) {
+                $concrete = $abstract;
+            }
+            $this->bindings[$abstract] = [
+                'concrete' => $concrete,
+                'shared' => $shared,
+            ];
+            unset($this->instances[$abstract]);
+        }
+
+        public function singleton(string $abstract, $concrete = null): void {
+            $this->bind($abstract, $concrete, true);
+        }
+
+        public function make(string $abstract, array $parameters = []) {
+            if (isset($this->instances[$abstract])) {
+                return $this->instances[$abstract];
+            }
+
+            $concrete = $this->bindings[$abstract]['concrete'] ?? $abstract;
+
+            if ($concrete instanceof Closure) {
+                $object = $concrete($this, $parameters);
+            } elseif (is_string($concrete)) {
+                $reflector = new ReflectionClass($concrete);
+                if (!$reflector->isInstantiable()) {
+                    throw new Exception("Target [$concrete] is not instantiable.");
+                }
+                $constructor = $reflector->getConstructor();
+                if ($constructor === null) {
+                    $object = new $concrete();
+                } else {
+                    $dependencies = [];
+                    foreach ($constructor->getParameters() as $param) {
+                        $type = $param->getType();
+                        if ($type && !$type->isBuiltin()) {
+                            $dependencies[] = $this->make($type->getName());
+                        } elseif ($param->isDefaultValueAvailable()) {
+                            $dependencies[] = $param->getDefaultValue();
+                        } else {
+                            throw new Exception("Cannot resolve parameter [{$param->getName()}] in class [{$concrete}].");
+                        }
+                    }
+                    $object = $reflector->newInstanceArgs($dependencies);
+                }
+            } else {
+                $object = $concrete;
+            }
+
+            if (!empty($this->bindings[$abstract]['shared'])) {
+                $this->instances[$abstract] = $object;
+            }
+
+            return $object;
+        }
+
+        public function has(string $abstract): bool {
+            return isset($this->bindings[$abstract]) || isset($this->instances[$abstract]);
+        }
+
+        public function getBindings(): array {
+            return $this->bindings;
+        }
+    }
+}
+
+namespace App\Contracts {
+    interface SensorClientInterface {
+        public function fetchStationTelemetry(string $stationCode): array;
+    }
+
+    interface WeatherReportServiceInterface {
+        public function generateReport(string $stationCode): array;
+    }
+}
+
+namespace App\Clients {
+    use App\Contracts\SensorClientInterface;
+
+    class OpenMeteoClient implements SensorClientInterface {
+        private ?string $apiKey;
+        public function __construct(?string $apiKey = null) {
+            $this->apiKey = $apiKey;
+        }
+        public function fetchStationTelemetry(string $stationCode): array {
+            return [
+                'station' => $stationCode,
+                'temps' => [28.5, 29.1, 31.0, 30.2, 27.8],
+                'humidity' => 78,
+            ];
+        }
+    }
+}
+
 namespace {
+    if (!function_exists('now')) {
+        function now() {
+            return new class {
+                public function toIso8601String(): string {
+                    return date('c');
+                }
+                public function format(string $fmt): string {
+                    return date($fmt);
+                }
+            };
+        }
+    }
+
+    if (!function_exists('env')) {
+        function env(string $key, $default = null) {
+            $val = getenv($key);
+            return $val !== false ? $val : $default;
+        }
+    }
+
     class_alias('App\Http\Controllers\Controller', 'Controller');
     class_alias('App\Models\Post', 'Post');
     class_alias('Illuminate\Http\Request', 'Request');
     class_alias('Illuminate\Http\JsonResponse', 'JsonResponse');
+    class_alias('Illuminate\Support\ServiceProvider', 'ServiceProvider');
+    class_alias('Illuminate\Container\Container', 'Container');
+    class_alias('App\Contracts\SensorClientInterface', 'SensorClientInterface');
+    class_alias('App\Contracts\WeatherReportServiceInterface', 'WeatherReportServiceInterface');
+    class_alias('App\Clients\OpenMeteoClient', 'OpenMeteoClient');
 }
 

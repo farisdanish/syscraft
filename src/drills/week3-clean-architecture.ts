@@ -16,6 +16,7 @@ export const WEEK_3_DRILL: DrillDefinition = {
       'Constructor Injection: Declare typed interface dependencies in class constructors; the Laravel IoC container automatically resolves them via reflection.',
       'IoC Container Binding: Register interface-to-concrete mappings in a ServiceProvider register() method via $this->app->bind() or singleton().',
       'Test Mockability: Inverting dependencies allows tests to swap live third-party network clients with fast in-memory test doubles without modifying production business logic.',
+      'Architecture File Map & Contracts: (1) App\\Contracts\\SensorClientInterface (fetchStationTelemetry), (2) App\\Contracts\\WeatherReportServiceInterface (generateReport), (3) App\\Clients\\OpenMeteoClient (concrete client), (4) App\\Services\\WeatherReportService (target submission with service and WeatherServiceProvider).',
       'Lifecycle Separation: ServiceProvider register() must strictly bind container definitions; boot() runs only after all providers are registered.',
       'Worker Memory Leaks (Octane/FrankenPHP): In traditional PHP-FPM, memory is wiped after every request. In Octane/FrankenPHP, singletons persist across requests; binding stateful classes as singletons leaks user data across requests.',
     ],
@@ -65,14 +66,18 @@ class WeatherReportController extends Controller
      * 2. Business logic directly mixed inside HTTP controller.
      * 3. No Dependency Inversion Principle (DIP) or Service Provider binding.
      *
+     * PRE-DEFINED CONTRACTS & FILE MAP:
+     * - App\\Contracts\\SensorClientInterface (fetchStationTelemetry(string $stationCode): array)
+     * - App\\Contracts\\WeatherReportServiceInterface (generateReport(string $stationCode): array)
+     * - App\\Clients\\OpenMeteoClient (concrete HTTP client implementing SensorClientInterface)
+     *
      * TASK:
-     * 1. Refactor into WeatherReportService implementing WeatherReportServiceInterface:
-     *    interface WeatherReportServiceInterface {
-     *        public function generateReport(string $stationCode): array;
-     *    }
-     * 2. Inject SensorClientInterface via constructor injection.
-     * 3. Register binding in WeatherServiceProvider:
+     * 1. Refactor into WeatherReportService implementing WeatherReportServiceInterface.
+     * 2. Inject SensorClientInterface via constructor injection:
+     *    public function __construct(protected SensorClientInterface $sensorClient) {}
+     * 3. Define WeatherServiceProvider extending ServiceProvider with register() binding:
      *    $this->app->bind(SensorClientInterface::class, OpenMeteoClient::class);
+     *    $this->app->bind(WeatherReportServiceInterface::class, WeatherReportService::class);
      */
     public function generateReport(Request $request): JsonResponse
     {
