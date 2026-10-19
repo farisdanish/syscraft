@@ -10,7 +10,7 @@ export interface StepOralRubricProps {
   isCompleted: boolean;
   hintsUsed?: number;
   solutionRevealed?: boolean;
-  onOralRubricCompleted: () => void;
+  onOralRubricCompleted: (passed: boolean) => void;
   onBackToStep3: () => void;
   onProceedToStep5: () => void;
 }

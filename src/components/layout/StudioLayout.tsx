@@ -98,7 +98,9 @@ export function StudioLayout({
         {/* STEP 1: Concept Brief */}
         {session.currentStep === 1 && (
           <StepConceptBrief
+            key={session.activeDrill.id}
             activeDrill={session.activeDrill}
+            conceptCompleted={session.stepCompletions[1]}
             onProceed={session.handleProceedFromConcept}
           />
         )}

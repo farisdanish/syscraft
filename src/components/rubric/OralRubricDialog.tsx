@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@govtechmy/myds-react/button';
 import { Tag } from '@govtechmy/myds-react/tag';
+import { Callout, CalloutTitle, CalloutContent } from '@govtechmy/myds-react/callout';
 import { 
   Play, 
   Pause, 
@@ -8,10 +9,12 @@ import {
   CheckCircle2, 
   Flag, 
   Award,
-  HelpCircle
+  HelpCircle,
+  AlertTriangle
 } from 'lucide-react';
 import type { RubricDimension, OralRubricScore } from '../../types';
 import { saveOralScore, logHesitation } from '../../services/storage';
+import { isOralAssessmentComplete, computeOralScore } from '../../services/progressionGates';
 
 interface OralRubricDialogProps {
   drillId: string;
@@ -24,7 +27,7 @@ interface OralRubricDialogProps {
   }>;
   hintsUsed?: number;
   solutionRevealed?: boolean;
-  onCompleted?: () => void;
+  onCompleted?: (passed: boolean) => void;
 }
 
 const RUBRIC_DESCRIPTORS: Record<RubricDimension, Record<number, string>> = {
@@ -76,17 +79,13 @@ export function OralRubricDialog({
 }: OralRubricDialogProps) {
   const [secondsRemaining, setSecondsRemaining] = useState<number>(180); // 3 minutes
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
-  const [scores, setScores] = useState<Record<RubricDimension, number>>({
-    correctness: 3,
-    tradeoff: 3,
-    failure: 3,
-    clarity: 3,
-    challenge: 3,
-  });
+  const [scores, setScores] = useState<Partial<Record<RubricDimension, number>>>({});
   const [oralNotes, setOralNotes] = useState<string>('');
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [hesitationFlagged, setHesitationFlagged] = useState<boolean>(false);
   const [politeAnnouncement, setPoliteAnnouncement] = useState<string>('');
+  const [assessmentError, setAssessmentError] = useState<string | null>(null);
+  const [attemptResult, setAttemptResult] = useState<{ passed: boolean; totalScore: number } | null>(null);
 
   // Timer Countdown with Milestone Announcements
   useEffect(() => {
@@ -121,11 +120,12 @@ export function OralRubricDialog({
 
   const handleScoreChange = (dim: RubricDimension, val: number) => {
     setScores(prev => ({ ...prev, [dim]: val }));
+    setAssessmentError(null);
     setPoliteAnnouncement(`${dim}, ${val} of 4 selected.`);
   };
 
   const onKeyDownRadioGroup = (e: React.KeyboardEvent, dim: RubricDimension) => {
-    const current = scores[dim] || 3;
+    const current = scores[dim] ?? 1;
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
       e.preventDefault();
       const nextVal = Math.min(4, current + 1);
@@ -138,13 +138,19 @@ export function OralRubricDialog({
   };
 
   const handleSaveAssessment = async () => {
-    const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
-    const passed = totalScore >= 14; // >= 14 out of 20 is a pass
+    if (!isOralAssessmentComplete(scores)) {
+      setAssessmentError('Please select a score for all 5 rubric dimensions before submitting.');
+      setPoliteAnnouncement('Incomplete rubric: select a rating for all 5 dimensions.');
+      return;
+    }
+
+    const { total, passed } = computeOralScore(scores);
+    setAttemptResult({ passed, totalScore: total });
 
     const scoreRecord: OralRubricScore = {
       drillId,
       timestamp: new Date().toISOString(),
-      dimensionScores: scores,
+      dimensionScores: scores as Record<RubricDimension, number>,
       durationSeconds: 180 - secondsRemaining,
       unscriptedPass: passed,
       notes: oralNotes,
@@ -154,7 +160,6 @@ export function OralRubricDialog({
     setSavedSuccess(true);
 
     if (!passed) {
-      // Auto-schedule for Sunday review if oral score < 14
       await logHesitation({
         drillId,
         week,
@@ -163,14 +168,16 @@ export function OralRubricDialog({
         retryCount: 1,
         hintsRequested: 0,
         failedAssertionCount: 0,
-        rubricMisses: Object.entries(scores).filter(([, s]) => s <= 2).map(([d]) => d),
+        rubricMisses: Object.entries(scores).filter(([, s]) => (s ?? 0) <= 2).map(([d]) => d),
         learnerFlagged: true,
       });
       setHesitationFlagged(true);
-    }
-
-    if (onCompleted) {
-      onCompleted();
+      setPoliteAnnouncement(`Oral assessment score ${total} of 20 did not meet the 14-point passing threshold.`);
+    } else {
+      setPoliteAnnouncement(`Oral defense passed with ${total} of 20 points! Tracer Replay is unlocked.`);
+      if (onCompleted) {
+        onCompleted(true);
+      }
     }
   };
 
@@ -329,7 +336,7 @@ export function OralRubricDialog({
         </div>
 
         {checkpoints.map((cp, idx) => {
-          const currentScore = scores[cp.dimension] || 3;
+          const currentScore = scores[cp.dimension];
           return (
             <fieldset 
               key={idx} 
@@ -372,23 +379,22 @@ export function OralRubricDialog({
                     { score: 4, label: 'L4', tag: 'Staff' }
                   ].map(({ score: scoreVal, label, tag }) => {
                     const isChecked = currentScore === scoreVal;
-                    const isTarget = scoreVal === 3;
                     return (
                       <button
                         key={scoreVal}
                         type="button"
                         role="radio"
                         aria-checked={isChecked}
-                        tabIndex={isChecked ? 0 : -1}
+                        tabIndex={typeof currentScore === 'number' ? (isChecked ? 0 : -1) : (scoreVal === 1 ? 0 : -1)}
                         onClick={() => handleScoreChange(cp.dimension, scoreVal)}
                         onKeyDown={(e) => onKeyDownRadioGroup(e, cp.dimension)}
                         style={{
                           height: '32px',
                           padding: '0 8px',
                           borderRadius: '6px',
-                          border: `1.5px solid ${isChecked ? 'var(--studio-primary)' : (isTarget ? 'var(--studio-border-strong)' : 'var(--studio-border)')}`,
-                          backgroundColor: isChecked ? 'var(--studio-primary)' : (isTarget ? 'var(--studio-primary-subtle)' : 'var(--studio-surface-subtle)'),
-                          color: isChecked ? 'var(--studio-primary-contrast)' : 'var(--studio-text)',
+                          border: `1.5px solid ${isChecked ? 'var(--studio-primary)' : 'var(--studio-border)'}`,
+                          backgroundColor: isChecked ? 'var(--studio-primary)' : 'var(--studio-surface-subtle)',
+                          color: isChecked ? 'var(--studio-text-on-accent)' : 'var(--studio-text)',
                           fontWeight: 700,
                           fontSize: '12px',
                           cursor: 'pointer',
@@ -427,10 +433,18 @@ export function OralRubricDialog({
                 alignItems: 'center',
                 gap: '6px'
               }}>
-                <span style={{ fontWeight: 700, color: 'var(--studio-primary)' }}>
-                  Level {currentScore}:
-                </span>
-                <span>{getScoreDescriptor(cp.dimension, currentScore)}</span>
+                {typeof currentScore === 'number' ? (
+                  <>
+                    <span style={{ fontWeight: 700, color: 'var(--studio-primary)' }}>
+                      Level {currentScore}:
+                    </span>
+                    <span>{getScoreDescriptor(cp.dimension, currentScore)}</span>
+                  </>
+                ) : (
+                  <span style={{ fontStyle: 'italic', color: 'var(--studio-text-muted)' }}>
+                    No rating selected yet. Choose a level (L1–L4) above.
+                  </span>
+                )}
               </div>
 
               {/* Scoring Guide Details */}
@@ -474,6 +488,43 @@ export function OralRubricDialog({
           }}
         />
       </div>
+
+      {/* Assessment Feedback Alerts */}
+      {assessmentError && (
+        <Callout variant="warning">
+          <CalloutTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertTriangle size={16} />
+            Incomplete Oral Assessment
+          </CalloutTitle>
+          <CalloutContent style={{ fontSize: '0.8125rem' }}>
+            {assessmentError}
+          </CalloutContent>
+        </Callout>
+      )}
+
+      {attemptResult && !attemptResult.passed && (
+        <Callout variant="warning">
+          <CalloutTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertTriangle size={16} />
+            Oral Defense Below 14-Point Threshold ({attemptResult.totalScore}/20)
+          </CalloutTitle>
+          <CalloutContent style={{ fontSize: '0.8125rem' }}>
+            Oral recall defense requires at least 14/20 points across all 5 dimensions to unlock Tracer Replay. Review your stumble points above and retry your defense when ready.
+          </CalloutContent>
+        </Callout>
+      )}
+
+      {attemptResult && attemptResult.passed && (
+        <Callout variant="success">
+          <CalloutTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <CheckCircle2 size={16} />
+            Oral Defense Verified ({attemptResult.totalScore}/20)
+          </CalloutTitle>
+          <CalloutContent style={{ fontSize: '0.8125rem' }}>
+            Unscripted oral defense meets Staff-level criteria! Step 5: Tracer Replay is now unlocked.
+          </CalloutContent>
+        </Callout>
+      )}
 
       {/* Action Buttons */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--studio-border)' }}>

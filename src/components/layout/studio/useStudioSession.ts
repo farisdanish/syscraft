@@ -33,6 +33,11 @@ import {
   compileMasterySummary
 } from '../../../services/storage';
 import { migrateLegacySession } from '../../../services/sessionMigration';
+import { 
+  isConceptGateSatisfied, 
+  canAdvanceToStep, 
+  canCompleteMastery 
+} from '../../../services/progressionGates';
 
 export interface UseStudioSessionOptions {
   initialWeek?: number;
@@ -116,13 +121,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
 
   // Sequential Step Unlock Predicate
   const isStepUnlocked = useCallback((step: WorkflowStep): boolean => {
-    if (step === 1) return true;
-    for (let k = 1; k < step; k++) {
-      if (!stepCompletions[k as WorkflowStep]) {
-        return false;
-      }
-    }
-    return true;
+    return canAdvanceToStep(step, stepCompletions);
   }, [stepCompletions]);
 
   const goToStep = useCallback((step: WorkflowStep) => {
@@ -353,7 +352,13 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
   }, [selectedWeek, activeDrill.id, activeDrill.week, currentStep, highestStepReached, stepCompletions, userCode, testResults, tier3Result, verificationSource, drillCompleted, starStories, hintsUsed, solutionRevealed]);
 
   // Gate 1: Proceed from Step 1 (Concept Brief) to Step 2 (Focused Drill)
-  const handleProceedFromConcept = async () => {
+  const handleProceedFromConcept = async (quizVerified: boolean = false) => {
+    const requiresQuiz = Boolean(activeDrill.conceptBrief.quiz);
+    if (!isConceptGateSatisfied(Boolean(stepCompletions[1]), quizVerified, requiresQuiz)) {
+      setPoliteNotice('Complete and verify the concept check to unlock Step 2.');
+      return;
+    }
+
     const updated: DrillStepCompletions = { ...stepCompletions, 1: true };
     setStepCompletions(updated);
     setCurrentStep(2);
@@ -574,7 +579,11 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
   };
 
   // Gate 4: Oral Rubric Submission Callback
-  const handleOralRubricCompleted = async () => {
+  const handleOralRubricCompleted = async (passed: boolean) => {
+    if (!passed) {
+      setPoliteNotice('Oral defense requires 14/20 or higher to unlock Step 5.');
+      return;
+    }
     const updated: DrillStepCompletions = { ...stepCompletions, 4: true };
     setStepCompletions(updated);
 
@@ -600,6 +609,10 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
 
   // Gate 5: Complete Drill Mastery (5/5)
   const handleCompleteMastery = async () => {
+    if (!canCompleteMastery(stepCompletions)) {
+      setPoliteNotice('Complete Steps 1–4 before recording mastery.');
+      return;
+    }
     const updated: DrillStepCompletions = { ...stepCompletions, 5: true };
     setStepCompletions(updated);
     setDrillCompleted(true);

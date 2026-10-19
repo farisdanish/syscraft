@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@govtechmy/myds-react/button';
 import { Tag } from '@govtechmy/myds-react/tag';
 import { Callout, CalloutTitle, CalloutContent } from '@govtechmy/myds-react/callout';
@@ -16,13 +16,18 @@ import { ConceptSchematicCard } from './ConceptSchematicCard';
 
 export interface StepConceptBriefProps {
   activeDrill: DrillDefinition;
-  onProceed: () => void;
+  conceptCompleted: boolean;
+  onProceed: (quizVerified: boolean) => void;
 }
 
 export const StepConceptBrief: React.FC<StepConceptBriefProps> = ({
   activeDrill,
+  conceptCompleted,
   onProceed,
 }) => {
+  const [isQuizPassed, setIsQuizPassed] = useState(false);
+  const requiresQuiz = Boolean(activeDrill.conceptBrief.quiz);
+  const canProceed = conceptCompleted || !requiresQuiz || isQuizPassed;
   return (
     <div className="studio-scrollable-step">
       <div style={{ maxWidth: '960px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -157,7 +162,10 @@ export const StepConceptBrief: React.FC<StepConceptBriefProps> = ({
 
         {/* Active Concept Check Micro-Quiz */}
         {activeDrill.conceptBrief.quiz && (
-          <ConceptQuizCard quiz={activeDrill.conceptBrief.quiz} />
+          <ConceptQuizCard 
+            quiz={activeDrill.conceptBrief.quiz} 
+            onVerified={() => setIsQuizPassed(true)}
+          />
         )}
 
         {/* Action Bar */}
@@ -171,7 +179,9 @@ export const StepConceptBrief: React.FC<StepConceptBriefProps> = ({
             id="proceed-to-drill-btn"
             variant="primary-fill" 
             size="medium" 
-            onClick={onProceed}
+            disabled={!canProceed}
+            onClick={() => onProceed(isQuizPassed)}
+            title={!canProceed ? 'Complete the verified concept check above to unlock the focused drill' : 'Advance to Step 2: Focused Drill'}
           >
             Proceed to Step 2: Focused Drill
             <ChevronRight size={16} style={{ marginLeft: '4px' }} />
