@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "declaration": false,
+    "rootDir": "./src",
+    "outDir": "./dist-test"
+  },
+  "files": [
+    "src/data/curriculumTasks.ts",
+    "src/drills/week1-internals.ts",
+    "src/drills/week2-api-pagination.ts",
+    "src/drills/week3-clean-architecture.ts",
+    "src/drills/week4-performance.ts",
+    "src/drills/week5-async-processing.ts",
+    "src/drills/week6-system-design.ts",
+    "src/drills/week7-security-sprint.ts",
+    "src/services/masterySummary.ts",
+    "src/services/sessionMigration.ts",
+    "src/services/progressionGates.ts"
+  ]
+}

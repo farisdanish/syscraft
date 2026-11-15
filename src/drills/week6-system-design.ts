@@ -159,18 +159,43 @@ export const WEEK_6_DRILL: DrillDefinition = {
 /**
  * Deterministic client evaluation for Week 6 System Design
  */
+interface ParsedSystemDesignConfig {
+  architecture?: {
+    buffer?: {
+      backpressureStrategy?: unknown;
+    };
+    storage?: {
+      partitionKey?: unknown;
+    };
+    workers?: {
+      batchSize?: unknown;
+    };
+  };
+  starStories?: {
+    spikeDefense?: {
+      action?: unknown;
+      result?: unknown;
+      resultMetrics?: {
+        uptimePercent?: unknown;
+        p95LatencyMs?: unknown;
+      };
+    };
+  };
+}
+
 export function evaluateSystemDesignDrill(code: string): {
   passed: boolean;
   queriesExecuted: number;
   simulatedLatencyMs: number;
   assertionResults: Array<{ name: string; passed: boolean; message: string }>;
 } {
-  let parsed: any = null;
+  let parsed: ParsedSystemDesignConfig | null = null;
   try {
-    parsed = JSON.parse(code);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    const raw: unknown = JSON.parse(code);
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
       throw new Error('Top-level JSON must be an object.');
     }
+    parsed = raw as ParsedSystemDesignConfig;
   } catch {
     return {
       passed: false,

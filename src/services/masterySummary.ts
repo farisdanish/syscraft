@@ -108,6 +108,21 @@ const NEXT_WEEK_MAP: Record<number, { id: string; title: string }> = {
   6: { id: 'w7-crud-auth-sprint', title: 'Timed CRUD, Session Fixation Defense & Policy Authorization' },
 };
 
+export interface LegacyTestResultsInput {
+  passed?: boolean;
+  queryCount?: number;
+  assertions?: Array<{ id?: string; name?: string; passed?: boolean; message?: string }>;
+  benchmark?: {
+    latencyMs?: number;
+    queryCount?: number;
+    reductionPercentage?: number;
+  };
+}
+
+export interface LegacyTier3ResultInput {
+  executionTimeMs?: number;
+}
+
 export interface ComputeMasterySummaryParams {
   drillId: string;
   week: number;
@@ -116,10 +131,8 @@ export interface ComputeMasterySummaryParams {
   tier: 1 | 2 | 3;
   verificationSource?: VerificationSource;
   completedAt?: string;
-  // biome-ignore lint/suspicious/noExplicitAny: testResults and tier3Result can come from legacy sessions as unknown
-  testResults?: any;
-  // biome-ignore lint/suspicious/noExplicitAny: tier3Result can come from legacy sessions as unknown
-  tier3Result?: any;
+  testResults?: LegacyTestResultsInput | unknown;
+  tier3Result?: LegacyTier3ResultInput | unknown;
   oralScore?: OralRubricScore | null;
   hintsUsed?: number;
   solutionRevealed?: boolean;
@@ -131,6 +144,8 @@ export function computeMasterySummary(params: ComputeMasterySummaryParams): Dril
   const solutionRevealed = Boolean(params.solutionRevealed);
   const verificationSource = params.verificationSource ?? 'simulation';
   const completedAt = params.completedAt ?? new Date().toISOString();
+  const tr = (params.testResults && typeof params.testResults === 'object' ? params.testResults : null) as LegacyTestResultsInput | null;
+  const t3 = (params.tier3Result && typeof params.tier3Result === 'object' ? params.tier3Result : null) as LegacyTier3ResultInput | null;
 
   // Pedagogical framing text
   let pedagogicalFraming: string;
@@ -151,7 +166,7 @@ export function computeMasterySummary(params: ComputeMasterySummaryParams): Dril
 
   // Assertions normalization
   const rawAssertions: Array<{ id?: string; name?: string; passed?: boolean; message?: string }> = 
-    Array.isArray(params.testResults?.assertions) ? params.testResults.assertions : [];
+    Array.isArray(tr?.assertions) ? tr.assertions : [];
   const assertions: MasteryAssertionItem[] = rawAssertions.length > 0 
     ? rawAssertions.map((a: { id?: string; name?: string; passed?: boolean; message?: string }, idx: number) => ({
         id: a.id || `a_${idx + 1}`,
@@ -163,22 +178,22 @@ export function computeMasterySummary(params: ComputeMasterySummaryParams): Dril
         {
           id: 'core_pass',
           name: `${params.title} Technical Requirements`,
-          passed: Boolean(params.testResults?.passed ?? true),
+          passed: Boolean(tr?.passed ?? true),
         }
       ];
 
   // Benchmark metrics
   let benchmark: MasteryBenchmark | undefined;
   if (
-    params.testResults?.benchmark || 
-    params.testResults?.queryCount !== undefined || 
-    params.tier3Result?.executionTimeMs !== undefined
+    tr?.benchmark || 
+    tr?.queryCount !== undefined || 
+    t3?.executionTimeMs !== undefined
   ) {
     benchmark = {
-      latencyMs: params.testResults?.benchmark?.latencyMs,
-      queryCount: params.testResults?.benchmark?.queryCount ?? params.testResults?.queryCount,
-      executionTimeMs: params.tier3Result?.executionTimeMs,
-      reductionPercentage: params.testResults?.benchmark?.reductionPercentage,
+      latencyMs: tr?.benchmark?.latencyMs,
+      queryCount: tr?.benchmark?.queryCount ?? tr?.queryCount,
+      executionTimeMs: t3?.executionTimeMs,
+      reductionPercentage: tr?.benchmark?.reductionPercentage,
     };
   }
 
@@ -219,7 +234,7 @@ export function computeMasterySummary(params: ComputeMasterySummaryParams): Dril
     completedAt,
     tier: params.tier,
     verificationSource,
-    passed: Boolean(params.testResults?.passed ?? true),
+    passed: Boolean(tr?.passed ?? true),
     assertions,
     benchmark,
     oralScore,

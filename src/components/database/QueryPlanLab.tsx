@@ -46,7 +46,7 @@ export function QueryPlanLab({
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<PlanViewTab>('delta');
   const [seedTrigger, setSeedTrigger] = useState<number>(0);
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<unknown>(null);
   const dbRef = useRef<Database | null>(null);
 
   // Initialize SQLite WASM and Seed Synthetically (5,000 observations)
@@ -58,7 +58,7 @@ export function QueryPlanLab({
       setIsSeeding(true);
       try {
         const sqlModule = await import('sql.js');
-        const initSqlJsFn = (sqlModule as any).default || sqlModule;
+        const initSqlJsFn = sqlModule.default ?? sqlModule;
         const SQL = await initSqlJsFn({
           locateFile: (file: string) => `/${file}`,
         });
@@ -209,10 +209,11 @@ export function QueryPlanLab({
       if (onExecutionComplete) {
         onExecutionComplete(assertion.passed, parsedPlan);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : 'Syntax error';
       setOptimizationStatus({
         passed: false,
-        message: `SQL Execution Error: ${err.message || 'Syntax error'}`,
+        message: `SQL Execution Error: ${errMessage || 'Syntax error'}`,
       });
     } finally {
       setIsRunning(false);

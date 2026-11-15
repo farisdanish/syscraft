@@ -19,6 +19,7 @@ import {
   type BridgeHealth, 
   type BridgeRunResult 
 } from '../../../services/bridgeClient';
+import type { DrillTestResults } from './steps/StepAssertionOutput';
 import { 
   saveDrillProgress, 
   getDrillProgress, 
@@ -61,7 +62,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
   // Drill State
   const activeDrill: DrillDefinition = getDrillByWeek(selectedWeek);
   const [userCode, setUserCode] = useState<string>(activeDrill.initialCode);
-  const [testResults, setTestResults] = useState<any>(null);
+  const [testResults, setTestResults] = useState<DrillTestResults | null>(null);
   const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
   const [drillCompleted, setDrillCompleted] = useState<boolean>(false);
   const [sundayCount, setSundayCount] = useState<number>(0);
@@ -195,7 +196,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
           setCurrentStep(targetStep);
           setHighestStepReached(session.highestStepReached || targetStep);
           setStepCompletions(session.stepCompletions);
-          setTestResults(session.testResults);
+          setTestResults((session.testResults as DrillTestResults) ?? null);
           setTier3Result(session.tier3Result as BridgeRunResult | null);
           setVerificationSource(session.verificationSource);
           setDrillCompleted(session.completed);
@@ -321,7 +322,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
         setCurrentStep(targetSession.currentStep);
         setHighestStepReached(targetSession.highestStepReached);
         setStepCompletions(targetSession.stepCompletions);
-        setTestResults(targetSession.testResults);
+        setTestResults((targetSession.testResults as DrillTestResults) ?? null);
         setTier3Result(targetSession.tier3Result as BridgeRunResult | null);
         setVerificationSource(targetSession.verificationSource);
         setDrillCompleted(targetSession.completed);
@@ -798,7 +799,7 @@ export function useStudioSession({ initialWeek = 1 }: UseStudioSessionOptions = 
             setCurrentStep(session.currentStep);
             setHighestStepReached(session.highestStepReached);
             setStepCompletions(session.stepCompletions);
-            setTestResults(session.testResults);
+            setTestResults((session.testResults as DrillTestResults) ?? null);
             setTier3Result(session.tier3Result as BridgeRunResult | null);
             setVerificationSource(session.verificationSource);
             setDrillCompleted(session.completed);

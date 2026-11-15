@@ -15,9 +15,32 @@ import {
 import type { DrillDefinition } from '../../../../types';
 import type { BridgeRunResult } from '../../../../services/bridgeClient';
 
+export interface AssertionResultItem {
+  name: string;
+  passed: boolean;
+  message?: string;
+}
+
+export interface DrillTestResults {
+  passed?: boolean;
+  queriesExecuted?: number;
+  simulatedLatencyMs?: number;
+  message?: string;
+  assertionResults?: AssertionResultItem[];
+  assertions?: Array<{ id?: string; name?: string; passed?: boolean; message?: string }>;
+  queryCount?: number;
+  benchmark?: {
+    latencyMs?: number;
+    queryCount?: number;
+    reductionPercentage?: number;
+  };
+}
+
+const ANSI_ESCAPE_REGEX = new RegExp(String.fromCharCode(27) + '\\[[0-9;]*[a-zA-Z]', 'g');
+
 export interface StepAssertionOutputProps {
   activeDrill: DrillDefinition;
-  testResults: any;
+  testResults: DrillTestResults | null;
   tier3Result: BridgeRunResult | null;
   onBackToDrill: () => void;
   onConfirmAnalysis: () => void;
@@ -206,8 +229,7 @@ export const StepAssertionOutput: React.FC<StepAssertionOutputProps> = ({
               overflowY: 'auto',
               border: '1px solid var(--studio-border)'
             }}>
-              {/* eslint-disable-next-line no-control-regex */}
-              {(tier3Result.stdout || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '')}
+              {(tier3Result.stdout || '').replace(ANSI_ESCAPE_REGEX, '')}
             </pre>
           </div>
         )}
@@ -244,12 +266,12 @@ export const StepAssertionOutput: React.FC<StepAssertionOutputProps> = ({
                     Detailed Assertion Verification
                   </span>
                   <Tag variant={testResults.passed ? "success" : "danger"} size="small">
-                    {testResults.assertionResults.filter((a: any) => a.passed).length} / {testResults.assertionResults.length} Passed
+                    {testResults.assertionResults.filter((a: AssertionResultItem) => a.passed).length} / {testResults.assertionResults.length} Passed
                   </Tag>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                  {testResults.assertionResults.map((a: any, i: number) => (
+                  {testResults.assertionResults.map((a: AssertionResultItem, i: number) => (
                     <div key={i} style={{ 
                       display: 'flex', 
                       alignItems: 'center', 

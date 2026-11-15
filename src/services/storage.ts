@@ -570,7 +570,8 @@ export async function importEnvelopeJSON(jsonString: string): Promise<{ success:
     }
 
     return { success: true, message: 'Backup imported, schema-validated, and restored successfully.' };
-  } catch (err: any) {
-    return { success: false, message: `Import validation failed: ${err.message || 'Malformed schema'}` };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Malformed schema';
+    return { success: false, message: `Import validation failed: ${message || 'Malformed schema'}` };
   }
 }
